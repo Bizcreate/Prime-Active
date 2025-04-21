@@ -60,7 +60,9 @@
     "zod": "^3.24.1",
     "ethers": "latest",
     "@thirdweb-dev/sdk": "latest",
-    "@thirdweb-dev/react": "latest"
+    "@emotion/is-prop-valid": "latest",
+    "@thirdweb-dev/react": "latest",
+    "framer-motion": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

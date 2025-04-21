@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Shield, AlertTriangle, Check, Loader2 } from "lucide-react"
 import { useWeb3 } from "@/components/web3-provider"
+import Image from "next/image"
 
 interface NFTVerificationProps {
   onVerified?: () => void
@@ -51,10 +52,19 @@ export function NFTVerification({ onVerified, onSkip }: NFTVerificationProps) {
   return (
     <Card className="bg-zinc-900 border-zinc-800">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-primary" />
-          Verify NFT Ownership
-        </CardTitle>
+        <div className="flex items-center gap-2">
+          <Image
+            src="/prime-mates-logo.png"
+            alt="Prime Mates Board Club"
+            width={80}
+            height={40}
+            className="object-contain"
+          />
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            Verify NFT Ownership
+          </CardTitle>
+        </div>
       </CardHeader>
       <CardContent>
         {error && (

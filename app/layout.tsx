@@ -9,8 +9,8 @@ const inter = Inter({ subsets: ["latin"] })
 
 // Update the metadata title and description
 export const metadata: Metadata = {
-  title: "Prime Active | Move & Earn",
-  description: "Track your activities, earn rewards, and collect NFTs",
+  title: "Prime Mates | Board Club & Activity Tracker",
+  description: "Track your activities, earn rewards, and join the Prime Mates Board Club community",
     generator: 'v0.dev'
 }
 

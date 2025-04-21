@@ -12,6 +12,7 @@ import { Plus, ChevronRight, Award, Trophy } from "lucide-react"
 import Link from "next/link"
 import { useWeb3 } from "@/components/web3-provider"
 import { generateRandomNFTImage } from "@/lib/utils"
+import Image from "next/image"
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("activities")
@@ -21,7 +22,15 @@ export default function DashboardPage() {
     <main className="flex min-h-screen flex-col bg-black pb-20">
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <div className="flex items-center">
+            <Image
+              src="/prime-mates-logo.png"
+              alt="Prime Mates Board Club"
+              width={120}
+              height={60}
+              className="object-contain mr-2"
+            />
+          </div>
           <Button variant="outline" size="icon">
             <Plus className="h-5 w-5" />
           </Button>

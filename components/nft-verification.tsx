@@ -1,112 +1,138 @@
 "use client"
 
-import { useWeb3 } from "@/components/web3-provider"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Loader2, CheckCircle, XCircle, RefreshCw } from "lucide-react"
-import { WalletConnectButton } from "@/components/wallet-connect-button"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Shield, AlertTriangle, Check, Loader2 } from "lucide-react"
+import { useWeb3 } from "@/components/web3-provider"
 
-export function NFTVerification() {
-  const { isConnected, ownedNFTs, isVerifying, verifyNFTOwnership, points, hasAccess } = useWeb3()
+interface NFTVerificationProps {
+  onVerified?: () => void
+  onSkip?: () => void
+}
+
+export function NFTVerification({ onVerified, onSkip }: NFTVerificationProps) {
+  const { isConnected, connectWallet, verifyNFTOwnership, hasAccess, ownedNFTs } = useWeb3()
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Check if already verified
+  useEffect(() => {
+    if (isConnected && hasAccess) {
+      onVerified?.()
+    }
+  }, [isConnected, hasAccess, onVerified])
+
+  // Handle connect and verify
+  const handleConnectAndVerify = async () => {
+    try {
+      setIsVerifying(true)
+      setError(null)
+
+      // Connect wallet if not connected
+      if (!isConnected) {
+        const connected = await connectWallet()
+        if (!connected) {
+          setError("Failed to connect wallet. Please try again.")
+          setIsVerifying(false)
+          return
+        }
+      }
+
+      // Verify NFT ownership
+      const verified = await verifyNFTOwnership()
+
+      if (verified) {
+        onVerified?.()
+      } else {
+        setError("No eligible NFTs found in your wallet. You can still use the app with limited features.")
+      }
+    } catch (err) {
+      console.error("Error during verification:", err)
+      setError("An error occurred during verification. Please try again.")
+    } finally {
+      setIsVerifying(false)
+    }
+  }
 
   return (
     <Card className="bg-zinc-900 border-zinc-800">
-      <CardContent className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold">NFT Verification</h2>
-          {isConnected && (
-            <Button variant="outline" size="sm" onClick={verifyNFTOwnership} disabled={isVerifying}>
-              {isVerifying ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Verifying
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
-                </>
-              )}
-            </Button>
-          )}
-        </div>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5 text-primary" />
+          Verify NFT Ownership
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <div className="bg-red-900/20 border border-red-900 rounded-md p-3 mb-4 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            <p className="text-sm text-red-500">{error}</p>
+          </div>
+        )}
 
-        {!isConnected ? (
-          <div className="text-center py-4">
-            <p className="text-zinc-400 mb-4">Connect your wallet to verify NFT ownership</p>
-            <WalletConnectButton />
-          </div>
-        ) : isVerifying ? (
-          <div className="flex flex-col items-center justify-center py-6">
-            <Loader2 className="h-8 w-8 text-primary animate-spin mb-2" />
-            <p className="text-zinc-400">Verifying NFT ownership...</p>
-          </div>
-        ) : ownedNFTs.length === 0 ? (
-          <div className="bg-zinc-800 rounded-lg p-4 text-center">
-            <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-            <p className="font-medium mb-1">No Verified NFTs</p>
-            <p className="text-sm text-zinc-400 mb-4">You don't own any NFTs from the required collections.</p>
-            <div className="text-xs text-zinc-500 mb-2">Required Collections:</div>
-            <div className="flex flex-wrap gap-2 justify-center">
-              <Badge variant="outline" className="text-xs">
-                Prime Mates Board Club
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                Prime To The Bone
-              </Badge>
+        {isConnected && hasAccess ? (
+          <div className="bg-green-900/20 border border-green-900 rounded-md p-3 mb-4 flex items-center gap-2">
+            <Check className="h-5 w-5 text-green-500" />
+            <div>
+              <p className="text-sm text-green-500">Verification successful!</p>
+              <p className="text-xs text-zinc-400">
+                {ownedNFTs.length} NFT{ownedNFTs.length !== 1 ? "s" : ""} found in your wallet
+              </p>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="bg-zinc-800 rounded-lg p-4 text-center">
-              <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-              <p className="font-medium mb-1">NFT Ownership Verified</p>
-              <p className="text-sm text-zinc-400">You own {ownedNFTs.length} verified NFTs</p>
-            </div>
+          <p className="text-sm text-zinc-400 mb-4">
+            Connect your wallet to verify NFT ownership and unlock premium features, including:
+          </p>
+        )}
 
-            <div className="bg-zinc-800 rounded-lg p-4 text-center">
-              <p className="text-sm text-zinc-400 mb-1">Points Earned</p>
-              <p className="text-3xl font-bold text-primary">{points}</p>
-              <p className="text-xs text-zinc-500 mt-1">Based on your NFT ownership</p>
-            </div>
-
-            <div className="bg-zinc-800 rounded-lg p-4 text-center">
-              <p className="text-sm text-zinc-400 mb-2">Reward Access</p>
-              {hasAccess ? (
-                <div className="flex items-center justify-center gap-2 text-green-500">
-                  <CheckCircle className="h-5 w-5" />
-                  <span className="font-medium">Unlocked</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center gap-2 text-red-500">
-                  <XCircle className="h-5 w-5" />
-                  <span className="font-medium">Locked</span>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <p className="text-sm font-medium mb-2">Your Verified NFTs</p>
-              <div className="grid grid-cols-2 gap-2">
-                {ownedNFTs.map((nft, index) => (
-                  <div key={index} className="bg-zinc-800 rounded-lg p-2">
-                    <div className="relative aspect-square rounded-md overflow-hidden mb-2">
-                      <img
-                        src={nft.image || "/placeholder.svg"}
-                        alt={nft.name || "NFT"}
-                        className="object-cover w-full h-full"
-                      />
-                    </div>
-                    <p className="text-xs font-medium truncate">{nft.name}</p>
-                    <p className="text-xs text-zinc-500 truncate">{nft.collection}</p>
-                  </div>
-                ))}
+        {!isConnected && (
+          <ul className="space-y-2 mb-4">
+            <li className="flex items-center gap-2 text-sm">
+              <div className="bg-primary/20 p-1 rounded-full">
+                <Check className="h-3 w-3 text-primary" />
               </div>
-            </div>
-          </div>
+              <span>Exclusive challenges and rewards</span>
+            </li>
+            <li className="flex items-center gap-2 text-sm">
+              <div className="bg-primary/20 p-1 rounded-full">
+                <Check className="h-3 w-3 text-primary" />
+              </div>
+              <span>Higher $ACTIVE token earning rates</span>
+            </li>
+            <li className="flex items-center gap-2 text-sm">
+              <div className="bg-primary/20 p-1 rounded-full">
+                <Check className="h-3 w-3 text-primary" />
+              </div>
+              <span>Access to premium NFT collections</span>
+            </li>
+          </ul>
         )}
       </CardContent>
+      <CardFooter className="flex flex-col gap-2">
+        {!isConnected || !hasAccess ? (
+          <>
+            <Button className="w-full" onClick={handleConnectAndVerify} disabled={isVerifying}>
+              {isVerifying ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                <>Connect Wallet & Verify</>
+              )}
+            </Button>
+            <Button variant="outline" className="w-full" onClick={onSkip} disabled={isVerifying}>
+              Skip for Now
+            </Button>
+          </>
+        ) : (
+          <Button className="w-full" onClick={onVerified}>
+            Continue
+          </Button>
+        )}
+      </CardFooter>
     </Card>
   )
 }

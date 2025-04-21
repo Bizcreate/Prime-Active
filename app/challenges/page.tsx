@@ -33,19 +33,19 @@ export default function ChallengesPage() {
             <ChallengeCard
               title="Morning Ride"
               description="Complete a ride before 9am"
-              reward="50 $PRIME"
+              reward="50 $ACTIVE"
               timeLeft="8 hours left"
             />
             <ChallengeCard
               title="Distance Challenge"
               description="Ride 5km in a single session"
-              reward="75 $PRIME"
+              reward="75 $ACTIVE"
               timeLeft="Today only"
             />
             <ChallengeCard
               title="Calorie Burner"
               description="Burn 300 calories in a session"
-              reward="60 $PRIME"
+              reward="60 $ACTIVE"
               timeLeft="Today only"
             />
           </TabsContent>
@@ -54,19 +54,19 @@ export default function ChallengesPage() {
             <ChallengeCard
               title="Weekend Warrior"
               description="Complete 3 rides this weekend"
-              reward="150 $PRIME"
+              reward="150 $ACTIVE"
               timeLeft="2 days left"
             />
             <ChallengeCard
               title="Consistency King"
               description="Ride 5 days in a row"
-              reward="200 $PRIME"
+              reward="200 $ACTIVE"
               timeLeft="Ongoing"
             />
             <ChallengeCard
               title="Distance Master"
               description="Ride 25km total this week"
-              reward="180 $PRIME"
+              reward="180 $ACTIVE"
               timeLeft="4 days left"
             />
           </TabsContent>
@@ -75,21 +75,21 @@ export default function ChallengesPage() {
             <ChallengeCard
               title="Burton Snow Challenge"
               description="Track 10km on your snowboard"
-              reward="250 $PRIME + NFT Badge"
+              reward="250 $ACTIVE + NFT Badge"
               timeLeft="5 days left"
               sponsored
             />
             <ChallengeCard
               title="Vans Skate Series"
               description="Visit 3 different skateparks"
-              reward="300 $PRIME + Discount Code"
+              reward="300 $ACTIVE + Discount Code"
               timeLeft="2 weeks left"
               sponsored
             />
             <ChallengeCard
               title="Rip Curl Surf Event"
               description="Track 5 surf sessions"
-              reward="400 $PRIME + Limited NFT"
+              reward="400 $ACTIVE + Limited NFT"
               timeLeft="3 weeks left"
               sponsored
             />

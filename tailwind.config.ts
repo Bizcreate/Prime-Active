@@ -53,7 +53,7 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        burnz: {
+        active: {
           50: "#fffbeb",
           100: "#fff3c4",
           200: "#ffe484",

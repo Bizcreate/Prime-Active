@@ -19,7 +19,7 @@ export function TokenCard({ amount, change }: TokenCardProps) {
               <Coins className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-zinc-400">$PRIME Balance</p>
+              <p className="text-xs text-zinc-400">$ACTIVE Balance</p>
               <p className="text-xl font-bold">{amount}</p>
             </div>
           </div>

@@ -78,7 +78,7 @@ export default function SocialPage() {
       },
       content:
         "Perfect waves at Sunset Beach this morning! Earned my Wave Catcher NFT after 5 consecutive surf sessions. 🏄‍♂️🌊",
-      image: "/placeholder.svg?height=300&width=500&query=surfing+wave",
+      image: "/surfer-silhouette.png",
       location: {
         name: "Sunset Beach",
         lat: 33.6189,
@@ -108,7 +108,7 @@ export default function SocialPage() {
       reward: "500 BURNZ + Exclusive NFT",
       participants: 128,
       deadline: "3 days left",
-      image: "/placeholder.svg?height=100&width=100&query=running+medal",
+      image: "/triumphant-finish.png",
     },
     {
       id: "challenge-2",
@@ -117,7 +117,7 @@ export default function SocialPage() {
       reward: "750 BURNZ + Rare NFT",
       participants: 64,
       deadline: "5 days left",
-      image: "/placeholder.svg?height=100&width=100&query=skateboard+medal",
+      image: "/skateboarding-victory.png",
     },
     {
       id: "challenge-3",
@@ -126,7 +126,7 @@ export default function SocialPage() {
       reward: "300 BURNZ",
       participants: 256,
       deadline: "Starts Saturday",
-      image: "/placeholder.svg?height=100&width=100&query=fitness+medal",
+      image: "/achievement-medal.png",
     },
   ]
 
@@ -351,7 +351,7 @@ export default function SocialPage() {
                     </div>
                     <p className="text-sm text-zinc-400 mb-2">{challenge.description}</p>
                     <div className="flex justify-between items-center">
-                      <p className="text-xs text-burnz-500">{challenge.reward}</p>
+                      <p className="text-xs text-primary">{challenge.reward}</p>
                       <p className="text-xs text-zinc-500">{challenge.participants} participants</p>
                     </div>
                   </div>

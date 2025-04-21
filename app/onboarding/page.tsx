@@ -30,7 +30,7 @@ export default function OnboardingPage() {
     if (step < 4) {
       setStep(step + 1)
     } else {
-      router.push("/dashboard")
+      router.push("/setup")
     }
   }
 
@@ -68,7 +68,7 @@ export default function OnboardingPage() {
           <div className="flex-1 text-center">
             <span className="text-sm text-zinc-400">Step {step} of 4</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard")}>
+          <Button variant="ghost" size="sm" onClick={() => router.push("/setup")}>
             Skip
           </Button>
         </div>
@@ -76,14 +76,14 @@ export default function OnboardingPage() {
         {/* Progress indicator */}
         <div className="w-full flex justify-between mb-8">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className={`h-1 rounded-full flex-1 mx-1 ${i <= step ? "bg-burnz-500" : "bg-zinc-800"}`} />
+            <div key={i} className={`h-1 rounded-full flex-1 mx-1 ${i <= step ? "bg-primary" : "bg-zinc-800"}`} />
           ))}
         </div>
 
         <div className="flex-1 flex flex-col">
           {step === 1 && (
             <div className="flex flex-col flex-1">
-              <h2 className="text-2xl font-bold mb-2">Welcome to Burnz</h2>
+              <h2 className="text-2xl font-bold mb-2">Welcome to Prime Active</h2>
               <p className="text-zinc-400 mb-8">Let's set up your account to get started</p>
 
               <div className="space-y-4 mb-8">
@@ -103,11 +103,11 @@ export default function OnboardingPage() {
 
               <p className="text-sm text-zinc-500 mb-8 text-center">
                 By continuing, you agree to our{" "}
-                <Link href="/terms" className="text-burnz-500 hover:underline">
+                <Link href="/terms" className="text-primary hover:underline">
                   Terms of Service
                 </Link>{" "}
                 and{" "}
-                <Link href="/privacy" className="text-burnz-500 hover:underline">
+                <Link href="/privacy" className="text-primary hover:underline">
                   Privacy Policy
                 </Link>
               </p>
@@ -189,7 +189,7 @@ export default function OnboardingPage() {
               <div className="bg-zinc-900 rounded-lg p-4 mb-6">
                 <div className="map-container h-40 rounded-lg mb-4 flex items-center justify-center">
                   <div className="text-center p-4">
-                    <MapPin className="h-8 w-8 text-burnz-500 mx-auto mb-2" />
+                    <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
                     <p className="text-sm text-zinc-400">We'll track your routes and activities</p>
                   </div>
                 </div>
@@ -197,7 +197,7 @@ export default function OnboardingPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Activity className="h-5 w-5 text-burnz-500" />
+                      <Activity className="h-5 w-5 text-primary" />
                       <span className="text-sm">Activity Tracking</span>
                     </div>
                     <span className="text-xs text-zinc-400">Automatic</span>
@@ -205,7 +205,7 @@ export default function OnboardingPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-burnz-500" />
+                      <MapPin className="h-5 w-5 text-primary" />
                       <span className="text-sm">Location Services</span>
                     </div>
                     <span className="text-xs text-zinc-400">Required</span>
@@ -213,7 +213,7 @@ export default function OnboardingPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Heart className="h-5 w-5 text-burnz-500" />
+                      <Heart className="h-5 w-5 text-primary" />
                       <span className="text-sm">Health Data</span>
                     </div>
                     <span className="text-xs text-zinc-400">Optional</span>
@@ -236,16 +236,16 @@ export default function OnboardingPage() {
 
               <div className="grid grid-cols-2 gap-4 mb-8">
                 <div className="bg-zinc-900 rounded-lg p-4 text-center">
-                  <div className="bg-burnz-500/20 h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <Wallet className="h-6 w-6 text-burnz-500" />
+                  <div className="bg-primary/20 h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Wallet className="h-6 w-6 text-primary" />
                   </div>
                   <h3 className="font-medium mb-1">Earn Tokens</h3>
-                  <p className="text-xs text-zinc-400">Get BURNZ tokens for every activity</p>
+                  <p className="text-xs text-zinc-400">Get $ACTIVE tokens for every activity</p>
                 </div>
 
                 <div className="bg-zinc-900 rounded-lg p-4 text-center">
-                  <div className="bg-burnz-500/20 h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <Trophy className="h-6 w-6 text-burnz-500" />
+                  <div className="bg-primary/20 h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Trophy className="h-6 w-6 text-primary" />
                   </div>
                   <h3 className="font-medium mb-1">Collect NFTs</h3>
                   <p className="text-xs text-zinc-400">Unlock unique NFTs as you progress</p>
@@ -256,25 +256,25 @@ export default function OnboardingPage() {
                 <h3 className="font-medium mb-2">How It Works</h3>
                 <ul className="space-y-2 text-sm text-zinc-400">
                   <li className="flex items-start gap-2">
-                    <span className="bg-burnz-500 text-black rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="bg-primary text-black rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 mt-0.5">
                       1
                     </span>
                     <span>Track your activities using the app</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="bg-burnz-500 text-black rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="bg-primary text-black rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 mt-0.5">
                       2
                     </span>
-                    <span>Earn BURNZ tokens based on duration and intensity</span>
+                    <span>Earn $ACTIVE tokens based on duration and intensity</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="bg-burnz-500 text-black rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="bg-primary text-black rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 mt-0.5">
                       3
                     </span>
                     <span>Complete challenges to unlock exclusive NFTs</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="bg-burnz-500 text-black rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="bg-primary text-black rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0 mt-0.5">
                       4
                     </span>
                     <span>Trade or showcase your NFTs in the marketplace</span>

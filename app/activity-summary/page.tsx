@@ -95,15 +95,15 @@ export default function ActivitySummaryPage() {
 
           <div className="flex items-center justify-between p-3 bg-zinc-800 rounded-lg mb-3">
             <div className="flex items-center gap-3">
-              <div className="bg-burnz-500/20 p-2 rounded-full">
-                <Award className="h-5 w-5 text-burnz-500" />
+              <div className="bg-primary/20 p-2 rounded-full">
+                <Award className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium">BURNZ Tokens</p>
+                <p className="font-medium">$ACTIVE Tokens</p>
                 <p className="text-xs text-zinc-400">Added to your wallet</p>
               </div>
             </div>
-            <p className="font-bold text-burnz-500">+125</p>
+            <p className="font-bold text-primary">+125</p>
           </div>
 
           <div className="p-3 bg-zinc-800 rounded-lg">

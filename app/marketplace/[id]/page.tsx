@@ -41,7 +41,7 @@ export default function NFTDetailPage() {
 
   const handlePurchase = () => {
     // In a real app, this would trigger a blockchain transaction
-    alert(`Purchase initiated for ${nft.name} at ${nft.price} PLAY tokens`)
+    alert(`Purchase initiated for ${nft.name} at ${nft.price} $ACTIVE tokens`)
     // After successful purchase
     router.push("/marketplace/purchase-success")
   }
@@ -133,7 +133,7 @@ export default function NFTDetailPage() {
             </div>
             <div className="flex justify-between items-center">
               <p className="text-2xl font-bold">
-                {nft.price} <span className="text-primary">PLAY</span>
+                {nft.price} <span className="text-primary">$ACTIVE</span>
               </p>
               <p className="text-sm text-zinc-400">≈ ${(Number.parseInt(nft.price) * 0.2).toFixed(2)} USD</p>
             </div>

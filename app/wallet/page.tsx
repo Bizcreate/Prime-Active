@@ -157,7 +157,7 @@ export default function WalletPage() {
                   <p className="text-xs text-zinc-400">Morning Run</p>
                 </div>
                 <div className="ml-auto text-right">
-                  <p className="font-medium text-green-500">+125 PLAY</p>
+                  <p className="font-medium text-green-500">+125 $ACTIVE</p>
                   <p className="text-xs text-zinc-400">Today, 8:45 AM</p>
                 </div>
               </div>
@@ -173,7 +173,7 @@ export default function WalletPage() {
                   <p className="text-xs text-zinc-400">Early Bird Challenge</p>
                 </div>
                 <div className="ml-auto text-right">
-                  <p className="font-medium text-green-500">+250 PLAY</p>
+                  <p className="font-medium text-green-500">+250 $ACTIVE</p>
                   <p className="text-xs text-zinc-400">Yesterday, 7:30 AM</p>
                 </div>
               </div>
@@ -189,7 +189,7 @@ export default function WalletPage() {
                   <p className="text-xs text-zinc-400">Skate Session</p>
                 </div>
                 <div className="ml-auto text-right">
-                  <p className="font-medium text-green-500">+85 PLAY</p>
+                  <p className="font-medium text-green-500">+85 $ACTIVE</p>
                   <p className="text-xs text-zinc-400">Feb 20, 4:15 PM</p>
                 </div>
               </div>

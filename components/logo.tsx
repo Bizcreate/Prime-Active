@@ -40,7 +40,7 @@ export function Logo({ size = "md", withText = true }: LogoProps) {
       </div>
       {withText && (
         <div className="flex flex-col">
-          <span className="font-bold text-xl text-white">Burnz</span>
+          <span className="font-bold text-xl text-white">Prime Active</span>
           {size === "lg" && <span className="text-xs text-gray-400">Move & Earn</span>}
         </div>
       )}

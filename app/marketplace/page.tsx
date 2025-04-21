@@ -128,8 +128,8 @@ export default function MarketplacePage() {
               <Wallet className="h-6 w-6 text-burnz-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold">
-                {balance} <span className="text-burnz-500">BURNZ</span>
+              <p className="text-3xl font-bold">
+                {balance} <span className="text-primary">$ACTIVE</span>
               </p>
               <p className="text-xs text-zinc-400">Available for purchases</p>
             </div>

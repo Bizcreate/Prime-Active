@@ -1,181 +1,232 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { TabBar } from "@/components/tab-bar"
-import { ActivityCard } from "@/components/activity-card"
+import { TokenCard } from "@/components/token-card"
 import { NFTCard } from "@/components/nft-card"
-import { AchievementCard } from "@/components/achievement-card"
-import { CircularProgress } from "@/components/circular-progress"
-import { Play, ChevronRight, Trophy, Wallet } from "lucide-react"
+import { ChallengeCard } from "@/components/challenge-card"
+import { ActivityTracker } from "@/components/activity-tracker"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Plus, ChevronRight, Award, Trophy } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { generateRandomNFTImage } from "@/lib/utils"
 import { useWeb3 } from "@/components/web3-provider"
-import { Badge } from "@/components/ui/badge"
+import { generateRandomNFTImage } from "@/lib/utils"
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const { isConnected, points, hasAccess, ownedNFTs } = useWeb3()
+  const [activeTab, setActiveTab] = useState("activities")
+  const { address, balance, isConnected, ownedNFTs, points, hasAccess } = useWeb3()
 
   return (
     <main className="flex min-h-screen flex-col bg-black pb-20">
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Hey, Rider!</h1>
-            <p className="text-zinc-400">Ready to move and earn?</p>
-          </div>
-          <Link href="/profile">
-            <div className="h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center">
-              <span className="font-medium text-sm">JD</span>
-            </div>
-          </Link>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <Button variant="outline" size="icon">
+            <Plus className="h-5 w-5" />
+          </Button>
         </div>
 
-        {isConnected && (
-          <div className="bg-zinc-900 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-bold">NFT Status</h2>
-              {hasAccess && (
-                <Badge variant="success" className="text-xs">
-                  Verified
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Wallet className="h-5 w-5 text-primary" />
-                <span className="text-sm">{ownedNFTs.length} Verified NFTs</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Trophy className="h-4 w-4 text-primary" />
-                <span className="text-sm font-bold">{points} Points</span>
-              </div>
-            </div>
-            <div className="mt-2">
-              <Link href="/rewards">
-                <Button variant="outline" size="sm" className="w-full">
-                  View Rewards
+        <TokenCard amount={balance} change={{ value: "0.05", positive: true }} />
+
+        <div className="my-6">
+          <h2 className="font-bold mb-3">Track Activity</h2>
+          <ActivityTracker />
+        </div>
+
+        <Tabs defaultValue="activities" className="mb-6">
+          <TabsList className="grid grid-cols-3 mb-6">
+            <TabsTrigger value="activities">Activities</TabsTrigger>
+            <TabsTrigger value="nfts">NFTs</TabsTrigger>
+            <TabsTrigger value="challenges">Challenges</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="activities" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium">Recent Activities</h3>
+              <Link href="/activities">
+                <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                  View All
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </Link>
             </div>
-          </div>
-        )}
+
+            <div className="space-y-3">
+              <div className="bg-zinc-900 rounded-lg p-3">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h4 className="font-medium">Morning Run</h4>
+                    <p className="text-xs text-zinc-400">Today, 7:30 AM</p>
+                  </div>
+                  <div className="bg-primary/20 p-1 rounded-full">
+                    <Award className="h-4 w-4 text-primary" />
+                  </div>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <div>
+                    <p className="text-zinc-400">Distance</p>
+                    <p>5.2 km</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-400">Duration</p>
+                    <p>32:15</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-400">Reward</p>
+                    <p className="text-primary">+125 $ACTIVE</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-zinc-900 rounded-lg p-3">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h4 className="font-medium">Skate Session</h4>
+                    <p className="text-xs text-zinc-400">Yesterday, 4:15 PM</p>
+                  </div>
+                  <div className="bg-primary/20 p-1 rounded-full">
+                    <Award className="h-4 w-4 text-primary" />
+                  </div>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <div>
+                    <p className="text-zinc-400">Distance</p>
+                    <p>3.8 km</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-400">Duration</p>
+                    <p>1:15:00</p>
+                  </div>
+                  <div>
+                    <p className="text-zinc-400">Reward</p>
+                    <p className="text-primary">+85 $ACTIVE</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="nfts" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium">Your Collection</h3>
+              <Link href="/wallet">
+                <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                  View All
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {isConnected && ownedNFTs.length > 0 ? (
+                ownedNFTs
+                  .slice(0, 2)
+                  .map((nft, index) => (
+                    <NFTCard
+                      key={index}
+                      id={nft.tokenId}
+                      name={nft.name || `NFT #${nft.tokenId}`}
+                      image={nft.image || generateRandomNFTImage(Number(nft.tokenId))}
+                      rarity="legendary"
+                      activity={nft.collection}
+                    />
+                  ))
+              ) : (
+                <>
+                  <NFTCard
+                    id="nft-1"
+                    name="Step Master"
+                    image={generateRandomNFTImage(1)}
+                    rarity="rare"
+                    activity="Walking"
+                  />
+                  <NFTCard
+                    id="nft-2"
+                    name="Skate Legend"
+                    image={generateRandomNFTImage(2)}
+                    rarity="epic"
+                    activity="Skateboarding"
+                  />
+                </>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="challenges" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium">Active Challenges</h3>
+              <Link href="/challenges">
+                <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                  View All
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              <ChallengeCard
+                title="Morning Ride"
+                description="Complete a ride before 9am"
+                reward="50 $ACTIVE"
+                timeLeft="8 hours left"
+              />
+              <ChallengeCard
+                title="Weekend Warrior"
+                description="Complete 3 rides this weekend"
+                reward="150 $ACTIVE"
+                timeLeft="2 days left"
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
 
         <div className="bg-zinc-900 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-4 mb-4">
-            <CircularProgress value={75} size={60} strokeWidth={6} />
+          <div className="flex items-center gap-3 mb-3">
+            <div className="bg-primary/20 p-2 rounded-full">
+              <Trophy className="h-5 w-5 text-primary" />
+            </div>
             <div>
-              <h2 className="font-bold text-lg">Today's Progress</h2>
-              <p className="text-zinc-400 text-sm">You're doing great! Keep it up.</p>
+              <h3 className="font-medium">Weekly Leaderboard</h3>
+              <p className="text-xs text-zinc-400">You're in 12th place</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center">
-              <p className="text-2xl font-bold">1,275</p>
-              <p className="text-xs text-zinc-400">Steps</p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="bg-primary text-black rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
+                  1
+                </div>
+                <p className="text-sm">Marathon Pro</p>
+              </div>
+              <p className="text-sm">156.2 km</p>
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">7.5</p>
-              <p className="text-xs text-zinc-400">km</p>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="bg-zinc-700 rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
+                  2
+                </div>
+                <p className="text-sm">Skate Legend</p>
+              </div>
+              <p className="text-sm">142.8 km</p>
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">327</p>
-              <p className="text-xs text-zinc-400">kcal</p>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="bg-zinc-700 rounded-full h-5 w-5 flex items-center justify-center text-xs font-bold">
+                  3
+                </div>
+                <p className="text-sm">Wave Master</p>
+              </div>
+              <p className="text-sm">128.5 km</p>
             </div>
           </div>
-        </div>
 
-        <Link href="/start-activity">
-          <Button className="w-full py-6 text-lg mb-6 flex items-center gap-2">
-            <Play className="h-5 w-5" />
-            Start Activity
+          <Button variant="outline" className="w-full mt-3" asChild>
+            <Link href="/leaderboard">View Leaderboard</Link>
           </Button>
-        </Link>
-
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-bold">Recent Activities</h2>
-            <Link href="/activities" className="text-primary text-sm flex items-center">
-              View All <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="space-y-3">
-            <ActivityCard type="running" title="Morning Run" value="5.2" unit="km" progress={100} />
-            <ActivityCard type="skateboarding" title="Skate Session" value="45" unit="min" progress={100} />
-            <ActivityCard type="walking" title="Evening Walk" value="3.1" unit="km" progress={100} />
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-bold">Your NFT Collection</h2>
-            <Link href="/wallet" className="text-primary text-sm flex items-center">
-              View All <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            {ownedNFTs.length > 0 ? (
-              ownedNFTs
-                .slice(0, 2)
-                .map((nft, index) => (
-                  <NFTCard
-                    key={index}
-                    id={nft.tokenId}
-                    name={nft.name || `NFT #${nft.tokenId}`}
-                    image={nft.image || generateRandomNFTImage(Number(nft.tokenId))}
-                    rarity="legendary"
-                    activity={nft.collection}
-                  />
-                ))
-            ) : (
-              <>
-                <NFTCard
-                  id="nft-1"
-                  name="Step Master"
-                  image={generateRandomNFTImage(1)}
-                  rarity="rare"
-                  activity="Walking"
-                />
-                <NFTCard
-                  id="nft-2"
-                  name="Skate Legend"
-                  image={generateRandomNFTImage(2)}
-                  rarity="epic"
-                  activity="Skateboarding"
-                />
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-bold">Achievements</h2>
-            <Link href="/achievements" className="text-primary text-sm flex items-center">
-              View All <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <div className="space-y-3">
-            <AchievementCard
-              title="Early Bird"
-              description="Complete a morning activity 5 days in a row"
-              type="badge"
-              unlocked={true}
-            />
-            <AchievementCard
-              title="Marathon Runner"
-              description="Run a total of 42.2km"
-              type="medal"
-              unlocked={false}
-              progress={25}
-              maxProgress={42.2}
-            />
-          </div>
         </div>
       </div>
 

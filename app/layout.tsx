@@ -7,8 +7,9 @@ import { Web3Provider } from "@/components/web3-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
+// Update the metadata title and description
 export const metadata: Metadata = {
-  title: "Play-On | Move & Earn",
+  title: "Prime Active | Move & Earn",
   description: "Track your activities, earn rewards, and collect NFTs",
     generator: 'v0.dev'
 }

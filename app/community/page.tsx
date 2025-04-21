@@ -36,7 +36,7 @@ export default function CommunityPage() {
             username="snowqueen"
             avatar="/diverse-woman-portrait.png"
             time="Yesterday"
-            content="Perfect powder day at Mountain High! Earned 120 $PRIME tokens today."
+            content="Perfect powder day at Mountain High! Earned 120 $ACTIVE tokens today."
             image="/powder-day-shred.png"
             likes={42}
             comments={8}
@@ -47,14 +47,14 @@ export default function CommunityPage() {
             avatar="/wave-rider-profile.png"
             time="2 days ago"
             content="Check out this new spot I found! Perfect waves and not crowded at all."
-            image="/placeholder.svg?height=300&width=500&query=surfing+wave"
+            image="/surfer-silhouette.png"
             likes={36}
             comments={12}
           />
 
           <PostCard
             username="primeactive"
-            avatar="/placeholder.svg?height=40&width=40&query=logo"
+            avatar="/abstract-geometric-logo.png"
             time="3 days ago"
             content="We're excited to announce our new partnership with Burton! Join the sponsored challenge to earn exclusive NFTs and $PRIME tokens."
             likes={89}

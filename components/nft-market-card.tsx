@@ -46,7 +46,7 @@ export function NFTMarketCard({ id, name, image, price, rarity, activity, seller
             </div>
           </div>
           <div className="flex justify-between items-center mt-2">
-            <p className="font-bold text-primary">{price} PLAY</p>
+            <p className="font-bold text-primary">{price} $ACTIVE</p>
             <Link href={`/marketplace/${id}`}>
               <Button size="sm">View</Button>
             </Link>

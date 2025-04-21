@@ -96,12 +96,12 @@ export default function SellNFTPage() {
 
           <div>
             <label htmlFor="price" className="block text-sm font-medium mb-2">
-              Price (PLAY tokens)
+              Price ($ACTIVE tokens)
             </label>
             <Input
               id="price"
               type="number"
-              placeholder="Enter price in PLAY tokens"
+              placeholder="Enter price in $ACTIVE tokens"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               className="bg-zinc-900 border-zinc-800"

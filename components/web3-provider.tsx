@@ -4,268 +4,285 @@ import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 import { ethers } from "ethers"
 
-// NFT Collection Addresses
-const PRIME_MATES_ADDRESS = "0x12662b6a2a424a0090b7D09401fB775A9b968898"
-const PRIME_TO_THE_BONE_ADDRESS = "0x72BCdE3C41c4Afa153F8E7849a9Cf64E2CC84E75"
+// Define the shape of our Web3 context
+interface Web3ContextType {
+  provider: ethers.providers.Web3Provider | null
+  signer: ethers.Signer | null
+  address: string | null
+  balance: string
+  isConnected: boolean
+  connectWallet: () => Promise<boolean>
+  disconnectWallet: () => void
+  ownedNFTs: NFT[]
+  points: number
+  hasAccess: boolean
+  verifyNFTOwnership: () => Promise<boolean>
+}
 
-// ABI for ERC721 (NFT) interface - minimal version for balanceOf and tokenOfOwnerByIndex
-const ERC721_ABI = [
+// NFT interface
+interface NFT {
+  tokenId: string
+  name?: string
+  image?: string
+  collection: string
+}
+
+// Create the context with default values
+const Web3Context = createContext<Web3ContextType>({
+  provider: null,
+  signer: null,
+  address: null,
+  balance: "0",
+  isConnected: false,
+  connectWallet: async () => false,
+  disconnectWallet: () => {},
+  ownedNFTs: [],
+  points: 0,
+  hasAccess: false,
+  verifyNFTOwnership: async () => false,
+})
+
+// NFT contract ABI (simplified for verification)
+const NFT_ABI = [
   "function balanceOf(address owner) view returns (uint256)",
   "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
   "function tokenURI(uint256 tokenId) view returns (string)",
 ]
 
-interface NFT {
-  collection: string
-  tokenId: string
-  image?: string
-  name?: string
-}
-
-interface Web3ContextType {
-  address: string | null
-  balance: string
-  isConnected: boolean
-  connectWallet: () => Promise<void>
-  disconnectWallet: () => void
-  verifyNFTOwnership: () => Promise<void>
-  ownedNFTs: NFT[]
-  isVerifying: boolean
-  points: number
-  hasAccess: boolean
-}
-
-const Web3Context = createContext<Web3ContextType>({
-  address: null,
-  balance: "0",
-  isConnected: false,
-  connectWallet: async () => {},
-  disconnectWallet: () => {},
-  verifyNFTOwnership: async () => {},
-  ownedNFTs: [],
-  isVerifying: false,
-  points: 0,
-  hasAccess: false,
-})
-
-export const useWeb3 = () => useContext(Web3Context)
+// Contract addresses - replace with your actual contract addresses
+const NFT_CONTRACT_ADDRESS = "0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e" // Example NFT contract (Doodles)
 
 export function Web3Provider({ children }: { children: React.ReactNode }) {
+  const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null)
+  const [signer, setSigner] = useState<ethers.Signer | null>(null)
   const [address, setAddress] = useState<string | null>(null)
   const [balance, setBalance] = useState("0")
   const [isConnected, setIsConnected] = useState(false)
   const [ownedNFTs, setOwnedNFTs] = useState<NFT[]>([])
-  const [isVerifying, setIsVerifying] = useState(false)
   const [points, setPoints] = useState(0)
   const [hasAccess, setHasAccess] = useState(false)
-  const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null)
+  const [connectionAttempted, setConnectionAttempted] = useState(false)
 
-  // Initialize provider when component mounts
+  // Initialize provider from window.ethereum if available
   useEffect(() => {
-    // Check if window is defined (browser environment)
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        const ethersProvider = new ethers.providers.Web3Provider(window.ethereum as any)
-        setProvider(ethersProvider)
-      } catch (error) {
-        console.error("Error initializing provider:", error)
-      }
-    }
-  }, [])
-
-  // Check for existing connection on mount
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (provider) {
+    const initProvider = async () => {
+      // Check if we're in a browser environment
+      if (typeof window !== "undefined") {
         try {
-          const accounts = await provider.listAccounts()
-          if (accounts.length > 0) {
-            setAddress(accounts[0])
-            setIsConnected(true)
+          // Check if ethereum is available (MetaMask or similar)
+          if (window.ethereum) {
+            console.log("Ethereum provider detected")
 
-            // Get balance
-            const balanceWei = await provider.getBalance(accounts[0])
-            const balanceEth = ethers.utils.formatEther(balanceWei)
-            setBalance(Number.parseFloat(balanceEth).toFixed(4))
+            // Create ethers provider
+            const ethersProvider = new ethers.providers.Web3Provider(window.ethereum, "any")
+            setProvider(ethersProvider)
 
-            // Verify NFT ownership
-            await verifyNFTOwnership()
+            // Check if already connected
+            const accounts = await ethersProvider.listAccounts()
+            if (accounts.length > 0) {
+              const userSigner = ethersProvider.getSigner()
+              const userAddress = await userSigner.getAddress()
+
+              setSigner(userSigner)
+              setAddress(userAddress)
+              setIsConnected(true)
+
+              // Get balance
+              const userBalance = await ethersProvider.getBalance(userAddress)
+              setBalance(ethers.utils.formatEther(userBalance))
+
+              // Verify NFT ownership
+              await verifyNFTOwnership()
+            }
+          } else {
+            console.log("No Ethereum provider detected")
           }
         } catch (error) {
-          console.error("Error checking connection:", error)
+          console.error("Error initializing Web3Provider:", error)
+        } finally {
+          setConnectionAttempted(true)
         }
       }
     }
 
-    const savedAddress = localStorage.getItem("walletAddress")
-    const walletConnected = localStorage.getItem("walletConnected") === "true"
+    initProvider()
+  }, [])
 
-    if (savedAddress && walletConnected) {
-      setAddress(savedAddress)
-      setIsConnected(true)
-
-      // For demo purposes, set mock data
-      setBalance("1.245")
-
-      // Mock NFT data for demo
-      const mockNFTs = [
-        {
-          collection: "Prime Mates Board Club",
-          tokenId: "1234",
-          image: `/placeholder.svg?height=300&width=300&query=prime+mates+nft+1234`,
-          name: `Prime Mate #1234`,
-        },
-        {
-          collection: "Prime To The Bone",
-          tokenId: "5678",
-          image: `/placeholder.svg?height=300&width=300&query=prime+to+the+bone+nft+5678`,
-          name: `Prime Bone #5678`,
-        },
-      ]
-      setOwnedNFTs(mockNFTs)
-      setPoints(250) // 100 + 150
-      setHasAccess(true)
-    }
-
-    if (provider && isConnected && !ownedNFTs.length) {
-      checkConnection()
-    }
-  }, [provider, isConnected])
-
-  const connectWallet = async () => {
+  // Handle account changes
+  useEffect(() => {
     if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        // For demo purposes, we'll use a mock implementation
-        const mockAddress = "0x71C...93E4"
-        setAddress(mockAddress)
-        setIsConnected(true)
-        setBalance("1.245")
+      const handleAccountsChanged = async (accounts: string[]) => {
+        console.log("Accounts changed:", accounts)
+        if (accounts.length === 0) {
+          // User disconnected
+          disconnectWallet()
+        } else if (accounts[0] !== address) {
+          // Account changed
+          if (provider) {
+            const userSigner = provider.getSigner()
+            const userAddress = await userSigner.getAddress()
 
-        // Store in localStorage for persistence
-        localStorage.setItem("walletConnected", "true")
-        localStorage.setItem("walletAddress", mockAddress)
+            setSigner(userSigner)
+            setAddress(userAddress)
+            setIsConnected(true)
 
-        // Mock NFT verification
-        setTimeout(() => {
-          const mockNFTs = [
-            {
-              collection: "Prime Mates Board Club",
-              tokenId: "1234",
-              image: `/placeholder.svg?height=300&width=300&query=prime+mates+nft+1234`,
-              name: `Prime Mate #1234`,
-            },
-            {
-              collection: "Prime To The Bone",
-              tokenId: "5678",
-              image: `/placeholder.svg?height=300&width=300&query=prime+to+the+bone+nft+5678`,
-              name: `Prime Bone #5678`,
-            },
-          ]
-          setOwnedNFTs(mockNFTs)
-          setPoints(250) // 100 + 150
-          setHasAccess(true)
-        }, 1500)
+            // Get balance
+            const userBalance = await provider.getBalance(userAddress)
+            setBalance(ethers.utils.formatEther(userBalance))
 
-        return true
-      } catch (error) {
-        console.error("Error connecting wallet:", error)
+            // Verify NFT ownership
+            await verifyNFTOwnership()
+          }
+        }
       }
-    } else {
-      console.error("Ethereum provider not available")
 
-      // For demo purposes, we'll use a mock implementation
-      const mockAddress = "0x71C...93E4"
-      setAddress(mockAddress)
-      setIsConnected(true)
-      setBalance("1.245")
+      const handleChainChanged = () => {
+        // Reload the page when chain changes
+        window.location.reload()
+      }
 
-      // Store in localStorage for persistence
-      localStorage.setItem("walletConnected", "true")
-      localStorage.setItem("walletAddress", mockAddress)
+      window.ethereum.on("accountsChanged", handleAccountsChanged)
+      window.ethereum.on("chainChanged", handleChainChanged)
 
-      // Mock NFT verification
-      setTimeout(() => {
-        const mockNFTs = [
-          {
-            collection: "Prime Mates Board Club",
-            tokenId: "1234",
-            image: `/placeholder.svg?height=300&width=300&query=prime+mates+nft+1234`,
-            name: `Prime Mate #1234`,
-          },
-          {
-            collection: "Prime To The Bone",
-            tokenId: "5678",
-            image: `/placeholder.svg?height=300&width=300&query=prime+to+the+bone+nft+5678`,
-            name: `Prime Bone #5678`,
-          },
-        ]
-        setOwnedNFTs(mockNFTs)
-        setPoints(250) // 100 + 150
-        setHasAccess(true)
-      }, 1500)
+      return () => {
+        window.ethereum.removeListener("accountsChanged", handleAccountsChanged)
+        window.ethereum.removeListener("chainChanged", handleChainChanged)
+      }
     }
+  }, [provider, address])
+
+  // Connect wallet function
+  const connectWallet = async (): Promise<boolean> => {
+    try {
+      if (typeof window !== "undefined" && window.ethereum) {
+        // Request account access
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
+
+        if (accounts.length > 0) {
+          // Create ethers provider if not already created
+          const ethersProvider = provider || new ethers.providers.Web3Provider(window.ethereum, "any")
+          setProvider(ethersProvider)
+
+          const userSigner = ethersProvider.getSigner()
+          const userAddress = await userSigner.getAddress()
+
+          setSigner(userSigner)
+          setAddress(userAddress)
+          setIsConnected(true)
+
+          // Get balance
+          const userBalance = await ethersProvider.getBalance(userAddress)
+          setBalance(ethers.utils.formatEther(userBalance))
+
+          // Verify NFT ownership
+          await verifyNFTOwnership()
+
+          return true
+        }
+      } else {
+        console.error("No Ethereum provider detected")
+        alert("Please install MetaMask or another Web3 wallet to connect")
+      }
+    } catch (error) {
+      console.error("Error connecting wallet:", error)
+      alert("Error connecting wallet. Please try again.")
+    }
+
     return false
   }
 
+  // Disconnect wallet function
   const disconnectWallet = () => {
+    setSigner(null)
     setAddress(null)
-    setBalance("0")
     setIsConnected(false)
+    setBalance("0")
     setOwnedNFTs([])
-    setPoints(0)
     setHasAccess(false)
-    localStorage.removeItem("walletConnected")
-    localStorage.removeItem("walletAddress")
   }
 
-  const verifyNFTOwnership = async () => {
-    if (!provider && !address) return
+  // Verify NFT ownership
+  const verifyNFTOwnership = async (): Promise<boolean> => {
+    if (!provider || !address) return false
 
-    setIsVerifying(true)
     try {
-      // For demo purposes, we'll use mock data
-      setTimeout(() => {
-        const mockNFTs = [
-          {
-            collection: "Prime Mates Board Club",
-            tokenId: "1234",
-            image: `/placeholder.svg?height=300&width=300&query=prime+mates+nft+1234`,
-            name: `Prime Mate #1234`,
-          },
-          {
-            collection: "Prime To The Bone",
-            tokenId: "5678",
-            image: `/placeholder.svg?height=300&width=300&query=prime+to+the+bone+nft+5678`,
-            name: `Prime Bone #5678`,
-          },
-        ]
-        setOwnedNFTs(mockNFTs)
-        setPoints(250) // 100 + 150
+      // Create contract instance
+      const nftContract = new ethers.Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, provider)
+
+      // Get balance of NFTs
+      const balance = await nftContract.balanceOf(address)
+      const balanceNumber = balance.toNumber()
+
+      console.log(`User owns ${balanceNumber} NFTs`)
+
+      // If user owns at least one NFT, they have access
+      if (balanceNumber > 0) {
         setHasAccess(true)
-        setIsVerifying(false)
-      }, 1500)
+
+        // Set points based on NFT ownership (example logic)
+        setPoints(balanceNumber * 100)
+
+        // Get owned NFTs (up to 10 for performance)
+        const nftsToFetch = Math.min(balanceNumber, 10)
+        const fetchedNFTs: NFT[] = []
+
+        for (let i = 0; i < nftsToFetch; i++) {
+          try {
+            const tokenId = await nftContract.tokenOfOwnerByIndex(address, i)
+
+            // For demo purposes, we're not fetching actual metadata
+            // In a real app, you would fetch the tokenURI and get metadata
+            fetchedNFTs.push({
+              tokenId: tokenId.toString(),
+              name: `Prime Active NFT #${tokenId}`,
+              collection: "Prime Active Collection",
+            })
+          } catch (err) {
+            console.error(`Error fetching NFT at index ${i}:`, err)
+          }
+        }
+
+        setOwnedNFTs(fetchedNFTs)
+        return true
+      } else {
+        setHasAccess(false)
+        setPoints(0)
+        setOwnedNFTs([])
+        return false
+      }
     } catch (error) {
       console.error("Error verifying NFT ownership:", error)
-      setIsVerifying(false)
+      setHasAccess(false)
+      setPoints(0)
+      setOwnedNFTs([])
+      return false
     }
   }
 
-  return (
-    <Web3Context.Provider
-      value={{
-        address,
-        balance,
-        isConnected,
-        connectWallet,
-        disconnectWallet,
-        verifyNFTOwnership,
-        ownedNFTs,
-        isVerifying,
-        points,
-        hasAccess,
-      }}
-    >
-      {children}
-    </Web3Context.Provider>
-  )
+  // Provide the context value
+  const contextValue: Web3ContextType = {
+    provider,
+    signer,
+    address,
+    balance,
+    isConnected,
+    connectWallet,
+    disconnectWallet,
+    ownedNFTs,
+    points,
+    hasAccess,
+    verifyNFTOwnership,
+  }
+
+  return <Web3Context.Provider value={contextValue}>{children}</Web3Context.Provider>
+}
+
+// Custom hook to use the Web3 context
+export const useWeb3 = () => useContext(Web3Context)
+
+// Add this to make window.ethereum available to TypeScript
+declare global {
+  interface Window {
+    ethereum?: any
+  }
 }

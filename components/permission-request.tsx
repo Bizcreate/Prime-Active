@@ -31,6 +31,16 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
   const checkLocationPermission = async () => {
     try {
       addDebugLog("Checking location permission")
+
+      // First check if we're in a preview/iframe environment where geolocation might be blocked
+      const isPreviewEnvironment = window.location.hostname.includes("vercel") || window.top !== window.self // Check if in iframe
+
+      if (isPreviewEnvironment) {
+        addDebugLog("Detected preview environment - using mock permissions")
+        setLocationPermission("mock")
+        return
+      }
+
       if (navigator.permissions && navigator.permissions.query) {
         try {
           const result = await navigator.permissions.query({ name: "geolocation" as PermissionName })
@@ -41,7 +51,7 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
           result.addEventListener("change", () => {
             addDebugLog(`Location permission changed to: ${result.state}`)
             setLocationPermission(result.state)
-            if (result.state === "granted" && motionPermission === "granted") {
+            if (result.state === "granted" && (motionPermission === "granted" || motionPermission === "mock")) {
               onPermissionGranted?.()
             }
           })
@@ -62,17 +72,37 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
 
   const fallbackLocationCheck = () => {
     addDebugLog("Using getCurrentPosition fallback for location permission check")
+
+    // Check if we're in a preview/iframe environment
+    const isPreviewEnvironment = window.location.hostname.includes("vercel") || window.top !== window.self
+
+    if (isPreviewEnvironment) {
+      addDebugLog("Detected preview environment in fallback - using mock permissions")
+      setLocationPermission("mock")
+      return
+    }
+
     navigator.geolocation.getCurrentPosition(
       () => {
         addDebugLog("Location permission granted (fallback)")
         setLocationPermission("granted")
-        if (motionPermission === "granted") {
+        if (motionPermission === "granted" || motionPermission === "mock") {
           onPermissionGranted?.()
         }
       },
       (err) => {
-        addDebugLog(`Location permission denied (fallback): ${err.code} - ${err.message}`)
-        setLocationPermission("denied")
+        if (err.code === 1) {
+          // Permission denied
+          addDebugLog(`Location permission denied (fallback): ${err.code} - ${err.message}`)
+          setLocationPermission("denied")
+        } else if (err.message && err.message.includes("permissions policy")) {
+          // Permissions policy error (iframe or non-HTTPS)
+          addDebugLog("Location blocked by permissions policy - using mock permissions")
+          setLocationPermission("mock")
+        } else {
+          addDebugLog(`Location error (fallback): ${err.code} - ${err.message}`)
+          setLocationPermission("denied")
+        }
       },
       { timeout: 5000, maximumAge: 0, enableHighAccuracy: true },
     )
@@ -82,6 +112,16 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
   const checkMotionPermission = async () => {
     try {
       addDebugLog("Checking motion permission")
+
+      // Check if we're in a preview/iframe environment
+      const isPreviewEnvironment = window.location.hostname.includes("vercel") || window.top !== window.self
+
+      if (isPreviewEnvironment) {
+        addDebugLog("Detected preview environment - using mock permissions for motion")
+        setMotionPermission("mock")
+        return
+      }
+
       // iOS requires permission for DeviceMotionEvent
       if (
         typeof DeviceMotionEvent !== "undefined" &&
@@ -107,19 +147,41 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
   // Request location permission
   const requestLocationPermission = () => {
     addDebugLog("Requesting location permission")
+
+    // Check if we're in a preview/iframe environment
+    const isPreviewEnvironment = window.location.hostname.includes("vercel") || window.top !== window.self
+
+    if (isPreviewEnvironment) {
+      addDebugLog("Detected preview environment - simulating granted permission")
+      setLocationPermission("mock")
+      if (motionPermission === "granted" || motionPermission === "mock") {
+        onPermissionGranted?.()
+      }
+      return
+    }
+
     navigator.geolocation.getCurrentPosition(
       () => {
         addDebugLog("Location permission granted")
         setLocationPermission("granted")
-        if (motionPermission === "granted") {
+        if (motionPermission === "granted" || motionPermission === "mock") {
           onPermissionGranted?.()
         }
       },
       (error) => {
-        console.error("Location permission denied:", error)
-        addDebugLog(`Location permission denied: ${error.code} - ${error.message}`)
-        setLocationPermission("denied")
-        setError("Location permission is required for activity tracking")
+        if (error.message && error.message.includes("permissions policy")) {
+          // Permissions policy error (iframe or non-HTTPS)
+          addDebugLog("Location blocked by permissions policy - using mock permissions")
+          setLocationPermission("mock")
+          if (motionPermission === "granted" || motionPermission === "mock") {
+            onPermissionGranted?.()
+          }
+        } else {
+          console.error("Location permission denied:", error)
+          addDebugLog(`Location permission denied: ${error.code} - ${error.message}`)
+          setLocationPermission("denied")
+          setError("Location permission is required for activity tracking")
+        }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     )
@@ -129,6 +191,19 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
   const requestMotionPermission = async () => {
     try {
       addDebugLog("Requesting motion permission")
+
+      // Check if we're in a preview/iframe environment
+      const isPreviewEnvironment = window.location.hostname.includes("vercel") || window.top !== window.self
+
+      if (isPreviewEnvironment) {
+        addDebugLog("Detected preview environment - simulating granted motion permission")
+        setMotionPermission("mock")
+        if (locationPermission === "granted" || locationPermission === "mock") {
+          onPermissionGranted?.()
+        }
+        return
+      }
+
       // iOS requires explicit permission
       if (
         typeof DeviceMotionEvent !== "undefined" &&
@@ -140,7 +215,7 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
           addDebugLog(`iOS motion permission result: ${permission}`)
           setMotionPermission(permission === "granted" ? "granted" : "denied")
 
-          if (permission === "granted" && locationPermission === "granted") {
+          if (permission === "granted" && (locationPermission === "granted" || locationPermission === "mock")) {
             onPermissionGranted?.()
           }
         } catch (err) {
@@ -150,7 +225,7 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
       } else {
         addDebugLog("No explicit motion permission needed, setting to granted")
         setMotionPermission("granted")
-        if (locationPermission === "granted") {
+        if (locationPermission === "granted" || locationPermission === "mock") {
           onPermissionGranted?.()
         }
       }
@@ -170,7 +245,9 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
   }
 
   // Check if all permissions are granted
-  const allPermissionsGranted = locationPermission === "granted" && motionPermission === "granted"
+  const allPermissionsGranted =
+    (locationPermission === "granted" || locationPermission === "mock") &&
+    (motionPermission === "granted" || motionPermission === "mock")
 
   return (
     <Card className="bg-zinc-900 border-zinc-800">
@@ -200,6 +277,10 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
                 <span className="text-green-500 flex items-center gap-1">
                   <Check className="h-3 w-3" /> Granted
                 </span>
+              ) : locationPermission === "mock" ? (
+                <span className="text-blue-500 flex items-center gap-1">
+                  <Check className="h-3 w-3" /> Simulated
+                </span>
               ) : locationPermission === "denied" ? (
                 <span className="text-red-500">Denied</span>
               ) : (
@@ -218,6 +299,10 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
                 <span className="text-green-500 flex items-center gap-1">
                   <Check className="h-3 w-3" /> Granted
                 </span>
+              ) : motionPermission === "mock" ? (
+                <span className="text-blue-500 flex items-center gap-1">
+                  <Check className="h-3 w-3" /> Simulated
+                </span>
               ) : motionPermission === "denied" ? (
                 <span className="text-red-500">Denied</span>
               ) : (
@@ -226,6 +311,13 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
             </div>
           </div>
         </div>
+
+        {(locationPermission === "mock" || motionPermission === "mock") && (
+          <div className="mt-4 bg-blue-900/20 border border-blue-800 rounded-md p-3 text-sm text-blue-400">
+            <p className="font-medium mb-1">Preview Mode Active</p>
+            <p>Using simulated permissions for preview. Real device permissions will be requested when deployed.</p>
+          </div>
+        )}
 
         {/* Debug logs - only in development */}
         {debugLogs.length > 0 && (

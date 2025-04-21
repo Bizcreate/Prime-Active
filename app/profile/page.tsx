@@ -9,6 +9,7 @@ import { useWeb3 } from "@/components/web3-provider"
 import { NFTVerification } from "@/components/nft-verification"
 import { Badge } from "@/components/ui/badge"
 import { WalletConnectButton } from "@/components/wallet-connect-button"
+import Image from "next/image"
 
 export default function ProfilePage() {
   const { address, isConnected, disconnectWallet, points, hasAccess } = useWeb3()
@@ -26,22 +27,31 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex flex-col items-center mb-8">
-          <div className="h-24 w-24 rounded-full bg-zinc-800 flex items-center justify-center mb-3">
-            <User className="h-12 w-12 text-zinc-400" />
+          <div className="relative">
+            <Image
+              src="/prime-mates-logo.png"
+              alt="Prime Mates Board Club"
+              width={150}
+              height={75}
+              className="object-contain mb-4"
+            />
+            <div className="h-24 w-24 rounded-full bg-zinc-800 flex items-center justify-center mb-3 mx-auto">
+              <User className="h-12 w-12 text-zinc-400" />
+            </div>
           </div>
           <h2 className="text-xl font-bold mb-1">Fathoni Ali</h2>
           <p className="text-zinc-400 text-sm">@fathoni • Joined April 2023</p>
 
           {isConnected && hasAccess && (
             <Badge variant="success" className="mt-2">
-              Verified NFT Owner
+              Verified Prime Mate
             </Badge>
           )}
 
           {isConnected && (
-            <div className="mt-2 flex items-center gap-1 bg-zinc-900 px-2 py-1 rounded-full">
-              <div className="h-2 w-2 rounded-full bg-green-500"></div>
-              <span className="text-xs">{points} Points</span>
+            <div className="mt-2 flex items-center gap-1 bg-banana/10 px-3 py-1 rounded-full">
+              <Image src="/banana-icon.png" alt="Banana Points" width={16} height={16} className="object-contain" />
+              <span className="text-xs text-primary">{points} Banana Points</span>
             </div>
           )}
 
@@ -59,6 +69,26 @@ export default function ProfilePage() {
               <p className="text-xs text-zinc-400">yrs</p>
             </div>
           </div>
+        </div>
+
+        <div className="banana-card p-4 mb-6">
+          <h2 className="text-lg font-medium mb-3 flex items-center">
+            <Image src="/shaka-icon.png" alt="Shaka" width={24} height={24} className="mr-2 shaka-animation" />
+            Board Club Status
+          </h2>
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="font-medium">Prime Mate</p>
+              <p className="text-xs text-zinc-400">Active Member</p>
+            </div>
+            <div className="bg-primary/20 px-3 py-1 rounded-full">
+              <p className="text-xs text-primary font-medium">Level 3</p>
+            </div>
+          </div>
+          <div className="mt-3 bg-zinc-800 h-2 rounded-full overflow-hidden">
+            <div className="bg-primary h-full" style={{ width: "65%" }}></div>
+          </div>
+          <p className="text-xs text-zinc-400 mt-1 text-right">65% to Level 4</p>
         </div>
 
         <div className="space-y-6">

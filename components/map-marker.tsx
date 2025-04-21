@@ -1,5 +1,5 @@
 interface MapMarkerProps {
-  type: "skatepark" | "trail" | "surf" | "user" | "checkpoint"
+  type: "skatepark" | "trail" | "surf" | "user" | "checkpoint" | "spot"
   size?: "sm" | "md" | "lg"
   active?: boolean
 }
@@ -11,6 +11,7 @@ export function MapMarker({ type, size = "md", active = false }: MapMarkerProps)
     surf: "#60a5fa",
     user: "#f43f5e",
     checkpoint: "#a855f7",
+    spot: "#ffc72d",
   }
 
   const sizes = {

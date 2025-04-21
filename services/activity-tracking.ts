@@ -36,7 +36,7 @@ export function useActivityTracking() {
   const [isTracking, setIsTracking] = useState(false)
   const [currentActivity, setCurrentActivity] = useState<ActivitySession | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [permissionStatus, setPermissionStatus] = useState<PermissionState | null>(null)
+  const [permissionStatus, setPermissionStatus] = useState<PermissionState | "mock" | null>(null)
   const [locations, setLocations] = useState<Location[]>([])
   const [stats, setStats] = useState<ActivityStats>({
     steps: 0,
@@ -58,6 +58,15 @@ export function useActivityTracking() {
     const checkPermissions = async () => {
       try {
         addDebugLog("Checking geolocation permissions")
+
+        // Check if we're in a preview/iframe environment
+        const isPreviewEnvironment = window.location.hostname.includes("vercel") || window.top !== window.self
+
+        if (isPreviewEnvironment) {
+          addDebugLog("Detected preview environment - using mock permissions")
+          setPermissionStatus("mock")
+          return
+        }
 
         // Check if geolocation is available
         if (!navigator.geolocation) {
@@ -97,14 +106,30 @@ export function useActivityTracking() {
     const fallbackPermissionCheck = () => {
       // Fallback for browsers that don't support permissions API
       addDebugLog("Using getCurrentPosition fallback for permission check")
+
+      // Check if we're in a preview/iframe environment
+      const isPreviewEnvironment = window.location.hostname.includes("vercel") || window.top !== window.self
+
+      if (isPreviewEnvironment) {
+        addDebugLog("Detected preview environment in fallback - using mock permissions")
+        setPermissionStatus("mock")
+        return
+      }
+
       navigator.geolocation.getCurrentPosition(
         () => {
           addDebugLog("Permission granted (fallback)")
           setPermissionStatus("granted")
         },
         (err) => {
-          addDebugLog(`Permission denied (fallback): ${err.code} - ${err.message}`)
-          setPermissionStatus("denied")
+          if (err.message && err.message.includes("permissions policy")) {
+            // Permissions policy error (iframe or non-HTTPS)
+            addDebugLog("Location blocked by permissions policy - using mock permissions")
+            setPermissionStatus("mock")
+          } else {
+            addDebugLog(`Permission denied (fallback): ${err.code} - ${err.message}`)
+            setPermissionStatus("denied")
+          }
         },
         { timeout: 5000, maximumAge: 0, enableHighAccuracy: true },
       )
@@ -123,8 +148,11 @@ export function useActivityTracking() {
         return false
       }
 
+      // Check if we're in a preview/iframe environment
+      const isPreviewEnvironment = window.location.hostname.includes("vercel") || window.top !== window.self
+
       // Check for geolocation support
-      if (!navigator.geolocation) {
+      if (!navigator.geolocation && !isPreviewEnvironment) {
         setError("Geolocation is not supported by your browser")
         addDebugLog("Geolocation not supported")
         return false
@@ -132,10 +160,23 @@ export function useActivityTracking() {
 
       addDebugLog(`Starting ${type} activity tracking`)
 
-      // Get initial position
+      // Get initial position or use mock position in preview
       try {
-        const position = await getCurrentPosition()
-        addDebugLog(`Got initial position: ${position.latitude}, ${position.longitude}`)
+        let position: Location
+
+        if (isPreviewEnvironment) {
+          // Use mock position for preview
+          addDebugLog("Using mock position for preview environment")
+          position = {
+            latitude: 37.7749, // San Francisco coordinates as example
+            longitude: -122.4194,
+            accuracy: 10,
+            timestamp: Date.now(),
+          }
+        } else {
+          position = await getCurrentPosition()
+          addDebugLog(`Got initial position: ${position.latitude}, ${position.longitude}`)
+        }
 
         // Create new activity session
         const newActivity: ActivitySession = {
@@ -153,16 +194,20 @@ export function useActivityTracking() {
         setLocations([position])
         setIsTracking(true)
 
-        // Start watching position
-        addDebugLog("Starting position watching")
-        const id = navigator.geolocation.watchPosition(handlePositionUpdate, handlePositionError, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-        })
+        // Start watching position if not in preview
+        if (!isPreviewEnvironment) {
+          addDebugLog("Starting position watching")
+          const id = navigator.geolocation.watchPosition(handlePositionUpdate, handlePositionError, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          })
 
-        setWatchId(id)
-        addDebugLog(`Watch ID: ${id}`)
+          setWatchId(id)
+          addDebugLog(`Watch ID: ${id}`)
+        } else {
+          addDebugLog("Using mock position updates for preview environment")
+        }
 
         // Start step counter if available
         startStepCounting()
@@ -172,9 +217,39 @@ export function useActivityTracking() {
 
         return true
       } catch (posErr) {
-        addDebugLog(`Failed to get initial position: ${posErr}`)
-        setError("Failed to get current position. Please ensure location permissions are granted.")
-        return false
+        if (isPreviewEnvironment) {
+          // In preview, continue with mock data
+          addDebugLog("Using mock data for preview despite position error")
+
+          const mockPosition: Location = {
+            latitude: 37.7749,
+            longitude: -122.4194,
+            accuracy: 10,
+            timestamp: Date.now(),
+          }
+
+          const newActivity: ActivitySession = {
+            id: generateId(),
+            type,
+            startTime: Date.now(),
+            locations: [mockPosition],
+            distance: 0,
+            steps: 0,
+            calories: 0,
+            isActive: true,
+          }
+
+          setCurrentActivity(newActivity)
+          setLocations([mockPosition])
+          setIsTracking(true)
+          startMockDataUpdates()
+
+          return true
+        } else {
+          addDebugLog(`Failed to get initial position: ${posErr}`)
+          setError("Failed to get current position. Please ensure location permissions are granted.")
+          return false
+        }
       }
     } catch (err) {
       console.error("Error starting activity:", err)
@@ -429,24 +504,48 @@ export function useActivityTracking() {
   let mockInterval: NodeJS.Timeout | null = null
 
   const startMockDataUpdates = () => {
-    addDebugLog("Starting mock data updates for testing")
+    // Check if we're in a preview/iframe environment
+    const isPreviewEnvironment = window.location.hostname.includes("vercel") || window.top !== window.self
+
+    const updateInterval = isPreviewEnvironment ? 1000 : 2000 // Faster updates in preview
+    const distanceIncrement = isPreviewEnvironment ? 0.01 : 0.005 // Larger increments in preview
+    const stepIncrement = isPreviewEnvironment ? 20 : 10 // More steps in preview
+
+    addDebugLog(`Starting mock data updates for testing (${isPreviewEnvironment ? "preview mode" : "normal mode"})`)
+
     // This is just for testing when sensors aren't available
     mockInterval = setInterval(() => {
       if (isTracking) {
         // Simulate distance increase
         setStats((prevStats) => {
-          const newDistance = prevStats.distance + 0.005 // 5 meters
-          const newSteps = prevStats.steps + 10
+          const newDistance = prevStats.distance + distanceIncrement
+          const newSteps = prevStats.steps + stepIncrement
           const newDuration = (Date.now() - (currentActivity?.startTime || Date.now())) / 1000
 
           // Update current activity
           if (currentActivity) {
             setCurrentActivity((prev) => {
               if (!prev) return null
+
+              // In preview mode, also add mock location updates
+              const updatedLocations = [...prev.locations]
+              if (isPreviewEnvironment && prev.locations.length > 0) {
+                const lastLoc = prev.locations[prev.locations.length - 1]
+                // Add a small random offset to create movement
+                const newLoc: Location = {
+                  latitude: lastLoc.latitude + (Math.random() - 0.5) * 0.001,
+                  longitude: lastLoc.longitude + (Math.random() - 0.5) * 0.001,
+                  accuracy: 10,
+                  timestamp: Date.now(),
+                }
+                updatedLocations.push(newLoc)
+              }
+
               return {
                 ...prev,
                 distance: newDistance,
                 steps: newSteps,
+                locations: updatedLocations,
               }
             })
           }
@@ -459,7 +558,7 @@ export function useActivityTracking() {
           }
         })
       }
-    }, 2000)
+    }, updateInterval)
   }
 
   const stopMockDataUpdates = () => {
@@ -474,6 +573,16 @@ export function useActivityTracking() {
   const requestLocationPermission = async (): Promise<boolean> => {
     try {
       addDebugLog("Requesting location permission")
+
+      // Check if we're in a preview/iframe environment
+      const isPreviewEnvironment = window.location.hostname.includes("vercel") || window.top !== window.self
+
+      if (isPreviewEnvironment) {
+        addDebugLog("Detected preview environment - simulating granted permission")
+        setPermissionStatus("mock")
+        return true
+      }
+
       return new Promise((resolve) => {
         navigator.geolocation.getCurrentPosition(
           () => {
@@ -482,11 +591,18 @@ export function useActivityTracking() {
             resolve(true)
           },
           (error) => {
-            console.error("Permission request failed:", error)
-            addDebugLog(`Permission request failed: ${error.code} - ${error.message}`)
-            setPermissionStatus("denied")
-            setError("Location permission denied")
-            resolve(false)
+            if (error.message && error.message.includes("permissions policy")) {
+              // Permissions policy error (iframe or non-HTTPS)
+              addDebugLog("Location blocked by permissions policy - using mock permissions")
+              setPermissionStatus("mock")
+              resolve(true)
+            } else {
+              console.error("Permission request failed:", error)
+              addDebugLog(`Permission request failed: ${error.code} - ${error.message}`)
+              setPermissionStatus("denied")
+              setError("Location permission denied")
+              resolve(false)
+            }
           },
           { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
         )

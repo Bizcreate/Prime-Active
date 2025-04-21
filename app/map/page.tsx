@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { TabBar } from "@/components/tab-bar"
 import { Search, Filter, Plus, SkullIcon as Skateboard, Waves, Bike, MapPin, Users, Star } from "lucide-react"
@@ -9,12 +9,14 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 import { CheckInModal } from "@/components/check-in-modal"
 import { useRouter } from "next/navigation"
+import { MapMarker } from "@/components/map-marker"
 
 export default function MapPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("all")
   const [showSpotDetails, setShowSpotDetails] = useState<string | null>(null)
   const [checkInLocation, setCheckInLocation] = useState<{ name: string; lat: number; lng: number } | null>(null)
+  const [mapLoaded, setMapLoaded] = useState(false)
 
   // Mock spots data
   const spots = [
@@ -22,6 +24,7 @@ export default function MapPage() {
       id: "spot1",
       name: "Downtown Skatepark",
       type: "skate",
+      markerType: "skatepark",
       distance: "1.2km",
       activeUsers: 4,
       rating: 4.5,
@@ -36,6 +39,7 @@ export default function MapPage() {
       id: "spot2",
       name: "Sunset Beach",
       type: "surf",
+      markerType: "surf",
       distance: "3.5km",
       activeUsers: 8,
       rating: 4.8,
@@ -50,20 +54,56 @@ export default function MapPage() {
       id: "spot3",
       name: "Mountain Trail",
       type: "bike",
+      markerType: "trail",
       distance: "5.8km",
       activeUsers: 2,
       rating: 4.2,
       reviews: 15,
       description: "Scenic mountain trail with varying difficulty levels. Great for mountain biking.",
       amenities: ["Parking", "Trail Maps"],
-      photos: [
-        "/placeholder.svg?height=100&width=100&query=mountain+trail+1",
-        "/placeholder.svg?height=100&width=100&query=mountain+trail+2",
-      ],
+      photos: ["/winding-mountain-path.png", "/winding-mountain-path.png"],
       lat: 34.1341,
       lng: -118.2882,
     },
+    {
+      id: "spot4",
+      name: "Prime Mates Surf Spot",
+      type: "surf",
+      markerType: "spot",
+      distance: "2.1km",
+      activeUsers: 12,
+      rating: 5.0,
+      reviews: 56,
+      description: "The official Prime Mates Board Club surf spot. Exclusive waves and good vibes only!",
+      amenities: ["Parking", "Restrooms", "Board Rentals", "Club House"],
+      photos: ["/barrel-rider.png", "/tropical-getaway.png"],
+      lat: 33.7189,
+      lng: -117.8298,
+    },
+    {
+      id: "spot5",
+      name: "Shaka Point",
+      type: "skate",
+      markerType: "spot",
+      distance: "0.8km",
+      activeUsers: 7,
+      rating: 4.9,
+      reviews: 38,
+      description: "A Prime Mates favorite skate spot with smooth concrete and plenty of obstacles.",
+      amenities: ["Lighting", "Water Fountain", "Shade"],
+      photos: ["/urban-skate-session.png", "/sunset-skate.png"],
+      lat: 34.0322,
+      lng: -118.2237,
+    },
   ]
+
+  // Simulate map loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMapLoaded(true)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [])
 
   const handleSpotClick = (spotId: string) => {
     setShowSpotDetails(spotId === showSpotDetails ? null : spotId)
@@ -137,34 +177,51 @@ export default function MapPage() {
             </Tabs>
 
             <div className="h-[calc(100vh-280px)] w-full rounded-lg overflow-hidden map-container relative mb-6">
-              {/* Map markers */}
-              <div className="absolute top-1/4 left-1/4">
-                <div className="relative">
-                  <div className="h-3 w-3 rounded-full bg-primary"></div>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-primary/30 animate-pulse"></div>
+              {/* Map background */}
+              {!mapLoaded ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-zinc-900">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
                 </div>
-              </div>
+              ) : (
+                <div className="absolute inset-0 bg-zinc-900">
+                  {/* Simple map grid background */}
+                  <div
+                    className="w-full h-full"
+                    style={{
+                      backgroundImage: `
+                      linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)
+                    `,
+                      backgroundSize: "20px 20px",
+                    }}
+                  >
+                    {/* Map markers */}
+                    <div className="absolute top-1/4 left-1/4">
+                      <MapMarker type="skatepark" size="md" active={true} />
+                    </div>
 
-              <div className="absolute top-1/3 left-2/3">
-                <div className="relative">
-                  <div className="h-3 w-3 rounded-full bg-blue-500"></div>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-blue-500/30 animate-pulse"></div>
-                </div>
-              </div>
+                    <div className="absolute top-1/3 left-2/3">
+                      <MapMarker type="trail" size="md" active={true} />
+                    </div>
 
-              <div className="absolute top-2/3 left-1/5">
-                <div className="relative">
-                  <div className="h-3 w-3 rounded-full bg-cyan-500"></div>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-6 w-6 rounded-full bg-cyan-500/30 animate-pulse"></div>
-                </div>
-              </div>
+                    <div className="absolute top-2/3 left-1/5">
+                      <MapMarker type="surf" size="md" active={true} />
+                    </div>
 
-              <div className="absolute top-1/2 left-1/2">
-                <div className="relative">
-                  <div className="h-4 w-4 rounded-full bg-red-500"></div>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-red-500/30 animate-pulse"></div>
+                    <div className="absolute top-1/2 left-1/2">
+                      <MapMarker type="user" size="lg" active={true} />
+                    </div>
+
+                    <div className="absolute top-1/4 right-1/4">
+                      <MapMarker type="spot" size="lg" active={true} />
+                    </div>
+
+                    <div className="absolute bottom-1/3 right-1/3">
+                      <MapMarker type="spot" size="lg" active={true} />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Legend */}
               <div className="absolute bottom-4 left-4 bg-black/70 p-3 rounded-lg">
@@ -175,16 +232,20 @@ export default function MapPage() {
                     <span>Skateparks</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-zinc-300">
-                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                    <span>Ski/Snow Areas</span>
+                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                    <span>Trails</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-zinc-300">
-                    <div className="h-2 w-2 rounded-full bg-cyan-500"></div>
+                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
                     <span>Surf Spots</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-zinc-300">
                     <div className="h-2 w-2 rounded-full bg-red-500"></div>
                     <span>Your Location</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-zinc-300">
+                    <div className="h-2 w-2 rounded-full bg-yellow-500"></div>
+                    <span>Prime Mates Spots</span>
                   </div>
                 </div>
               </div>

@@ -26,8 +26,8 @@ const config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "#FFC72D", // Prime Mates yellow
+          foreground: "#000000", // Black text on yellow background
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -58,13 +58,18 @@ const config = {
           100: "#fff3c4",
           200: "#ffe484",
           300: "#ffd249",
-          400: "#ffc72d",
+          400: "#ffc72d", // Prime Mates yellow
           500: "#f59e0b",
           600: "#d97706",
           700: "#b45309",
           800: "#92400e",
           900: "#78350f",
           950: "#451a03",
+        },
+        banana: {
+          light: "#FFF3C4",
+          DEFAULT: "#FFE484",
+          dark: "#FFD249",
         },
       },
       borderRadius: {
@@ -85,11 +90,17 @@ const config = {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
+        shake: {
+          "0%, 100%": { transform: "rotate(0deg)" },
+          "25%": { transform: "rotate(-5deg)" },
+          "75%": { transform: "rotate(5deg)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        shake: "shake 0.5s ease-in-out infinite",
       },
     },
   },

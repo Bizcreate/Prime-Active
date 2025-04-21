@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Shield, AlertTriangle, Check, Loader2 } from "lucide-react"
@@ -12,21 +12,17 @@ interface NFTVerificationProps {
 }
 
 export function NFTVerification({ onVerified, onSkip }: NFTVerificationProps) {
-  const { isConnected, connectWallet, verifyNFTOwnership, hasAccess, ownedNFTs } = useWeb3()
-  const [isVerifying, setIsVerifying] = useState(false)
+  const { isConnected, connectWallet, verifyNFTOwnership, hasAccess, ownedNFTs, isVerifying } = useWeb3()
   const [error, setError] = useState<string | null>(null)
 
   // Check if already verified
-  useEffect(() => {
-    if (isConnected && hasAccess) {
-      onVerified?.()
-    }
-  }, [isConnected, hasAccess, onVerified])
+  if (isConnected && hasAccess && onVerified) {
+    onVerified()
+  }
 
   // Handle connect and verify
   const handleConnectAndVerify = async () => {
     try {
-      setIsVerifying(true)
       setError(null)
 
       // Connect wallet if not connected
@@ -34,7 +30,6 @@ export function NFTVerification({ onVerified, onSkip }: NFTVerificationProps) {
         const connected = await connectWallet()
         if (!connected) {
           setError("Failed to connect wallet. Please try again.")
-          setIsVerifying(false)
           return
         }
       }
@@ -50,8 +45,6 @@ export function NFTVerification({ onVerified, onSkip }: NFTVerificationProps) {
     } catch (err) {
       console.error("Error during verification:", err)
       setError("An error occurred during verification. Please try again.")
-    } finally {
-      setIsVerifying(false)
     }
   }
 

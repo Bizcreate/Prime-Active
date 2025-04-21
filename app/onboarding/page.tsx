@@ -17,14 +17,15 @@ import {
   Trophy,
 } from "lucide-react"
 import Link from "next/link"
-import { useWeb3 } from "@/components/web3-provider"
 import { useRouter } from "next/navigation"
+import { useWeb3 } from "@/components/web3-provider"
+import { WalletConnectButton } from "@/components/wallet-connect-button"
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [selectedActivities, setSelectedActivities] = useState<string[]>([])
   const router = useRouter()
-  const { connectWallet } = useWeb3()
+  const { isConnected } = useWeb3()
 
   const nextStep = () => {
     if (step < 4) {
@@ -48,11 +49,9 @@ export default function OnboardingPage() {
     }
   }
 
-  const handleConnectWallet = async () => {
-    const success = await connectWallet()
-    if (success) {
-      nextStep()
-    }
+  // Check if connected and move to next step
+  if (step === 1 && isConnected) {
+    nextStep()
   }
 
   return (
@@ -91,14 +90,7 @@ export default function OnboardingPage() {
                   Sign Up with Email
                 </Button>
 
-                <Button
-                  variant="outline"
-                  className="w-full flex items-center justify-center gap-2"
-                  onClick={handleConnectWallet}
-                >
-                  <Wallet className="h-4 w-4" />
-                  Connect Wallet
-                </Button>
+                <WalletConnectButton className="w-full" />
               </div>
 
               <p className="text-sm text-zinc-500 mb-8 text-center">
@@ -114,6 +106,8 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {/* Rest of the steps remain the same */}
+          {/* Step 2 - Activities */}
           {step === 2 && (
             <div className="flex flex-col flex-1">
               <h2 className="text-2xl font-bold mb-2">Choose Your Favorite Activities</h2>
@@ -181,6 +175,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {/* Step 3 - Tracking */}
           {step === 3 && (
             <div className="flex flex-col flex-1">
               <h2 className="text-2xl font-bold mb-2">Track Your Fitness Activity</h2>
@@ -229,6 +224,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {/* Step 4 - Rewards */}
           {step === 4 && (
             <div className="flex flex-col flex-1">
               <h2 className="text-2xl font-bold mb-2">Earn NFTs & Rewards</h2>

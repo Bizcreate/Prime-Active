@@ -6,7 +6,6 @@ import { ArrowLeft, User, Wallet, Heart, LogOut, Bell, Shield, Moon } from "luci
 import Link from "next/link"
 import { TabBar } from "@/components/tab-bar"
 import { useWeb3 } from "@/components/web3-provider"
-import { shortenAddress } from "@/lib/utils"
 import { NFTVerification } from "@/components/nft-verification"
 import { Badge } from "@/components/ui/badge"
 import { WalletConnectButton } from "@/components/wallet-connect-button"
@@ -74,7 +73,7 @@ export default function ProfilePage() {
                     </div>
                     <div>
                       <p className="font-medium">Web3 Wallet</p>
-                      <p className="text-xs text-zinc-400">{shortenAddress(address || "")}</p>
+                      <p className="text-xs text-zinc-400">{address}</p>
                     </div>
                   </div>
                   <Button variant="ghost" size="sm" onClick={disconnectWallet}>

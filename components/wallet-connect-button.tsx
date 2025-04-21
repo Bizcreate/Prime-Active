@@ -12,7 +12,7 @@ interface WalletConnectButtonProps {
 }
 
 export function WalletConnectButton({ variant = "default", size = "default", className }: WalletConnectButtonProps) {
-  const { isConnected, connectWallet, disconnectWallet } = useWeb3()
+  const { isConnected, connectWallet, disconnectWallet, address } = useWeb3()
   const [isConnecting, setIsConnecting] = useState(false)
 
   const handleConnect = async () => {
@@ -21,9 +21,10 @@ export function WalletConnectButton({ variant = "default", size = "default", cla
     setIsConnecting(false)
   }
 
+  // Custom UI
   return isConnected ? (
     <Button variant={variant} size={size} onClick={disconnectWallet} className={className}>
-      Disconnect Wallet
+      {address ? address : "Disconnect Wallet"}
     </Button>
   ) : (
     <Button variant={variant} size={size} onClick={handleConnect} disabled={isConnecting} className={className}>

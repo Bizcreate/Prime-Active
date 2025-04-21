@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { MapPin, Activity, AlertTriangle } from "lucide-react"
+import { MapPin, Activity, AlertTriangle, Check } from "lucide-react"
 
 interface PermissionRequestProps {
   onPermissionGranted?: () => void
@@ -13,6 +13,13 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
   const [locationPermission, setLocationPermission] = useState<PermissionState | null>(null)
   const [motionPermission, setMotionPermission] = useState<PermissionState | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [debugLogs, setDebugLogs] = useState<string[]>([])
+
+  // Add debug logging
+  const addDebugLog = (message: string) => {
+    console.log(`[PermissionRequest] ${message}`)
+    setDebugLogs((prev) => [...prev, message])
+  }
 
   // Check permissions on mount
   useEffect(() => {
@@ -23,54 +30,86 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
   // Check location permission
   const checkLocationPermission = async () => {
     try {
+      addDebugLog("Checking location permission")
       if (navigator.permissions && navigator.permissions.query) {
-        const result = await navigator.permissions.query({ name: "geolocation" as PermissionName })
-        setLocationPermission(result.state)
-
-        // Listen for permission changes
-        result.addEventListener("change", () => {
+        try {
+          const result = await navigator.permissions.query({ name: "geolocation" as PermissionName })
           setLocationPermission(result.state)
-          if (result.state === "granted" && motionPermission === "granted") {
-            onPermissionGranted?.()
-          }
-        })
+          addDebugLog(`Location permission state: ${result.state}`)
+
+          // Listen for permission changes
+          result.addEventListener("change", () => {
+            addDebugLog(`Location permission changed to: ${result.state}`)
+            setLocationPermission(result.state)
+            if (result.state === "granted" && motionPermission === "granted") {
+              onPermissionGranted?.()
+            }
+          })
+        } catch (err) {
+          addDebugLog(`Permissions API error: ${err}`)
+          fallbackLocationCheck()
+        }
       } else {
-        // Fallback for browsers that don't support permissions API
-        navigator.geolocation.getCurrentPosition(
-          () => setLocationPermission("granted"),
-          () => setLocationPermission("denied"),
-          { timeout: 5000 },
-        )
+        addDebugLog("Permissions API not available, using fallback")
+        fallbackLocationCheck()
       }
     } catch (err) {
       console.error("Error checking location permission:", err)
+      addDebugLog(`Error checking location permission: ${err}`)
       setError("Failed to check location permissions")
     }
+  }
+
+  const fallbackLocationCheck = () => {
+    addDebugLog("Using getCurrentPosition fallback for location permission check")
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        addDebugLog("Location permission granted (fallback)")
+        setLocationPermission("granted")
+        if (motionPermission === "granted") {
+          onPermissionGranted?.()
+        }
+      },
+      (err) => {
+        addDebugLog(`Location permission denied (fallback): ${err.code} - ${err.message}`)
+        setLocationPermission("denied")
+      },
+      { timeout: 5000, maximumAge: 0, enableHighAccuracy: true },
+    )
   }
 
   // Check motion permission
   const checkMotionPermission = async () => {
     try {
+      addDebugLog("Checking motion permission")
       // iOS requires permission for DeviceMotionEvent
       if (
         typeof DeviceMotionEvent !== "undefined" &&
         typeof (DeviceMotionEvent as any).requestPermission === "function"
       ) {
+        addDebugLog("iOS DeviceMotionEvent permission required")
         setMotionPermission("prompt")
-      } else {
+      } else if (window.DeviceMotionEvent) {
         // For other browsers, assume granted if the API is available
-        setMotionPermission(window.DeviceMotionEvent ? "granted" : "denied")
+        addDebugLog("DeviceMotionEvent available, assuming granted")
+        setMotionPermission("granted")
+      } else {
+        addDebugLog("DeviceMotionEvent not available")
+        setMotionPermission("denied")
       }
     } catch (err) {
       console.error("Error checking motion permission:", err)
-      setError("Failed to check motion permissions")
+      addDebugLog(`Error checking motion permission: ${err}`)
+      setMotionPermission("denied")
     }
   }
 
   // Request location permission
   const requestLocationPermission = () => {
+    addDebugLog("Requesting location permission")
     navigator.geolocation.getCurrentPosition(
       () => {
+        addDebugLog("Location permission granted")
         setLocationPermission("granted")
         if (motionPermission === "granted") {
           onPermissionGranted?.()
@@ -78,28 +117,38 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
       },
       (error) => {
         console.error("Location permission denied:", error)
+        addDebugLog(`Location permission denied: ${error.code} - ${error.message}`)
         setLocationPermission("denied")
         setError("Location permission is required for activity tracking")
       },
-      { enableHighAccuracy: true, timeout: 10000 },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     )
   }
 
   // Request motion permission
   const requestMotionPermission = async () => {
     try {
+      addDebugLog("Requesting motion permission")
       // iOS requires explicit permission
       if (
         typeof DeviceMotionEvent !== "undefined" &&
         typeof (DeviceMotionEvent as any).requestPermission === "function"
       ) {
-        const permission = await (DeviceMotionEvent as any).requestPermission()
-        setMotionPermission(permission === "granted" ? "granted" : "denied")
+        addDebugLog("Using iOS DeviceMotionEvent.requestPermission")
+        try {
+          const permission = await (DeviceMotionEvent as any).requestPermission()
+          addDebugLog(`iOS motion permission result: ${permission}`)
+          setMotionPermission(permission === "granted" ? "granted" : "denied")
 
-        if (permission === "granted" && locationPermission === "granted") {
-          onPermissionGranted?.()
+          if (permission === "granted" && locationPermission === "granted") {
+            onPermissionGranted?.()
+          }
+        } catch (err) {
+          addDebugLog(`iOS motion permission error: ${err}`)
+          setMotionPermission("denied")
         }
       } else {
+        addDebugLog("No explicit motion permission needed, setting to granted")
         setMotionPermission("granted")
         if (locationPermission === "granted") {
           onPermissionGranted?.()
@@ -107,6 +156,7 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
       }
     } catch (err) {
       console.error("Error requesting motion permission:", err)
+      addDebugLog(`Error requesting motion permission: ${err}`)
       setMotionPermission("denied")
       setError("Motion permission is required for step counting")
     }
@@ -114,6 +164,7 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
 
   // Request all permissions
   const requestAllPermissions = async () => {
+    addDebugLog("Requesting all permissions")
     requestLocationPermission()
     await requestMotionPermission()
   }
@@ -146,7 +197,9 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
             </div>
             <div className="text-xs">
               {locationPermission === "granted" ? (
-                <span className="text-green-500">Granted</span>
+                <span className="text-green-500 flex items-center gap-1">
+                  <Check className="h-3 w-3" /> Granted
+                </span>
               ) : locationPermission === "denied" ? (
                 <span className="text-red-500">Denied</span>
               ) : (
@@ -162,7 +215,9 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
             </div>
             <div className="text-xs">
               {motionPermission === "granted" ? (
-                <span className="text-green-500">Granted</span>
+                <span className="text-green-500 flex items-center gap-1">
+                  <Check className="h-3 w-3" /> Granted
+                </span>
               ) : motionPermission === "denied" ? (
                 <span className="text-red-500">Denied</span>
               ) : (
@@ -171,6 +226,20 @@ export function PermissionRequest({ onPermissionGranted }: PermissionRequestProp
             </div>
           </div>
         </div>
+
+        {/* Debug logs - only in development */}
+        {debugLogs.length > 0 && (
+          <div className="mt-4 p-2 bg-black/30 rounded-md">
+            <p className="text-xs text-zinc-500 mb-1">Debug logs:</p>
+            <div className="max-h-24 overflow-y-auto">
+              {debugLogs.map((log, i) => (
+                <p key={i} className="text-xs text-zinc-600">
+                  {log}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
       <CardFooter>
         {allPermissionsGranted ? (

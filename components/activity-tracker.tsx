@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { CircularProgress } from "@/components/circular-progress"
 import { useActivityTracking, type ActivityType } from "@/services/activity-tracking"
-import { MapPin, Clock, Flame, Activity, Play, Pause, AlertTriangle } from "lucide-react"
+import { MapPin, Clock, Flame, Activity, Play, Pause, AlertTriangle, Bug } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface ActivityTrackerProps {
@@ -17,6 +17,7 @@ export function ActivityTracker({ defaultActivityType = "walking" }: ActivityTra
   const [activityType, setActivityType] = useState<ActivityType>(defaultActivityType)
   const [elapsedTime, setElapsedTime] = useState(0)
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null)
+  const [showDebug, setShowDebug] = useState(false)
 
   const {
     isTracking,
@@ -27,6 +28,7 @@ export function ActivityTracker({ defaultActivityType = "walking" }: ActivityTra
     startActivity,
     stopActivity,
     requestLocationPermission,
+    debug,
   } = useActivityTracking()
 
   // Format time as MM:SS
@@ -110,12 +112,17 @@ export function ActivityTracker({ defaultActivityType = "walking" }: ActivityTra
             <h2 className="font-bold text-lg capitalize">{activityType}</h2>
             <p className="text-zinc-400 text-sm">{isTracking ? "Tracking in progress" : "Ready to start"}</p>
           </div>
-          <CircularProgress
-            value={isTracking ? 100 : 0}
-            size={50}
-            strokeWidth={5}
-            className={isTracking ? "animate-pulse-slow" : ""}
-          />
+          <div className="flex items-center gap-2">
+            <CircularProgress
+              value={isTracking ? 100 : 0}
+              size={50}
+              strokeWidth={5}
+              className={isTracking ? "animate-pulse-slow" : ""}
+            />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowDebug(!showDebug)}>
+              <Bug className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-4">
@@ -151,6 +158,24 @@ export function ActivityTracker({ defaultActivityType = "walking" }: ActivityTra
             </div>
           </div>
         </div>
+
+        {showDebug && (
+          <div className="mb-4 bg-black/50 p-2 rounded-md">
+            <p className="text-xs text-zinc-400 mb-1">Debug Info:</p>
+            <div className="text-xs text-zinc-300 max-h-32 overflow-y-auto">
+              <p>Permission: {permissionStatus || "unknown"}</p>
+              <p>Tracking: {isTracking ? "yes" : "no"}</p>
+              <p>Activity: {currentActivity?.type || "none"}</p>
+              <div className="mt-1 border-t border-zinc-800 pt-1">
+                {debug.map((log, i) => (
+                  <p key={i} className="text-[10px] text-zinc-400">
+                    {log}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {!isTracking && (
           <div className="mb-4">

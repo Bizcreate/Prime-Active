@@ -45,38 +45,69 @@ export function useActivityTracking() {
     duration: 0,
   })
   const [watchId, setWatchId] = useState<number | null>(null)
+  const [debug, setDebug] = useState<string[]>([])
+
+  // Add debug logging
+  const addDebugLog = (message: string) => {
+    console.log(`[ActivityTracking] ${message}`)
+    setDebug((prev) => [...prev, `${new Date().toISOString().split("T")[1].split(".")[0]}: ${message}`])
+  }
 
   // Check for geolocation permissions
   useEffect(() => {
     const checkPermissions = async () => {
       try {
+        addDebugLog("Checking geolocation permissions")
+
         // Check if geolocation is available
         if (!navigator.geolocation) {
           setError("Geolocation is not supported by your browser")
+          addDebugLog("Geolocation not supported")
           return
         }
 
         // Check for permissions API
         if (navigator.permissions && navigator.permissions.query) {
-          const result = await navigator.permissions.query({ name: "geolocation" as PermissionName })
-          setPermissionStatus(result.state)
-
-          // Listen for permission changes
-          result.addEventListener("change", () => {
+          addDebugLog("Using Permissions API")
+          try {
+            const result = await navigator.permissions.query({ name: "geolocation" as PermissionName })
             setPermissionStatus(result.state)
-          })
+            addDebugLog(`Permission state: ${result.state}`)
+
+            // Listen for permission changes
+            result.addEventListener("change", () => {
+              addDebugLog(`Permission state changed to: ${result.state}`)
+              setPermissionStatus(result.state)
+            })
+          } catch (err) {
+            addDebugLog(`Permissions API error: ${err}`)
+            fallbackPermissionCheck()
+          }
         } else {
-          // Fallback for browsers that don't support permissions API
-          navigator.geolocation.getCurrentPosition(
-            () => setPermissionStatus("granted"),
-            () => setPermissionStatus("denied"),
-            { timeout: 5000 },
-          )
+          addDebugLog("Permissions API not available, using fallback")
+          fallbackPermissionCheck()
         }
       } catch (err) {
         console.error("Error checking permissions:", err)
+        addDebugLog(`Error checking permissions: ${err}`)
         setError("Failed to check location permissions")
       }
+    }
+
+    const fallbackPermissionCheck = () => {
+      // Fallback for browsers that don't support permissions API
+      addDebugLog("Using getCurrentPosition fallback for permission check")
+      navigator.geolocation.getCurrentPosition(
+        () => {
+          addDebugLog("Permission granted (fallback)")
+          setPermissionStatus("granted")
+        },
+        (err) => {
+          addDebugLog(`Permission denied (fallback): ${err.code} - ${err.message}`)
+          setPermissionStatus("denied")
+        },
+        { timeout: 5000, maximumAge: 0, enableHighAccuracy: true },
+      )
     }
 
     checkPermissions()
@@ -88,53 +119,66 @@ export function useActivityTracking() {
       // Check if already tracking
       if (isTracking) {
         setError("Already tracking an activity")
+        addDebugLog("Already tracking an activity")
         return false
       }
 
       // Check for geolocation support
       if (!navigator.geolocation) {
         setError("Geolocation is not supported by your browser")
+        addDebugLog("Geolocation not supported")
         return false
       }
+
+      addDebugLog(`Starting ${type} activity tracking`)
 
       // Get initial position
-      const position = await getCurrentPosition()
-      if (!position) {
-        setError("Failed to get current position")
+      try {
+        const position = await getCurrentPosition()
+        addDebugLog(`Got initial position: ${position.latitude}, ${position.longitude}`)
+
+        // Create new activity session
+        const newActivity: ActivitySession = {
+          id: generateId(),
+          type,
+          startTime: Date.now(),
+          locations: [position],
+          distance: 0,
+          steps: 0,
+          calories: 0,
+          isActive: true,
+        }
+
+        setCurrentActivity(newActivity)
+        setLocations([position])
+        setIsTracking(true)
+
+        // Start watching position
+        addDebugLog("Starting position watching")
+        const id = navigator.geolocation.watchPosition(handlePositionUpdate, handlePositionError, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        })
+
+        setWatchId(id)
+        addDebugLog(`Watch ID: ${id}`)
+
+        // Start step counter if available
+        startStepCounting()
+
+        // Start mock data updates for testing
+        startMockDataUpdates()
+
+        return true
+      } catch (posErr) {
+        addDebugLog(`Failed to get initial position: ${posErr}`)
+        setError("Failed to get current position. Please ensure location permissions are granted.")
         return false
       }
-
-      // Create new activity session
-      const newActivity: ActivitySession = {
-        id: generateId(),
-        type,
-        startTime: Date.now(),
-        locations: [position],
-        distance: 0,
-        steps: 0,
-        calories: 0,
-        isActive: true,
-      }
-
-      setCurrentActivity(newActivity)
-      setLocations([position])
-      setIsTracking(true)
-
-      // Start watching position
-      const id = navigator.geolocation.watchPosition(handlePositionUpdate, handlePositionError, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      })
-
-      setWatchId(id)
-
-      // Start step counter if available
-      startStepCounting()
-
-      return true
     } catch (err) {
       console.error("Error starting activity:", err)
+      addDebugLog(`Error starting activity: ${err}`)
       setError("Failed to start activity tracking")
       return false
     }
@@ -145,17 +189,24 @@ export function useActivityTracking() {
     try {
       if (!isTracking || !currentActivity) {
         setError("No active tracking session")
+        addDebugLog("No active tracking session to stop")
         return null
       }
+
+      addDebugLog("Stopping activity tracking")
 
       // Stop watching position
       if (watchId !== null) {
         navigator.geolocation.clearWatch(watchId)
+        addDebugLog(`Cleared watch ID: ${watchId}`)
         setWatchId(null)
       }
 
       // Stop step counter
       stopStepCounting()
+
+      // Stop mock data updates
+      stopMockDataUpdates()
 
       // Update activity with end time
       const completedActivity: ActivitySession = {
@@ -164,6 +215,15 @@ export function useActivityTracking() {
         isActive: false,
       }
 
+      addDebugLog(
+        `Activity completed: ${JSON.stringify({
+          type: completedActivity.type,
+          duration: (completedActivity.endTime - completedActivity.startTime) / 1000,
+          distance: completedActivity.distance,
+          steps: completedActivity.steps,
+        })}`,
+      )
+
       // Reset state
       setIsTracking(false)
       setCurrentActivity(null)
@@ -171,6 +231,7 @@ export function useActivityTracking() {
       return completedActivity
     } catch (err) {
       console.error("Error stopping activity:", err)
+      addDebugLog(`Error stopping activity: ${err}`)
       setError("Failed to stop activity tracking")
       return null
     }
@@ -185,6 +246,8 @@ export function useActivityTracking() {
       timestamp: position.timestamp,
     }
 
+    addDebugLog(`Position update: ${newLocation.latitude}, ${newLocation.longitude}`)
+
     setLocations((prevLocations) => {
       const updatedLocations = [...prevLocations, newLocation]
 
@@ -198,24 +261,37 @@ export function useActivityTracking() {
           newLocation.longitude,
         )
 
+        addDebugLog(`New distance segment: ${newDistance.toFixed(4)} km`)
+
         // Update stats
-        setStats((prevStats) => ({
-          ...prevStats,
-          distance: prevStats.distance + newDistance,
-          duration: (Date.now() - (currentActivity?.startTime || Date.now())) / 1000,
-          calories: calculateCalories(
-            prevStats.distance + newDistance,
-            (Date.now() - (currentActivity?.startTime || Date.now())) / 1000,
-            currentActivity?.type || "walking",
-          ),
-        }))
+        setStats((prevStats) => {
+          const updatedStats = {
+            ...prevStats,
+            distance: prevStats.distance + newDistance,
+            duration: (Date.now() - (currentActivity?.startTime || Date.now())) / 1000,
+            calories: calculateCalories(
+              prevStats.distance + newDistance,
+              (Date.now() - (currentActivity?.startTime || Date.now())) / 1000,
+              currentActivity?.type || "walking",
+            ),
+          }
+
+          addDebugLog(
+            `Updated stats: distance=${updatedStats.distance.toFixed(2)}km, duration=${updatedStats.duration.toFixed(0)}s`,
+          )
+          return updatedStats
+        })
 
         // Update current activity
         if (currentActivity) {
-          setCurrentActivity({
-            ...currentActivity,
-            locations: updatedLocations,
-            distance: (currentActivity.distance || 0) + newDistance,
+          setCurrentActivity((prev) => {
+            if (!prev) return null
+            const updated = {
+              ...prev,
+              locations: updatedLocations,
+              distance: (prev.distance || 0) + newDistance,
+            }
+            return updated
           })
         }
       }
@@ -227,6 +303,7 @@ export function useActivityTracking() {
   // Handle position errors
   const handlePositionError = (error: GeolocationPositionError) => {
     console.error("Geolocation error:", error)
+    addDebugLog(`Geolocation error: ${error.code} - ${error.message}`)
 
     let errorMessage = "Unknown location error"
 
@@ -248,8 +325,10 @@ export function useActivityTracking() {
   // Get current position as a Promise
   const getCurrentPosition = (): Promise<Location> => {
     return new Promise((resolve, reject) => {
+      addDebugLog("Getting current position")
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          addDebugLog(`Position acquired: ${position.coords.latitude}, ${position.coords.longitude}`)
           resolve({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
@@ -259,6 +338,7 @@ export function useActivityTracking() {
         },
         (error) => {
           console.error("Error getting current position:", error)
+          addDebugLog(`Error getting position: ${error.code} - ${error.message}`)
           reject(error)
         },
         {
@@ -272,17 +352,30 @@ export function useActivityTracking() {
 
   // Step counting implementation
   const startStepCounting = () => {
+    addDebugLog("Attempting to start step counting")
     // Check if the Step Counter API is available
     if (window.DeviceMotionEvent) {
-      window.addEventListener("devicemotion", handleStepDetection)
+      addDebugLog("DeviceMotionEvent is available")
+      try {
+        window.addEventListener("devicemotion", handleStepDetection)
+        addDebugLog("Added devicemotion event listener")
+      } catch (err) {
+        addDebugLog(`Error adding devicemotion listener: ${err}`)
+      }
     } else {
-      console.warn("Step counting not available: DeviceMotionEvent not supported")
+      addDebugLog("Step counting not available: DeviceMotionEvent not supported")
     }
   }
 
   const stopStepCounting = () => {
+    addDebugLog("Stopping step counting")
     if (window.DeviceMotionEvent) {
-      window.removeEventListener("devicemotion", handleStepDetection)
+      try {
+        window.removeEventListener("devicemotion", handleStepDetection)
+        addDebugLog("Removed devicemotion event listener")
+      } catch (err) {
+        addDebugLog(`Error removing devicemotion listener: ${err}`)
+      }
     }
   }
 
@@ -305,12 +398,16 @@ export function useActivityTracking() {
       // Increment step count
       setStats((prevStats) => {
         const newSteps = prevStats.steps + 1
+        addDebugLog(`Step detected! Count: ${newSteps}`)
 
         // Update current activity
         if (currentActivity) {
-          setCurrentActivity({
-            ...currentActivity,
-            steps: newSteps,
+          setCurrentActivity((prev) => {
+            if (!prev) return null
+            return {
+              ...prev,
+              steps: newSteps,
+            }
           })
         }
 
@@ -328,26 +425,75 @@ export function useActivityTracking() {
     }
   }
 
+  // Mock data updates for testing
+  let mockInterval: NodeJS.Timeout | null = null
+
+  const startMockDataUpdates = () => {
+    addDebugLog("Starting mock data updates for testing")
+    // This is just for testing when sensors aren't available
+    mockInterval = setInterval(() => {
+      if (isTracking) {
+        // Simulate distance increase
+        setStats((prevStats) => {
+          const newDistance = prevStats.distance + 0.005 // 5 meters
+          const newSteps = prevStats.steps + 10
+          const newDuration = (Date.now() - (currentActivity?.startTime || Date.now())) / 1000
+
+          // Update current activity
+          if (currentActivity) {
+            setCurrentActivity((prev) => {
+              if (!prev) return null
+              return {
+                ...prev,
+                distance: newDistance,
+                steps: newSteps,
+              }
+            })
+          }
+
+          return {
+            distance: newDistance,
+            steps: newSteps,
+            duration: newDuration,
+            calories: calculateCalories(newDistance, newDuration, currentActivity?.type || "walking", newSteps),
+          }
+        })
+      }
+    }, 2000)
+  }
+
+  const stopMockDataUpdates = () => {
+    if (mockInterval) {
+      clearInterval(mockInterval)
+      mockInterval = null
+      addDebugLog("Stopped mock data updates")
+    }
+  }
+
   // Request location permission explicitly
   const requestLocationPermission = async (): Promise<boolean> => {
     try {
+      addDebugLog("Requesting location permission")
       return new Promise((resolve) => {
         navigator.geolocation.getCurrentPosition(
           () => {
+            addDebugLog("Location permission granted")
             setPermissionStatus("granted")
             resolve(true)
           },
           (error) => {
             console.error("Permission request failed:", error)
+            addDebugLog(`Permission request failed: ${error.code} - ${error.message}`)
             setPermissionStatus("denied")
             setError("Location permission denied")
             resolve(false)
           },
-          { enableHighAccuracy: true, timeout: 10000 },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
         )
       })
     } catch (err) {
       console.error("Error requesting location permission:", err)
+      addDebugLog(`Error requesting location permission: ${err}`)
       setError("Failed to request location permission")
       return false
     }
@@ -410,6 +556,7 @@ export function useActivityTracking() {
     startActivity,
     stopActivity,
     requestLocationPermission,
+    debug, // Expose debug logs
   }
 }
 

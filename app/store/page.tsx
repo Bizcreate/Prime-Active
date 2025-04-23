@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, ShoppingCart, Search, Filter, Star, Heart, ShoppingBag } from "lucide-react"
+import { ArrowLeft, ShoppingCart, Search, Filter, Star, Heart, ShoppingBag, Check } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Loader2 } from "lucide-react"
 
 export default function MerchandiseStorePage() {
   const [products, setProducts] = useState<any[]>([])
@@ -20,6 +21,10 @@ export default function MerchandiseStorePage() {
   const [cartItems, setCartItems] = useState<any[]>([])
   const [showCart, setShowCart] = useState(false)
   const [wishlist, setWishlist] = useState<string[]>([])
+
+  // Add state for checkout process
+  const [isCheckingOut, setIsCheckingOut] = useState(false)
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false)
 
   // Mock products data
   useEffect(() => {
@@ -110,7 +115,7 @@ export default function MerchandiseStorePage() {
           name: "Banana Wax Comb",
           description: "Wax comb with banana-shaped handle. Perfect for removing old wax from your surfboard.",
           price: 9.99,
-          images: ["/placeholder.svg?height=400&width=600&query=surf+wax+comb+with+banana+shape"],
+          images: ["/placeholder.svg?key=76xp7"],
           category: "surf",
           bananaPoints: 50,
           rating: 4.5,
@@ -125,7 +130,7 @@ export default function MerchandiseStorePage() {
           name: "Prime Mates Snowboard Stomp Pad",
           description: "Banana-shaped stomp pad for your snowboard. Provides excellent grip for your back foot.",
           price: 19.99,
-          images: ["/placeholder.svg?height=400&width=600&query=snowboard+stomp+pad+banana+shaped"],
+          images: ["/placeholder.svg?key=s6785"],
           category: "snow",
           bananaPoints: 100,
           rating: 4.7,
@@ -140,7 +145,7 @@ export default function MerchandiseStorePage() {
           name: "Prime Mates T-Shirt",
           description: "Comfortable t-shirt with Prime Mates logo. Made from 100% organic cotton.",
           price: 29.99,
-          images: ["/placeholder.svg?height=400&width=600&query=t-shirt+with+monkey+logo"],
+          images: ["/placeholder.svg?key=bg33b"],
           category: "apparel",
           bananaPoints: 200,
           rating: 4.8,
@@ -264,6 +269,30 @@ export default function MerchandiseStorePage() {
         damping: 30,
       },
     },
+  }
+
+  // Add this function
+  const handleCheckout = async () => {
+    try {
+      setIsCheckingOut(true)
+
+      // Simulate checkout process
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      // Success
+      setCheckoutSuccess(true)
+      setCartItems([])
+
+      // Reset after showing success message
+      setTimeout(() => {
+        setCheckoutSuccess(false)
+        setShowCart(false)
+      }, 3000)
+    } catch (error) {
+      console.error("Checkout error:", error)
+    } finally {
+      setIsCheckingOut(false)
+    }
   }
 
   return (
@@ -719,7 +748,25 @@ export default function MerchandiseStorePage() {
                       </div>
                     </div>
 
-                    <Button className="w-full mb-3">Proceed to Checkout</Button>
+                    {checkoutSuccess && (
+                      <div className="bg-green-900/20 border border-green-900 rounded-md p-3 mb-4 flex items-center gap-2">
+                        <Check className="h-5 w-5 text-green-500" />
+                        <p className="text-sm text-green-500">
+                          Order placed successfully! You've earned {cartTotalBananaPoints} Banana Points.
+                        </p>
+                      </div>
+                    )}
+
+                    <Button className="w-full mb-3" onClick={handleCheckout} disabled={isCheckingOut}>
+                      {isCheckingOut ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        "Proceed to Checkout"
+                      )}
+                    </Button>
                     <Button variant="outline" className="w-full" onClick={() => setShowCart(false)}>
                       Continue Shopping
                     </Button>

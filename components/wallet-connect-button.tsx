@@ -9,9 +9,15 @@ interface WalletConnectButtonProps {
   variant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive"
   size?: "default" | "sm" | "lg" | "icon"
   className?: string
+  showBypass?: boolean
 }
 
-export function WalletConnectButton({ variant = "default", size = "default", className }: WalletConnectButtonProps) {
+export function WalletConnectButton({
+  variant = "default",
+  size = "default",
+  className,
+  showBypass = false, // Not used anymore since we're simulating directly
+}: WalletConnectButtonProps) {
   const { isConnected, connectWallet, disconnectWallet, address } = useWeb3()
   const [isConnecting, setIsConnecting] = useState(false)
 
@@ -21,13 +27,31 @@ export function WalletConnectButton({ variant = "default", size = "default", cla
     setIsConnecting(false)
   }
 
-  // Custom UI
+  // Format address for display
+  const formatAddress = (addr: string) => {
+    if (!addr) return ""
+    return addr.length > 10 ? `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}` : addr
+  }
+
+  // Custom UI with the correct color scheme
   return isConnected ? (
-    <Button variant={variant} size={size} onClick={disconnectWallet} className={className}>
-      {address ? address : "Disconnect Wallet"}
+    <Button
+      variant={variant}
+      size={size}
+      onClick={disconnectWallet}
+      className={`bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90 ${className}`}
+    >
+      <Wallet className="mr-2 h-4 w-4" />
+      {address ? formatAddress(address) : "Disconnect"}
     </Button>
   ) : (
-    <Button variant={variant} size={size} onClick={handleConnect} disabled={isConnecting} className={className}>
+    <Button
+      variant={variant}
+      size={size}
+      onClick={handleConnect}
+      disabled={isConnecting}
+      className={`bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90 ${className}`}
+    >
       {isConnecting ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />

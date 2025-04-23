@@ -1,229 +1,174 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { TabBar } from "@/components/tab-bar"
-import { StatCard } from "@/components/stat-card"
-import { ActivityCard } from "@/components/activity-card"
 import { ChallengeCard } from "@/components/challenge-card"
-import { CircularProgress } from "@/components/circular-progress"
-import Link from "next/link"
-import { ArrowRight, Trophy } from "lucide-react"
-import Image from "next/image"
+import { PostCard } from "@/components/post-card"
+import { ActivityCard } from "@/components/activity-card"
 import { useWeb3 } from "@/components/web3-provider"
+import { WalletConnectButton } from "@/components/wallet-connect-button"
+import { ArrowRight, Calendar, Clock, MapPin, Users } from "lucide-react"
+import Link from "next/link"
+import { HealthTracker } from "@/components/health-tracker"
 
 export default function DashboardPage() {
-  const { isConnected, hasAccess } = useWeb3()
-  const [dailyGoal, setDailyGoal] = useState(70)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => {
-      setLoading(false)
-    }, 1000)
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Mock data
-  const stats = [
-    { label: "Today", value: "2.4", unit: "km" },
-    { label: "Steps", value: "3,248", unit: "" },
-    { label: "Calories", value: "187", unit: "kcal" },
-    { label: "Time", value: "32", unit: "min" },
-  ]
-
-  const recentActivities = [
-    {
-      id: "1",
-      type: "skate",
-      title: "Evening Skate Session",
-      location: "Venice Beach Skatepark",
-      distance: "1.8 km",
-      duration: "45 min",
-      date: "Today",
-      image: "/urban-skate-session.png",
-    },
-    {
-      id: "2",
-      type: "surf",
-      title: "Morning Surf",
-      location: "Malibu Beach",
-      distance: "N/A",
-      duration: "1h 20m",
-      date: "Yesterday",
-      image: "/wave-rider.png",
-    },
-  ]
-
-  const challenges = [
-    {
-      id: "challenge1",
-      title: "10K Steps Challenge",
-      description: "Walk 10,000 steps daily for 7 days",
-      progress: 4,
-      total: 7,
-      image: "/focused-marathoner.png",
-      reward: "250 Points",
-    },
-    {
-      id: "challenge2",
-      title: "Explore 5 New Spots",
-      description: "Check in at 5 new locations",
-      progress: 2,
-      total: 5,
-      image: "/urban-playground.png",
-      reward: "300 Points",
-    },
-  ]
+  const { isConnected } = useWeb3()
 
   return (
-    <main className="flex min-h-screen flex-col bg-black pb-20">
+    <div className="flex min-h-screen flex-col bg-black pb-20">
       <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Dashboard</h1>
-            <p className="text-zinc-400">Track your active lifestyle</p>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-bold">Dashboard</h1>
+          {!isConnected && <WalletConnectButton size="sm" />}
+        </div>
+
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-[#ffc72d]">Health Tracking</h2>
+            <Link href="/activities">
+              <Button variant="ghost" size="sm" className="h-8 gap-1">
+                Details
+                <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
           </div>
-          <div className="relative">
-            <Image
-              src="/prime-mates-logo.png"
-              alt="Prime Mates Board Club"
-              width={80}
-              height={40}
-              className="object-contain"
+          <HealthTracker />
+        </div>
+
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold">Active Challenges</h2>
+            <Link href="/challenges">
+              <Button variant="ghost" size="sm" className="h-8 gap-1">
+                View All
+                <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
+          <div className="space-y-3">
+            <ChallengeCard
+              title="Morning Run Streak"
+              description="Complete a morning run for 5 consecutive days"
+              progress={60}
+              icon={<Clock className="h-5 w-5" />}
+              daysLeft={2}
+              reward={50}
+            />
+            <ChallengeCard
+              title="Explore New Trails"
+              description="Discover 3 new running or hiking trails this week"
+              progress={33}
+              icon={<MapPin className="h-5 w-5" />}
+              daysLeft={5}
+              reward={75}
             />
           </div>
         </div>
 
         <div className="mb-6">
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="font-bold">Daily Progress</h2>
-                <span className="text-sm text-zinc-400">{dailyGoal}% of goal</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16">
-                  <CircularProgress value={dailyGoal} />
-                </div>
-                <div className="flex-1">
-                  <div className="grid grid-cols-2 gap-2">
-                    {stats.map((stat, index) => (
-                      <StatCard key={index} label={stat.label} value={stat.value} unit={stat.unit} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold">Recent Activities</h2>
-            <Link href="/activities" className="text-primary text-sm flex items-center">
-              View All <ArrowRight className="h-4 w-4 ml-1" />
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold">Community Feed</h2>
+            <Link href="/social">
+              <Button variant="ghost" size="sm" className="h-8 gap-1">
+                View All
+                <ArrowRight className="h-3 w-3" />
+              </Button>
             </Link>
           </div>
-          <div className="space-y-3">
-            {recentActivities.map((activity) => (
-              <ActivityCard
-                key={activity.id}
-                type={activity.type}
-                title={activity.title}
-                location={activity.location}
-                distance={activity.distance}
-                duration={activity.duration}
-                date={activity.date}
-                image={activity.image}
-              />
-            ))}
+          <div className="space-y-4">
+            <PostCard
+              avatar="/wave-rider-profile.png"
+              username="WaveRider"
+              time="2h ago"
+              content="Just caught the perfect wave at Sunset Beach! 🏄‍♂️ #PrimeActive #SurfLife"
+              image="/wave-rider.png"
+              likes={24}
+              comments={8}
+              hasNft={true}
+            />
+            <PostCard
+              avatar="/diverse-woman-portrait.png"
+              username="MountainGoat"
+              time="5h ago"
+              content="Morning trail run complete! The misty views were absolutely worth the early alarm. Who else is getting their steps in today?"
+              image="/misty-trail-run.png"
+              likes={42}
+              comments={15}
+              hasNft={false}
+            />
           </div>
         </div>
 
         <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold">Active Challenges</h2>
-            <Link href="/challenges" className="text-primary text-sm flex items-center">
-              View All <ArrowRight className="h-4 w-4 ml-1" />
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold">Upcoming Events</h2>
+            <Link href="/events">
+              <Button variant="ghost" size="sm" className="h-8 gap-1">
+                View All
+                <ArrowRight className="h-3 w-3" />
+              </Button>
             </Link>
           </div>
-          <div className="space-y-3">
-            {challenges.map((challenge) => (
-              <ChallengeCard
-                key={challenge.id}
-                title={challenge.title}
-                description={challenge.description}
-                progress={challenge.progress}
-                total={challenge.total}
-                image={challenge.image}
-                reward={challenge.reward}
-              />
-            ))}
-          </div>
-        </div>
-
-        {isConnected && hasAccess && (
-          <div className="mb-6">
-            <div className="bg-zinc-900 rounded-lg p-4 border border-primary/20">
-              <div className="flex items-center gap-4 mb-3">
-                <div>
-                  <Image
-                    src="/prime-mates-logo.png"
-                    alt="Prime Mates Board Club"
-                    width={60}
-                    height={30}
-                    className="object-contain"
-                  />
-                </div>
-                <div>
-                  <h2 className="font-bold">Prime Mates Board Club</h2>
-                  <p className="text-sm text-zinc-400">Exclusive challenges and rewards</p>
+          <div className="bg-zinc-900 rounded-lg p-4 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <Calendar className="h-6 w-6 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="font-medium">Weekend Beach Cleanup</h3>
+                <p className="text-xs text-zinc-400 mb-1">Saturday, 10:00 AM • Sunset Beach</p>
+                <div className="flex items-center gap-1">
+                  <Users className="h-3 w-3 text-zinc-500" />
+                  <span className="text-xs text-zinc-500">24 attending</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="bg-zinc-800 rounded-lg p-3 flex flex-col items-center">
-                  <div className="mb-1">
-                    <Trophy className="h-5 w-5 text-primary" />
-                  </div>
-                  <p className="text-xs text-center">3 Active Challenges</p>
-                </div>
-                <div className="bg-zinc-800 rounded-lg p-3 flex flex-col items-center">
-                  <div className="mb-1">
-                    <Image src="/shaka-coin.png" alt="Rewards" width={20} height={20} className="object-contain" />
-                  </div>
-                  <p className="text-xs text-center">1,250 Shaka Coins</p>
-                </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                <Users className="h-6 w-6 text-purple-500" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Link href="/challenges/board-club">
-                  <Button className="w-full" variant="outline">
-                    Challenges
-                  </Button>
-                </Link>
-                <Link href="/rewards">
-                  <Button className="w-full bg-primary text-black">Rewards</Button>
-                </Link>
+              <div>
+                <h3 className="font-medium">Board Club Meetup</h3>
+                <p className="text-xs text-zinc-400 mb-1">Sunday, 4:00 PM • Skate Park</p>
+                <div className="flex items-center gap-1">
+                  <Users className="h-3 w-3 text-zinc-500" />
+                  <span className="text-xs text-zinc-500">18 attending</span>
+                </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
 
-        <div className="space-y-3">
-          <Link href="/start-activity">
-            <Button className="w-full">Start Activity</Button>
-          </Link>
-          <Link href="/map">
-            <Button variant="outline" className="w-full">
-              Explore Map
-            </Button>
-          </Link>
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold">Recent Activities</h2>
+            <Link href="/activities">
+              <Button variant="ghost" size="sm" className="h-8 gap-1">
+                View All
+                <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
+          <div className="space-y-3">
+            <ActivityCard
+              title="Morning Run"
+              subtitle="5.2 km • 28 min"
+              date="Today, 7:30 AM"
+              image="/misty-morning-trail.png"
+              points={75}
+            />
+            <ActivityCard
+              title="Skateboarding Session"
+              subtitle="Urban Park • 1.5 hours"
+              date="Yesterday, 5:15 PM"
+              image="/urban-skater-motion.png"
+              points={120}
+            />
+          </div>
         </div>
       </div>
 
-      <TabBar activeTab="home" />
-    </main>
+      <TabBar activeTab="dashboard" />
+    </div>
   )
 }

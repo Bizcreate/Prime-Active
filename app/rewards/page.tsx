@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { NFTVerification } from "@/components/nft-verification"
 import { WalletConnectButton } from "@/components/wallet-connect-button"
 import Image from "next/image"
+import { NFTCommunityRewards } from "@/components/nft-community-rewards"
 
 export default function RewardsPage() {
   const { isConnected, points, hasAccess, ownedNFTs } = useWeb3()
@@ -270,6 +271,10 @@ export default function RewardsPage() {
             </div>
           </>
         )}
+
+        <div className="mt-8">
+          <NFTCommunityRewards />
+        </div>
 
         {!hasAccess && isConnected && (
           <div className="mt-6">

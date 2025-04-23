@@ -19,18 +19,22 @@ export function BrandedNFTCard({ id, name, image, rarity, activity, onClick }: B
     uncommon: "bg-green-600",
     rare: "bg-blue-600",
     epic: "bg-purple-600",
-    legendary: "bg-primary",
+    legendary: "bg-[#ffc72d]",
   }
 
   return (
     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="cursor-pointer" onClick={onClick}>
       <Card className="overflow-hidden bg-zinc-900/50 border-zinc-800/50 prime-mates-shadow">
-        <div className="relative aspect-square overflow-hidden">
+        <div className="relative aspect-square rounded-t-lg overflow-hidden">
           <Image
             src={image || "/placeholder.svg"}
             alt={name}
             fill
-            className="object-cover transition-transform hover:scale-110"
+            className="object-cover transition-transform duration-300 group-hover:scale-110"
+            onError={(e) => {
+              // Fallback to placeholder if image fails to load
+              ;(e.target as HTMLImageElement).src = "/chromatic-flow.png"
+            }}
           />
           <div className={`absolute top-2 right-2 ${rarityColors[rarity]} text-black text-xs px-2 py-0.5 rounded-full`}>
             {rarity.charAt(0).toUpperCase() + rarity.slice(1)}

@@ -3,63 +3,41 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { TabBar } from "@/components/tab-bar"
-import { ArrowLeft, Copy, ExternalLink, Plus, RefreshCw } from "lucide-react"
+import { ArrowLeft, Copy, ExternalLink, Plus, RefreshCw, ChevronsUp } from "lucide-react"
 import Link from "next/link"
 import { useWeb3 } from "@/components/web3-provider"
 import { WalletConnectButton } from "@/components/wallet-connect-button"
 import { WalletDisplay } from "@/components/wallet-display"
 import Image from "next/image"
+import NFTStaking from "@/components/nft-staking"
 
 export default function WalletPage() {
-  const { isConnected, address, balance, ownedNFTs } = useWeb3()
+  const { isConnected, address, balance, ownedNFTs, stakingRewards } = useWeb3()
   const [activeTab, setActiveTab] = useState("tokens")
+  const [showStaking, setShowStaking] = useState(false)
 
-  // Mock data for tokens and NFTs
+  // Mock data for tokens
   const tokens = [
     {
       name: "Shaka Coin",
       symbol: "SHKA",
-      balance: "1,250.00",
-      value: "125.00",
+      balance: balance.toString(),
+      value: (balance * 0.1).toFixed(2), // Assuming 1 SHKA = $0.1
+      icon: "/shaka-coin.png",
     },
     {
       name: "Prime Active",
       symbol: "ACTIVE",
       balance: "500.00",
       value: "50.00",
+      icon: null,
     },
     {
       name: "Ethereum",
       symbol: "ETH",
       balance: "0.05",
       value: "125.00",
-    },
-  ]
-
-  const nfts = [
-    {
-      id: "1",
-      name: "Prime Mates Surfer",
-      image: "/surfing-monkey.png",
-      collection: "Prime Mates Board Club",
-    },
-    {
-      id: "2",
-      name: "Prime Mates Skater",
-      image: "/skateboarding-monkey.png",
-      collection: "Prime Mates Board Club",
-    },
-    {
-      id: "3",
-      name: "Banana Boarder",
-      image: "/snowboarding-monkey.png",
-      collection: "Prime Mates Board Club",
-    },
-    {
-      id: "4",
-      name: "Digital Athlete",
-      image: "/abstract-digital-art.png",
-      collection: "Prime Active Collection",
+      icon: null,
     },
   ]
 
@@ -93,7 +71,7 @@ export default function WalletPage() {
         ) : (
           <>
             <div className="bg-zinc-900 rounded-lg p-4 mb-6">
-              <WalletDisplay address={address} balance={balance} />
+              <WalletDisplay />
               <div className="flex gap-2 mt-4">
                 <Button variant="outline" size="sm" className="flex-1">
                   <RefreshCw className="h-4 w-4 mr-2" />
@@ -115,21 +93,21 @@ export default function WalletPage() {
                 <div className="mb-2">
                   <Image src="/shaka-coin.png" alt="Shaka Coins" width={48} height={48} className="object-contain" />
                 </div>
-                <div className="text-2xl font-bold text-yellow-500">1,250</div>
+                <div className="text-2xl font-bold text-[#ffc72d]">{balance}</div>
                 <div className="text-xs text-zinc-400">Shaka Coins</div>
               </div>
               <div className="bg-zinc-900 p-4 rounded-lg flex flex-col items-center">
                 <div className="mb-2">
                   <Image
                     src="/shaka-banana.png"
-                    alt="Banana Points"
+                    alt="Staking Rewards"
                     width={48}
                     height={48}
                     className="object-contain"
                   />
                 </div>
-                <div className="text-2xl font-bold text-yellow-500">42</div>
-                <div className="text-xs text-zinc-400">Banana Points</div>
+                <div className="text-2xl font-bold text-[#ffc72d]">{stakingRewards}</div>
+                <div className="text-xs text-zinc-400">Staking Rewards</div>
               </div>
             </div>
 
@@ -139,36 +117,56 @@ export default function WalletPage() {
                 <Button
                   size="sm"
                   variant={activeTab === "tokens" ? "default" : "outline"}
-                  onClick={() => setActiveTab("tokens")}
+                  onClick={() => {
+                    setActiveTab("tokens")
+                    setShowStaking(false)
+                  }}
+                  className={activeTab === "tokens" ? "bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90" : ""}
                 >
                   Tokens
                 </Button>
                 <Button
                   size="sm"
                   variant={activeTab === "nfts" ? "default" : "outline"}
-                  onClick={() => setActiveTab("nfts")}
+                  onClick={() => {
+                    setActiveTab("nfts")
+                    setShowStaking(false)
+                  }}
+                  className={activeTab === "nfts" ? "bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90" : ""}
                 >
                   NFTs
+                </Button>
+                <Button
+                  size="sm"
+                  variant={activeTab === "staking" ? "default" : "outline"}
+                  onClick={() => {
+                    setActiveTab("staking")
+                    setShowStaking(true)
+                  }}
+                  className={activeTab === "staking" ? "bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90" : ""}
+                >
+                  <ChevronsUp className="h-4 w-4 mr-1" />
+                  Stake
                 </Button>
               </div>
             </div>
 
-            {activeTab === "tokens" ? (
+            {activeTab === "tokens" && (
               <div className="space-y-3">
                 {tokens.map((token, index) => (
                   <div key={index} className="bg-zinc-900 rounded-lg p-4 flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center mr-3">
-                        {token.symbol === "SHKA" ? (
+                        {token.icon ? (
                           <Image
-                            src="/shaka-coin.png"
+                            src={token.icon || "/placeholder.svg"}
                             alt={token.symbol}
                             width={32}
                             height={32}
                             className="object-contain"
                           />
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-black font-bold">
+                          <div className="w-8 h-8 rounded-full bg-[#ffc72d] flex items-center justify-center text-black font-bold">
                             {token.symbol.charAt(0)}
                           </div>
                         )}
@@ -189,9 +187,11 @@ export default function WalletPage() {
                   Add Token
                 </Button>
               </div>
-            ) : (
+            )}
+
+            {activeTab === "nfts" && (
               <div className="grid grid-cols-2 gap-3">
-                {nfts.map((nft, index) => (
+                {ownedNFTs.map((nft, index) => (
                   <div key={index} className="bg-zinc-900 rounded-lg overflow-hidden">
                     <div className="relative aspect-square">
                       <Image src={nft.image || "/placeholder.svg"} alt={nft.name} fill className="object-cover" />
@@ -206,10 +206,27 @@ export default function WalletPage() {
                           />
                         </div>
                       )}
+                      <div
+                        className={`absolute top-2 right-2 bg-${nft.rarity === "legendary" ? "[#ffc72d]" : nft.rarity === "epic" ? "purple-600" : nft.rarity === "rare" ? "blue-600" : "zinc-600"} text-black text-xs px-2 py-0.5 rounded-full`}
+                      >
+                        {nft.rarity.charAt(0).toUpperCase() + nft.rarity.slice(1)}
+                      </div>
                     </div>
                     <div className="p-3">
                       <p className="font-medium text-sm truncate">{nft.name}</p>
-                      <p className="text-xs text-zinc-500 truncate">{nft.collection}</p>
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs text-zinc-500 truncate">{nft.collection}</p>
+                        <div className="flex items-center gap-1">
+                          <Image
+                            src="/shaka-coin.png"
+                            alt="Rewards"
+                            width={12}
+                            height={12}
+                            className="object-contain"
+                          />
+                          <span className="text-xs text-[#ffc72d]">+{nft.stakingRewards}/day</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -221,6 +238,8 @@ export default function WalletPage() {
                 </Link>
               </div>
             )}
+
+            {activeTab === "staking" && <NFTStaking onSuccess={() => console.log("Staking successful")} />}
           </>
         )}
       </div>

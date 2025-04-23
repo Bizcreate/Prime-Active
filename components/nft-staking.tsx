@@ -25,10 +25,12 @@ interface StakableNFT {
   stakingPeriod: number
   stakingProgress: number
   selected?: boolean
+  stakedAt?: string
+  unlockAt?: string
 }
 
 export default function NFTStaking({ onSuccess }: NFTStakingProps) {
-  const { isConnected, connectWallet, ownedNFTs } = useWeb3()
+  const { isConnected, connectWallet, ownedNFTs, stakedNFTs } = useWeb3()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [stakableNFTs, setStakableNFTs] = useState<StakableNFT[]>([])
@@ -36,53 +38,27 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
   const [isStaking, setIsStaking] = useState(false)
   const [stakingSuccess, setStakingSuccess] = useState(false)
 
-  // Mock stakable NFTs data
-  const mockStakableNFTs: StakableNFT[] = [
-    {
-      id: "nft-1",
-      name: "Banana Boarder",
-      image: "/skateboarding-monkey.png",
-      collection: "Prime Mates Board Club",
-      rarity: "rare",
-      stakingStatus: "unstaked",
-      stakingRewards: 25,
-      stakingPeriod: 7,
-      stakingProgress: 0,
-    },
-    {
-      id: "nft-2",
-      name: "Wave Rider",
-      image: "/surfing-monkey.png",
-      collection: "Prime Mates Board Club",
-      rarity: "epic",
-      stakingStatus: "staked",
-      stakingRewards: 50,
-      stakingPeriod: 14,
-      stakingProgress: 65,
-    },
-    {
-      id: "nft-3",
-      name: "Powder Monkey",
-      image: "/snowboarding-monkey.png",
-      collection: "Prime Mates Board Club",
-      rarity: "legendary",
-      stakingStatus: "cooldown",
-      stakingRewards: 100,
-      stakingPeriod: 30,
-      stakingProgress: 100,
-    },
-  ]
-
   // Load stakable NFTs when wallet is connected
   useEffect(() => {
     if (isConnected) {
-      // In a real app, we would filter ownedNFTs to find stakable ones
-      // For now, we'll use mock data
-      setStakableNFTs(mockStakableNFTs)
+      // Convert owned NFTs to stakable format
+      const ownedStakable = ownedNFTs.map((nft) => ({
+        ...nft,
+        stakingStatus: "unstaked" as StakingStatus,
+        stakingProgress: 0,
+      }))
+
+      // Use staked NFTs as is
+      const stakedItems = stakedNFTs.map((nft) => ({
+        ...nft,
+        stakingStatus: "staked" as StakingStatus,
+      }))
+
+      setStakableNFTs([...ownedStakable, ...stakedItems])
     } else {
       setStakableNFTs([])
     }
-  }, [isConnected, ownedNFTs])
+  }, [isConnected, ownedNFTs, stakedNFTs])
 
   // Handle wallet connection
   const handleConnectWallet = async () => {
@@ -119,7 +95,15 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
       // Update staking status for selected NFTs
       setStakableNFTs((prevNFTs) =>
         prevNFTs.map((nft) =>
-          selectedNFTs.includes(nft.id) ? { ...nft, stakingStatus: "staking", stakingProgress: 5 } : nft,
+          selectedNFTs.includes(nft.id)
+            ? {
+                ...nft,
+                stakingStatus: "staking",
+                stakingProgress: 5,
+                stakedAt: new Date().toISOString(),
+                unlockAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * nft.stakingPeriod).toISOString(),
+              }
+            : nft,
         ),
       )
 
@@ -186,13 +170,23 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
     }
   }
 
+  // Format date to readable string
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+  }
+
   return (
     <Card className="bg-zinc-900 border-zinc-800">
       <CardHeader>
         <div className="flex items-center gap-2">
           <Image src="/shaka-coin.png" alt="Prime Mates Board Club" width={40} height={40} className="object-contain" />
           <CardTitle className="flex items-center gap-2">
-            <ChevronsUp className="h-5 w-5 text-primary" />
+            <ChevronsUp className="h-5 w-5 text-[#ffc72d]" />
             NFT Staking
           </CardTitle>
         </div>
@@ -216,32 +210,32 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
 
         <div className="bg-zinc-800/50 rounded-lg p-4 mb-6">
           <h3 className="font-medium mb-2 flex items-center gap-2">
-            <Info className="h-4 w-4 text-primary" />
+            <Info className="h-4 w-4 text-[#ffc72d]" />
             Staking Benefits
           </h3>
           <ul className="space-y-2 text-sm text-zinc-300">
             <li className="flex items-center gap-2">
-              <div className="bg-primary/20 p-1 rounded-full">
-                <Check className="h-3 w-3 text-primary" />
+              <div className="bg-[#ffc72d]/20 p-1 rounded-full">
+                <Check className="h-3 w-3 text-[#ffc72d]" />
               </div>
               <span>
-                Earn passive <span className="text-primary font-medium">Shaka Coins</span> daily
+                Earn passive <span className="text-[#ffc72d] font-medium">Shaka Coins</span> daily
               </span>
             </li>
             <li className="flex items-center gap-2">
-              <div className="bg-primary/20 p-1 rounded-full">
-                <Check className="h-3 w-3 text-primary" />
+              <div className="bg-[#ffc72d]/20 p-1 rounded-full">
+                <Check className="h-3 w-3 text-[#ffc72d]" />
               </div>
               <span>
-                Unlock exclusive <span className="text-primary font-medium">Board Club</span> challenges
+                Unlock exclusive <span className="text-[#ffc72d] font-medium">Board Club</span> challenges
               </span>
             </li>
             <li className="flex items-center gap-2">
-              <div className="bg-primary/20 p-1 rounded-full">
-                <Check className="h-3 w-3 text-primary" />
+              <div className="bg-[#ffc72d]/20 p-1 rounded-full">
+                <Check className="h-3 w-3 text-[#ffc72d]" />
               </div>
               <span>
-                Boost your <span className="text-primary font-medium">activity rewards</span> by up to 3x
+                Boost your <span className="text-[#ffc72d] font-medium">activity rewards</span> by up to 3x
               </span>
             </li>
           </ul>
@@ -249,6 +243,10 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
 
         {!isConnected ? (
           <div className="text-center py-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold mb-2 text-[#ffc72d]">Connect Wallet to Stake</h2>
+              {/* Existing wallet connection UI */}
+            </div>
             <div className="mb-4 mx-auto w-20 h-20 rounded-full bg-zinc-800 flex items-center justify-center">
               <Lock className="h-8 w-8 text-zinc-500" />
             </div>
@@ -256,7 +254,11 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
             <p className="text-zinc-400 text-sm mb-4">
               Connect your wallet to view and stake your Prime Mates NFTs for rewards
             </p>
-            <Button onClick={handleConnectWallet} disabled={isLoading} className="w-full">
+            <Button
+              onClick={handleConnectWallet}
+              disabled={isLoading}
+              className="w-full bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90"
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -276,14 +278,19 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
             <p className="text-zinc-400 text-sm mb-4">
               You don't have any Prime Mates NFTs that can be staked. Visit the marketplace to get some!
             </p>
-            <Button className="w-full">Browse Marketplace</Button>
+            <Button className="w-full bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90">Browse Marketplace</Button>
           </div>
         ) : (
           <>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold">Your Stakable NFTs</h3>
               {selectedNFTs.length > 0 && (
-                <Button size="sm" onClick={handleStakeNFTs} disabled={isStaking} className="bg-primary text-black">
+                <Button
+                  size="sm"
+                  onClick={handleStakeNFTs}
+                  disabled={isStaking}
+                  className="bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90"
+                >
                   {isStaking ? (
                     <>
                       <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -308,8 +315,8 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
                   <div
                     key={nft.id}
                     className={`bg-zinc-800 rounded-lg overflow-hidden border ${
-                      isSelected ? "border-primary" : "border-zinc-700"
-                    } transition-all ${isSelectable ? "cursor-pointer hover:border-primary/50" : ""}`}
+                      isSelected ? "border-[#ffc72d]" : "border-zinc-700"
+                    } transition-all ${isSelectable ? "cursor-pointer hover:border-[#ffc72d]/50" : ""}`}
                     onClick={() => isSelectable && toggleNFTSelection(nft.id)}
                   >
                     <div className="flex p-3">
@@ -323,7 +330,7 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
                           >
                             <div
                               className={`w-6 h-6 rounded-full ${
-                                isSelected ? "bg-primary" : "bg-zinc-700"
+                                isSelected ? "bg-[#ffc72d]" : "bg-zinc-700"
                               } flex items-center justify-center`}
                             >
                               {isSelected ? (
@@ -348,9 +355,16 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
                           <div className="mt-2">
                             <div className="flex justify-between text-xs mb-1">
                               <span>Staking Progress</span>
-                              <span className="text-primary">{nft.stakingProgress}%</span>
+                              <span className="text-[#ffc72d]">{nft.stakingProgress}%</span>
                             </div>
-                            <Progress value={nft.stakingProgress} className="h-1.5" />
+                            <Progress value={nft.stakingProgress} className="h-1.5" indicatorClassName="bg-[#ffc72d]" />
+
+                            {nft.stakedAt && nft.unlockAt && (
+                              <div className="flex justify-between text-xs mt-1 text-zinc-400">
+                                <span>Staked: {formatDate(nft.stakedAt)}</span>
+                                <span>Unlock: {formatDate(nft.unlockAt)}</span>
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -363,7 +377,7 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
                               height={12}
                               className="object-contain"
                             />
-                            <span className="text-primary font-medium">+{nft.stakingRewards}/day</span>
+                            <span className="text-[#ffc72d] font-medium">+{nft.stakingRewards}/day</span>
                           </div>
 
                           {nft.stakingStatus === "staked" && (
@@ -384,7 +398,7 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
                           {nft.stakingStatus === "cooldown" && (
                             <Button
                               size="sm"
-                              className="h-7 text-xs bg-primary text-black"
+                              className="h-7 text-xs bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleClaimRewards(nft.id)
@@ -406,17 +420,21 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
       </CardContent>
       <CardFooter className="flex flex-col">
         <div className="w-full p-3 bg-zinc-800 rounded-lg">
+          <div className="mb-4">
+            <h2 className="text-lg font-bold mb-2 text-[#ffc72d]">Staking Summary</h2>
+            {/* Existing staking summary UI */}
+          </div>
           <div className="flex justify-between items-center mb-2">
             <h4 className="font-medium text-sm">Staking Summary</h4>
-            <div className="flex items-center gap-1 text-xs bg-primary/20 px-2 py-1 rounded-full">
-              <Clock className="h-3 w-3 text-primary" />
-              <span className="text-primary">Updated daily</span>
+            <div className="flex items-center gap-1 text-xs bg-[#ffc72d]/20 px-2 py-1 rounded-full">
+              <Clock className="h-3 w-3 text-[#ffc72d]" />
+              <span className="text-[#ffc72d]">Updated daily</span>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="bg-zinc-900 p-2 rounded-lg">
               <p className="text-xs text-zinc-400">Staked NFTs</p>
-              <p className="text-lg font-bold text-primary">
+              <p className="text-lg font-bold text-[#ffc72d]">
                 {stakableNFTs.filter((nft) => nft.stakingStatus === "staked" || nft.stakingStatus === "staking").length}
               </p>
             </div>
@@ -424,7 +442,7 @@ export default function NFTStaking({ onSuccess }: NFTStakingProps) {
               <p className="text-xs text-zinc-400">Daily Rewards</p>
               <div className="flex items-center justify-center gap-1">
                 <Image src="/shaka-coin.png" alt="Rewards" width={14} height={14} className="object-contain" />
-                <p className="text-lg font-bold text-primary">
+                <p className="text-lg font-bold text-[#ffc72d]">
                   {stakableNFTs
                     .filter((nft) => nft.stakingStatus === "staked" || nft.stakingStatus === "staking")
                     .reduce((total, nft) => total + nft.stakingRewards, 0)}

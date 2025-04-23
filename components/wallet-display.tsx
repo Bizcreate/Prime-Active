@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Wallet, ExternalLink, Copy, LogOut } from "lucide-react"
 import { useState } from "react"
 import { useWeb3 } from "@/components/web3-provider"
+import Image from "next/image"
 
 export function WalletDisplay() {
-  const { address, disconnectWallet } = useWeb3()
+  const { address, disconnectWallet, balance } = useWeb3()
   const [copied, setCopied] = useState(false)
 
   const copyAddress = () => {
@@ -33,14 +34,14 @@ export function WalletDisplay() {
     <Card className="bg-zinc-900 border-zinc-800">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Wallet className="h-5 w-5 text-primary" />
+          <Wallet className="h-5 w-5 text-[#ffc72d]" />
           Connected Wallet
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center mb-4">
           <div className="bg-zinc-800 p-3 rounded-full mb-3">
-            <Wallet className="h-8 w-8 text-primary" />
+            <Wallet className="h-8 w-8 text-[#ffc72d]" />
           </div>
           <p className="font-medium">Web3 Wallet</p>
           <div className="flex items-center gap-2 mt-1">
@@ -50,6 +51,11 @@ export function WalletDisplay() {
             </Button>
             {copied && <span className="text-xs text-green-500">Copied!</span>}
           </div>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <Image src="/shaka-coin.png" alt="Shaka Coins" width={24} height={24} className="object-contain" />
+          <span className="text-xl font-bold text-[#ffc72d]">{balance} $SHKA</span>
         </div>
 
         <div className="space-y-3">

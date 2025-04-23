@@ -19,7 +19,7 @@ export function NFTCard({ id, name, image, rarity, activity, onClick }: NFTCardP
     uncommon: "bg-green-600",
     rare: "bg-blue-600",
     epic: "bg-purple-600",
-    legendary: "bg-primary",
+    legendary: "bg-[#ffc72d]",
   }
 
   return (
@@ -31,7 +31,7 @@ export function NFTCard({ id, name, image, rarity, activity, onClick }: NFTCardP
           fill
           className="object-cover transition-transform hover:scale-110"
         />
-        <div className={`absolute top-2 right-2 ${rarityColors[rarity]} text-white text-xs px-2 py-0.5 rounded-full`}>
+        <div className={`absolute top-2 right-2 ${rarityColors[rarity]} text-black text-xs px-2 py-0.5 rounded-full`}>
           {rarity}
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { ArrowLeft, User, Wallet, Heart, LogOut, Bell, Shield, Moon } from "lucide-react"
+import { ArrowLeft, User, Wallet, Heart, LogOut, Bell, Shield, Moon, Calendar } from "lucide-react"
 import Link from "next/link"
 import { TabBar } from "@/components/tab-bar"
 import { useWeb3 } from "@/components/web3-provider"
@@ -147,6 +147,27 @@ export default function ProfilePage() {
               <NFTVerification />
             </div>
           )}
+
+          <div>
+            <h2 className="text-lg font-medium mb-4">Activity</h2>
+            <div className="space-y-3">
+              <Link
+                href="/profile/activity-history"
+                className="flex items-center justify-between p-3 bg-zinc-900 rounded-lg"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-zinc-800 p-2 rounded-full">
+                    <Calendar className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Activity History</p>
+                    <p className="text-xs text-zinc-400">View your past activities and achievements</p>
+                  </div>
+                </div>
+                <ArrowLeft className="h-4 w-4 rotate-180" />
+              </Link>
+            </div>
+          </div>
 
           <div>
             <h2 className="text-lg font-medium mb-4">Settings</h2>

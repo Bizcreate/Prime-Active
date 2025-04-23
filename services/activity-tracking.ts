@@ -136,6 +136,16 @@ export function useActivityTracking() {
     }
 
     checkPermissions()
+
+    // Add proper cleanup
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId)
+      }
+      if (mockInterval) {
+        clearInterval(mockInterval)
+      }
+    }
   }, [])
 
   // Start tracking an activity
@@ -324,6 +334,22 @@ export function useActivityTracking() {
     addDebugLog(`Position update: ${newLocation.latitude}, ${newLocation.longitude}`)
 
     setLocations((prevLocations) => {
+      // Only add location if it's significantly different from the last one
+      const lastLocation = prevLocations[prevLocations.length - 1]
+      if (lastLocation) {
+        const distance = calculateDistance(
+          lastLocation.latitude,
+          lastLocation.longitude,
+          newLocation.latitude,
+          newLocation.longitude,
+        )
+
+        // If distance is less than 5 meters, don't add a new point (reduces data points)
+        if (distance < 0.005) {
+          return prevLocations
+        }
+      }
+
       const updatedLocations = [...prevLocations, newLocation]
 
       // Calculate new distance

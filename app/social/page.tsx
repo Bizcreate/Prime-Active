@@ -1,407 +1,329 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { TabBar } from "@/components/tab-bar"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { Search, Filter, Plus, Heart, MessageCircle, Share2, Award, MapPin } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { PostCard } from "@/components/post-card"
 import Link from "next/link"
-import { generateRandomNFTImage } from "@/lib/utils"
-import Image from "next/image"
+import { Search, Plus, TrendingUp, Filter, Users, Sparkles } from "lucide-react"
+
+// Mock data for posts
+const mockPosts = [
+  {
+    id: "post1",
+    username: "BananaShredder",
+    avatar: "/cheerful-monkey-profile.png",
+    time: "2h ago",
+    content: "Just hit a new personal best at Downtown Skatepark! Earned 150 banana points today. 🍌🛹",
+    image: "/sunset-ollie.png",
+    likes: 24,
+    comments: 8,
+    location: "Downtown Skatepark",
+    activity: {
+      type: "skate",
+      duration: "1h 45m",
+      distance: "5.2 miles",
+      points: 150,
+    },
+    verified: true,
+  },
+  {
+    id: "post2",
+    username: "WaveMaster",
+    avatar: "/stoked-simian.png",
+    time: "5h ago",
+    content:
+      "Perfect waves this morning at Malibu! Caught the barrel of my life and earned my Banana Barrel achievement. 🍌🌊",
+    image: "/barrel-rider.png",
+    likes: 42,
+    comments: 12,
+    location: "Malibu Surfrider Beach",
+    activity: {
+      type: "surf",
+      duration: "2h 30m",
+      distance: "N/A",
+      points: 200,
+    },
+    verified: true,
+  },
+  {
+    id: "post3",
+    username: "PrimeMatesOfficial",
+    avatar: "/prime-mates-logo.png",
+    time: "1d ago",
+    content:
+      "🍌 ANNOUNCEMENT: The Banana Boardwalk event is happening this Saturday! Join us for group skating, competitions, and exclusive NFT drops. RSVP now to earn 2x banana points! 🛹",
+    image: "/banana-shred.png",
+    likes: 89,
+    comments: 34,
+    location: "Venice Beach Boardwalk",
+    isOfficial: true,
+    isEvent: true,
+  },
+  {
+    id: "post4",
+    username: "PowderMonkey",
+    avatar: "/stoked-snowboarder-ape.png",
+    time: "2d ago",
+    content:
+      "First snow of the season! ❄️ Getting ready for the winter shred season. Who's joining the Prime Mates Snow Trip next month?",
+    image: "/waxing-snowboard-closeup.png",
+    likes: 36,
+    comments: 15,
+    location: "Prime Mates HQ",
+    activity: {
+      type: "snow",
+      duration: "N/A",
+      distance: "N/A",
+      points: 100,
+    },
+    verified: true,
+  },
+]
 
 export default function SocialPage() {
-  const [searchQuery, setSearchQuery] = useState("")
+  const [filter, setFilter] = useState("all")
+  const [posts, setPosts] = useState(mockPosts)
+  const [isLoading, setIsLoading] = useState(false)
+  const [commentText, setCommentText] = useState("")
+  const [activeCommentPost, setActiveCommentPost] = useState<string | null>(null)
+  const feedRef = useRef<HTMLDivElement>(null)
 
-  // Mock social feed data
-  const posts = [
-    {
-      id: "post-1",
-      user: {
-        name: "Alex Runner",
-        username: "alexrunner",
-        avatar: "/focused-marathoner.png",
-      },
-      content: "Just completed my morning run! 5.2km in 32:15. Feeling great! 🏃‍♂️",
-      image: "/misty-morning-trail.png",
-      location: {
-        name: "Central Park Trail",
-        lat: 40.7812,
-        lng: -73.9665,
-      },
-      activity: {
-        type: "running",
-        distance: "5.2 km",
-        duration: "32:15",
-        calories: "327",
-      },
-      nft: {
-        earned: true,
-        name: "Morning Runner",
-        image: generateRandomNFTImage(3),
-      },
-      likes: 24,
-      comments: 5,
-      time: "2 hours ago",
-    },
-    {
-      id: "post-2",
-      user: {
-        name: "Skate Master",
-        username: "sk8master",
-        avatar: "/urban-skater-motion.png",
-      },
-      content:
-        "New personal best at Downtown Skatepark! Landed my first kickflip 360. Check out the video! #skateboarding #tricks",
-      image: "/ollie-over-gap.png",
-      location: {
-        name: "Downtown Skatepark",
-        lat: 34.0522,
-        lng: -118.2437,
-      },
-      activity: {
-        type: "skateboarding",
-        duration: "1:15:00",
-        calories: "450",
-      },
-      likes: 42,
-      comments: 8,
-      time: "Yesterday",
-    },
-    {
-      id: "post-3",
-      user: {
-        name: "Wave Rider",
-        username: "waverider",
-        avatar: "/determined-surfer.png",
-      },
-      content:
-        "Perfect waves at Sunset Beach this morning! Earned my Wave Catcher NFT after 5 consecutive surf sessions. 🏄‍♂️🌊",
-      image: "/surfer-silhouette.png",
-      location: {
-        name: "Sunset Beach",
-        lat: 33.6189,
-        lng: -117.9298,
-      },
-      activity: {
-        type: "surfing",
-        duration: "2:00:00",
-        calories: "700",
-      },
-      nft: {
-        earned: true,
-        name: "Wave Catcher",
-        image: generateRandomNFTImage(5),
-      },
-      likes: 36,
-      comments: 12,
-      time: "2 days ago",
-    },
-  ]
+  // Filter posts based on selected filter
+  const filteredPosts =
+    filter === "all"
+      ? posts
+      : filter === "official"
+        ? posts.filter((post) => post.isOfficial)
+        : posts.filter((post) => post.activity?.type === filter)
 
-  const challenges = [
-    {
-      id: "challenge-1",
-      title: "10K Challenge",
-      description: "Run 10km in a single session",
-      reward: "500 BURNZ + Exclusive NFT",
-      participants: 128,
-      deadline: "3 days left",
-      image: "/triumphant-finish.png",
-    },
-    {
-      id: "challenge-2",
-      title: "Skate Park Tour",
-      description: "Visit 5 different skateparks",
-      reward: "750 BURNZ + Rare NFT",
-      participants: 64,
-      deadline: "5 days left",
-      image: "/skateboarding-victory.png",
-    },
-    {
-      id: "challenge-3",
-      title: "Weekend Warrior",
-      description: "Complete 3 activities this weekend",
-      reward: "300 BURNZ",
-      participants: 256,
-      deadline: "Starts Saturday",
-      image: "/achievement-medal.png",
-    },
-  ]
+  // Handle like post
+  const handleLikePost = (postId: string) => {
+    setPosts(
+      posts.map((post) => {
+        if (post.id === postId) {
+          return { ...post, likes: post.likes + 1 }
+        }
+        return post
+      }),
+    )
+  }
 
-  const leaderboard = [
-    {
-      rank: 1,
-      user: {
-        name: "Marathon Pro",
-        username: "marathonpro",
-        avatar: "/placeholder.svg?height=40&width=40&query=runner+1",
-      },
-      activity: "Running",
-      score: "156.2 km",
-    },
-    {
-      rank: 2,
-      user: {
-        name: "Skate Legend",
-        username: "sk8legend",
-        avatar: "/placeholder.svg?height=40&width=40&query=skater+2",
-      },
-      activity: "Skateboarding",
-      score: "142.8 km",
-    },
-    {
-      rank: 3,
-      user: {
-        name: "Wave Master",
-        username: "wavemaster",
-        avatar: "/placeholder.svg?height=40&width=40&query=surfer+3",
-      },
-      activity: "Surfing",
-      score: "128.5 km",
-    },
-    {
-      rank: 4,
-      user: {
-        name: "Snow Rider",
-        username: "snowrider",
-        avatar: "/placeholder.svg?height=40&width=40&query=snowboarder+4",
-      },
-      activity: "Snowboarding",
-      score: "115.2 km",
-    },
-    {
-      rank: 5,
-      user: {
-        name: "Bike Explorer",
-        username: "bikeexplorer",
-        avatar: "/placeholder.svg?height=40&width=40&query=cyclist+5",
-      },
-      activity: "Mountain Biking",
-      score: "98.7 km",
-    },
-  ]
+  // Handle comment submission
+  const handleSubmitComment = (postId: string) => {
+    if (!commentText.trim()) return
+
+    setPosts(
+      posts.map((post) => {
+        if (post.id === postId) {
+          return { ...post, comments: post.comments + 1 }
+        }
+        return post
+      }),
+    )
+
+    setCommentText("")
+    setActiveCommentPost(null)
+  }
+
+  // Load more posts when scrolling to bottom
+  const handleScroll = () => {
+    if (feedRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = feedRef.current
+      if (scrollTop + clientHeight >= scrollHeight - 100 && !isLoading) {
+        loadMorePosts()
+      }
+    }
+  }
+
+  // Simulate loading more posts
+  const loadMorePosts = () => {
+    setIsLoading(true)
+    setTimeout(() => {
+      setPosts([...posts, ...mockPosts.slice(0, 2)])
+      setIsLoading(false)
+    }, 1000)
+  }
+
+  // Add scroll event listener
+  useEffect(() => {
+    const currentFeedRef = feedRef.current
+    if (currentFeedRef) {
+      currentFeedRef.addEventListener("scroll", handleScroll)
+    }
+    return () => {
+      if (currentFeedRef) {
+        currentFeedRef.removeEventListener("scroll", handleScroll)
+      }
+    }
+  }, [posts, isLoading])
 
   return (
-    <main className="flex min-h-screen flex-col bg-black pb-20">
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Community</h1>
-          <Button variant="ghost" size="icon">
-            <Filter className="h-5 w-5" />
-          </Button>
+    <div className="flex min-h-screen flex-col bg-black pb-20">
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">Social Feed</h1>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <Filter className="h-5 w-5" />
+            </Button>
+            <Link href="/social/create-post">
+              <Button size="icon" className="rounded-full bg-[#ffc72d] text-black">
+                <Plus className="h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
         </div>
 
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-zinc-500" />
-          <Input
-            placeholder="Search posts and users..."
-            className="pl-9 bg-zinc-900 border-zinc-800"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+        {/* Search Bar */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-zinc-400" />
+          <input
+            type="text"
+            placeholder="Search posts..."
+            className="w-full bg-zinc-800 rounded-full py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-600"
           />
         </div>
 
-        <Tabs defaultValue="feed" className="mb-6">
-          <TabsList className="grid grid-cols-3 mb-6">
-            <TabsTrigger value="feed">Feed</TabsTrigger>
-            <TabsTrigger value="challenges">Challenges</TabsTrigger>
-            <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-          </TabsList>
+        {/* Filter Tabs */}
+        <div className="flex overflow-x-auto pb-4 gap-2 no-scrollbar">
+          <Button
+            variant={filter === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("all")}
+            className={`rounded-full px-6 ${
+              filter === "all" ? "bg-white text-black" : "bg-zinc-800 text-white border-zinc-700"
+            }`}
+          >
+            All
+          </Button>
+          <Button
+            variant={filter === "trending" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("trending")}
+            className={`rounded-full px-6 flex items-center gap-1 ${
+              filter === "trending" ? "bg-white text-black" : "bg-zinc-800 text-white border-zinc-700"
+            }`}
+          >
+            <TrendingUp className="h-3 w-3" />
+            Trending
+          </Button>
+          <Button
+            variant={filter === "official" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("official")}
+            className={`rounded-full px-6 flex items-center gap-1 ${
+              filter === "official" ? "bg-white text-black" : "bg-zinc-800 text-white border-zinc-700"
+            }`}
+          >
+            <Sparkles className="h-3 w-3" />
+            Official
+          </Button>
+          <Button
+            variant={filter === "skate" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("skate")}
+            className={`rounded-full px-6 ${
+              filter === "skate" ? "bg-white text-black" : "bg-zinc-800 text-white border-zinc-700"
+            }`}
+          >
+            Skate
+          </Button>
+          <Button
+            variant={filter === "surf" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("surf")}
+            className={`rounded-full px-6 ${
+              filter === "surf" ? "bg-white text-black" : "bg-zinc-800 text-white border-zinc-700"
+            }`}
+          >
+            Surf
+          </Button>
+          <Button
+            variant={filter === "snow" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("snow")}
+            className={`rounded-full px-6 ${
+              filter === "snow" ? "bg-white text-black" : "bg-zinc-800 text-white border-zinc-700"
+            }`}
+          >
+            Snow
+          </Button>
+        </div>
 
-          <TabsContent value="feed" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold">Activity Feed</h2>
-              <Link href="/social/create-post">
-                <Button size="sm" className="flex items-center gap-1">
-                  <Plus className="h-4 w-4" />
-                  New Post
-                </Button>
-              </Link>
+        {/* Posts Feed */}
+        <div ref={feedRef} className="space-y-4 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
+          {filteredPosts.length === 0 ? (
+            <div className="bg-zinc-900 rounded-lg p-6 text-center">
+              <Users className="h-12 w-12 mx-auto mb-3 text-zinc-700" />
+              <h3 className="text-lg font-bold mb-2">No Posts</h3>
+              <p className="text-zinc-400 text-sm mb-4">There are no posts matching your filters</p>
+              <Button onClick={() => setFilter("all")}>Show All Posts</Button>
             </div>
+          ) : (
+            filteredPosts.map((post) => (
+              <div key={post.id} className="space-y-2">
+                <PostCard
+                  username={post.username}
+                  avatar={post.avatar}
+                  time={post.time}
+                  content={post.content}
+                  image={post.image}
+                  likes={post.likes}
+                  comments={post.comments}
+                  onLike={() => handleLikePost(post.id)}
+                  onComment={() => setActiveCommentPost(post.id === activeCommentPost ? null : post.id)}
+                  location={post.location}
+                  activity={post.activity}
+                  isOfficial={post.isOfficial}
+                  isEvent={post.isEvent}
+                  verified={post.verified}
+                />
 
-            {posts.map((post) => (
-              <div key={post.id} className="bg-zinc-900 rounded-lg overflow-hidden">
-                <div className="p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Avatar>
-                      <AvatarImage src={post.user.avatar || "/placeholder.svg"} alt={post.user.name} />
-                      <AvatarFallback>{post.user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                {/* Comment section */}
+                {activeCommentPost === post.id && (
+                  <div className="bg-zinc-800 rounded-lg p-3 flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src="/stylish-macaque.png" alt="Your avatar" />
+                      <AvatarFallback>YA</AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="font-medium">{post.user.name}</p>
-                      <p className="text-xs text-zinc-400">
-                        @{post.user.username} • {post.time}
-                      </p>
-                    </div>
-                  </div>
-
-                  <p className="text-sm mb-3">{post.content}</p>
-
-                  {post.location && (
-                    <div className="flex items-center gap-1 text-xs text-zinc-400 mb-2">
-                      <MapPin className="h-3 w-3 text-primary" />
-                      <span>{post.location.name}</span>
-                    </div>
-                  )}
-
-                  {post.image && (
-                    <div className="rounded-lg overflow-hidden mb-3 relative aspect-video">
-                      <Image src={post.image || "/placeholder.svg"} alt="Post" fill className="object-cover" />
-                    </div>
-                  )}
-
-                  {post.activity && (
-                    <div className="bg-zinc-800 rounded-lg p-3 mb-3">
-                      <p className="text-xs text-zinc-400 mb-2">Activity Details</p>
-                      <div className="flex gap-4">
-                        {post.activity.type && (
-                          <div>
-                            <p className="text-xs text-zinc-400">Type</p>
-                            <p className="text-sm capitalize">{post.activity.type}</p>
-                          </div>
-                        )}
-                        {post.activity.distance && (
-                          <div>
-                            <p className="text-xs text-zinc-400">Distance</p>
-                            <p className="text-sm">{post.activity.distance}</p>
-                          </div>
-                        )}
-                        {post.activity.duration && (
-                          <div>
-                            <p className="text-xs text-zinc-400">Duration</p>
-                            <p className="text-sm">{post.activity.duration}</p>
-                          </div>
-                        )}
-                        {post.activity.calories && (
-                          <div>
-                            <p className="text-xs text-zinc-400">Calories</p>
-                            <p className="text-sm">{post.activity.calories} kcal</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {post.nft && post.nft.earned && (
-                    <div className="bg-zinc-800 rounded-lg p-3 mb-3 flex items-center gap-3">
-                      <div className="relative h-12 w-12 rounded-md overflow-hidden">
-                        <Image
-                          src={post.nft.image || "/placeholder.svg"}
-                          alt={post.nft.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1">
-                          <Award className="h-3 w-3 text-burnz-500" />
-                          <p className="text-xs text-burnz-500">NFT Earned</p>
-                        </div>
-                        <p className="text-sm font-medium">{post.nft.name}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="border-t border-zinc-800 p-2 flex justify-between">
-                  <Button variant="ghost" size="sm" className="flex items-center gap-1">
-                    <Heart className="h-4 w-4" />
-                    <span className="text-xs">{post.likes}</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-1">
-                    <MessageCircle className="h-4 w-4" />
-                    <span className="text-xs">{post.comments}</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-1">
-                    <Share2 className="h-4 w-4" />
-                    <span className="text-xs">Share</span>
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="challenges" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold">Active Challenges</h2>
-              <Link href="/social/challenges">
-                <Button variant="ghost" size="sm">
-                  View All
-                </Button>
-              </Link>
-            </div>
-
-            {challenges.map((challenge) => (
-              <div key={challenge.id} className="bg-zinc-900 rounded-lg p-4">
-                <div className="flex gap-3">
-                  <div className="relative h-16 w-16 rounded-md overflow-hidden flex-shrink-0">
-                    <Image
-                      src={challenge.image || "/placeholder.svg"}
-                      alt={challenge.title}
-                      fill
-                      className="object-cover"
+                    <Input
+                      placeholder="Add a comment..."
+                      className="flex-1 bg-zinc-700 border-zinc-600"
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleSubmitComment(post.id)
+                        }
+                      }}
                     />
+                    <Button
+                      size="sm"
+                      className="bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90"
+                      onClick={() => handleSubmitComment(post.id)}
+                      disabled={!commentText.trim()}
+                    >
+                      Post
+                    </Button>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold">{challenge.title}</h3>
-                      <span className="text-xs bg-zinc-800 px-2 py-0.5 rounded-full">{challenge.deadline}</span>
-                    </div>
-                    <p className="text-sm text-zinc-400 mb-2">{challenge.description}</p>
-                    <div className="flex justify-between items-center">
-                      <p className="text-xs text-primary">{challenge.reward}</p>
-                      <p className="text-xs text-zinc-500">{challenge.participants} participants</p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
-            ))}
+            ))
+          )}
 
-            <Button className="w-full">Join a Challenge</Button>
-          </TabsContent>
-
-          <TabsContent value="leaderboard" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-bold">This Week's Leaders</h2>
-              <select className="bg-zinc-800 text-white text-sm rounded-md px-2 py-1 border-none">
-                <option value="distance">Distance</option>
-                <option value="calories">Calories</option>
-                <option value="activities">Activities</option>
-              </select>
+          {/* Loading indicator */}
+          {isLoading && (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#ffc72d]"></div>
             </div>
-
-            <div className="space-y-2">
-              {leaderboard.map((item) => (
-                <div key={item.rank} className="bg-zinc-900 rounded-lg p-3 flex items-center">
-                  <div className="w-6 text-center font-bold mr-2">
-                    {item.rank === 1 ? "🥇" : item.rank === 2 ? "🥈" : item.rank === 3 ? "🥉" : item.rank}
-                  </div>
-                  <Avatar className="mr-3">
-                    <AvatarImage src={item.user.avatar || "/placeholder.svg"} alt={item.user.name} />
-                    <AvatarFallback>{item.user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="font-medium">{item.user.name}</p>
-                    <p className="text-xs text-zinc-400">@{item.user.username}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{item.score}</p>
-                    <p className="text-xs text-zinc-400">{item.activity}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <Button variant="outline" className="w-full">
-              View Full Leaderboard
-            </Button>
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </div>
 
-      <TabBar activeTab="home" />
-    </main>
+      <TabBar activeTab="social" />
+    </div>
   )
 }

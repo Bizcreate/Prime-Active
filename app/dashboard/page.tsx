@@ -7,9 +7,10 @@ import { PostCard } from "@/components/post-card"
 import { ActivityCard } from "@/components/activity-card"
 import { useWeb3 } from "@/components/web3-provider"
 import { WalletConnectButton } from "@/components/wallet-connect-button"
-import { ArrowRight, Calendar, Clock, MapPin, Users } from "lucide-react"
+import { ArrowRight, Calendar, Clock, MapPin, Users, User } from "lucide-react"
 import Link from "next/link"
 import { HealthTracker } from "@/components/health-tracker"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function DashboardPage() {
   const { isConnected } = useWeb3()
@@ -18,7 +19,17 @@ export default function DashboardPage() {
     <div className="flex min-h-screen flex-col bg-black pb-20">
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold">Dashboard</h1>
+          <div className="flex items-center">
+            <Link href="/profile">
+              <Avatar className="h-10 w-10 mr-3 border-2 border-primary cursor-pointer hover:opacity-80 transition-opacity">
+                <AvatarImage src="/stylish-macaque.png" alt="Profile" />
+                <AvatarFallback>
+                  <User className="h-5 w-5" />
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+            <h1 className="text-xl font-bold">Dashboard</h1>
+          </div>
           {!isConnected && <WalletConnectButton size="sm" />}
         </div>
 

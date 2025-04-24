@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 
-export default function StorePage() {
+export default function MerchandisePage() {
   const router = useRouter()
 
   useEffect(() => {

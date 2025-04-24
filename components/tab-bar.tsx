@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Home, Map, Trophy, Wallet, ChevronsUp } from "lucide-react"
+import { Home, Map, Trophy, Wallet, ShoppingBag, ChevronsUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 
@@ -37,6 +37,12 @@ export function TabBar({ activeTab }: TabBarProps) {
       icon: Wallet,
       label: "Wallet",
       href: "/wallet",
+    },
+    {
+      name: "merch",
+      icon: ShoppingBag,
+      label: "Merch",
+      href: "/merch",
     },
     {
       name: "staking",

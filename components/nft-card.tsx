@@ -18,7 +18,7 @@ export function NFTCard({ id, name, image, rarity, benefits, activity }: NFTCard
     uncommon: "bg-green-600",
     rare: "bg-blue-600",
     epic: "bg-purple-600",
-    legendary: "bg-primary",
+    legendary: "bg-[#ffc72d]",
   }
 
   return (
@@ -46,4 +46,5 @@ export function NFTCard({ id, name, image, rarity, benefits, activity }: NFTCard
   )
 }
 
+// Add this named export to fix the deployment error
 export const NftCard = NFTCard

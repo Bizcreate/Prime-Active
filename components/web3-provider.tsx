@@ -15,6 +15,7 @@ interface Web3ContextType {
   hasAccess: boolean
   verifyNFTOwnership: () => Promise<boolean>
   isVerifying: boolean
+  isSimulated: boolean
 }
 
 const Web3Context = createContext<Web3ContextType>({
@@ -29,6 +30,7 @@ const Web3Context = createContext<Web3ContextType>({
   hasAccess: false,
   verifyNFTOwnership: async () => false,
   isVerifying: false,
+  isSimulated: true,
 })
 
 export const useWeb3 = () => useContext(Web3Context)
@@ -42,13 +44,14 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
   const [stakingRewards, setStakingRewards] = useState(0)
   const [hasAccess, setHasAccess] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
+  const [isSimulated] = useState(true) // Always true for testing
 
-  // Mock data for NFTs
+  // Updated mock data for NFTs using actual PMBC NFTs
   const mockNFTs = [
     {
       id: "nft-1",
-      name: "Banana Boarder",
-      image: "/skateboarding-monkey.png",
+      name: "PMBC #420",
+      image: "/pmbc-flamingo.webp",
       collection: "Prime Mates Board Club",
       rarity: "rare",
       stakingRewards: 25,
@@ -56,8 +59,8 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     },
     {
       id: "nft-2",
-      name: "Wave Rider",
-      image: "/surfing-monkey.png",
+      name: "PMBC #721",
+      image: "/pmbc-dreadlocks.webp",
       collection: "Prime Mates Board Club",
       rarity: "epic",
       stakingRewards: 50,
@@ -65,8 +68,8 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     },
     {
       id: "nft-3",
-      name: "Powder Monkey",
-      image: "/snowboarding-monkey.png",
+      name: "PMBC #1337",
+      image: "/pmbc-surfer.jpeg",
       collection: "Prime Mates Board Club",
       rarity: "legendary",
       stakingRewards: 100,
@@ -74,30 +77,21 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     },
     {
       id: "nft-4",
-      name: "Community Champion",
-      image: "/crowned-golden-primate.png",
-      collection: "Prime Mates Community",
+      name: "PMBC #888",
+      image: "/pmbc-pink.jpeg",
+      collection: "Prime Mates Board Club",
       rarity: "legendary",
       stakingRewards: 150,
       stakingPeriod: 14,
     },
-    {
-      id: "nft-5",
-      name: "Digital Pathfinder",
-      image: "/digital-pathfinders.png",
-      collection: "Prime Mates Community",
-      rarity: "epic",
-      stakingRewards: 75,
-      stakingPeriod: 7,
-    },
   ]
 
-  // Mock data for staked NFTs
+  // Updated mock data for staked NFTs
   const mockStakedNFTs = [
     {
       id: "staked-1",
-      name: "Happy Monkey",
-      image: "/happy-monkey-portrait.png",
+      name: "PMBC #420",
+      image: "/pmbc-flamingo.webp",
       collection: "Prime Mates Board Club",
       rarity: "legendary",
       stakingRewards: 125,
@@ -108,9 +102,9 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     },
     {
       id: "staked-2",
-      name: "Digital Flow",
-      image: "/digital-event-flow.png",
-      collection: "Prime Mates Community",
+      name: "PMBC #721",
+      image: "/pmbc-dreadlocks.webp",
+      collection: "Prime Mates Board Club",
       rarity: "epic",
       stakingRewards: 75,
       stakingPeriod: 14,
@@ -124,6 +118,7 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const savedConnection = localStorage.getItem("walletConnected")
     if (savedConnection === "true") {
+      console.log("Restoring saved wallet connection")
       setIsConnected(true)
       setAddress("0x1234...5678")
       setBalance(250)
@@ -134,13 +129,17 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Connect wallet function - now always simulates a successful connection
+  // Connect wallet function - guaranteed to work in test mode
   const connectWallet = async () => {
+    console.log("Connecting wallet in test mode...")
+
     try {
       // Simulate connection delay
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Always simulate a successful connection
+      console.log("Wallet connected successfully in test mode")
+
+      // Set all the state values for a connected wallet
       setIsConnected(true)
       setAddress("0x1234...5678")
       setBalance(250)
@@ -148,6 +147,8 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
       setStakedNFTs(mockStakedNFTs)
       setStakingRewards(200)
       setHasAccess(true)
+
+      // Save connection state to localStorage
       localStorage.setItem("walletConnected", "true")
 
       return true
@@ -157,7 +158,7 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Verify NFT ownership
+  // Verify NFT ownership - always succeeds in test mode
   const verifyNFTOwnership = async () => {
     try {
       setIsVerifying(true)
@@ -176,6 +177,7 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
 
   // Disconnect wallet function
   const disconnectWallet = () => {
+    console.log("Disconnecting wallet")
     setIsConnected(false)
     setAddress(null)
     setBalance(0)
@@ -200,6 +202,7 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
         hasAccess,
         verifyNFTOwnership,
         isVerifying,
+        isSimulated,
       }}
     >
       {children}

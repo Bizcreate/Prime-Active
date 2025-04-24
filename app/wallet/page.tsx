@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { TabBar } from "@/components/tab-bar"
-import { ArrowLeft, Copy, ExternalLink, Plus, RefreshCw } from "lucide-react"
+import { ArrowLeft, Copy, ExternalLink, Plus, RefreshCw, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { useWeb3 } from "@/components/web3-provider"
 import { WalletConnectButton } from "@/components/wallet-connect-button"
@@ -13,7 +13,7 @@ import NFTStaking from "@/components/nft-staking"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 export default function WalletPage() {
-  const { isConnected, address, balance, ownedNFTs, stakingRewards } = useWeb3()
+  const { isConnected, address, balance, ownedNFTs, stakingRewards, isSimulated } = useWeb3()
   const [activeTab, setActiveTab] = useState("tokens")
   const [showStaking, setShowStaking] = useState(false)
 
@@ -71,6 +71,17 @@ export default function WalletPage() {
           </div>
         ) : (
           <>
+            {isSimulated && (
+              <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3 mb-4 text-amber-400 text-sm flex items-center">
+                <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">Test Mode Active</p>
+                  <p className="text-xs">
+                    Using simulated wallet connection. All transactions and balances are for testing only.
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="bg-zinc-900 rounded-lg p-4 mb-6">
               <WalletDisplay />
               <div className="flex gap-2 mt-4">
@@ -169,19 +180,25 @@ export default function WalletPage() {
                     <div key={index} className="bg-zinc-900 rounded-lg overflow-hidden">
                       <div className="relative aspect-square">
                         <Image src={nft.image || "/placeholder.svg"} alt={nft.name} fill className="object-cover" />
-                        {nft.collection === "Prime Mates Board Club" && (
-                          <div className="absolute top-2 left-2">
-                            <Image
-                              src="/prime-mates-logo.png"
-                              alt="Prime Mates"
-                              width={30}
-                              height={15}
-                              className="object-contain"
-                            />
-                          </div>
-                        )}
+                        <div className="absolute top-2 left-2 bg-black/50 px-2 py-1 rounded-md">
+                          <Image
+                            src="/prime-mates-logo.png"
+                            alt="Prime Mates"
+                            width={30}
+                            height={15}
+                            className="object-contain"
+                          />
+                        </div>
                         <div
-                          className={`absolute top-2 right-2 bg-${nft.rarity === "legendary" ? "[#ffc72d]" : nft.rarity === "epic" ? "purple-600" : nft.rarity === "rare" ? "blue-600" : "zinc-600"} text-black text-xs px-2 py-0.5 rounded-full`}
+                          className={`absolute top-2 right-2 ${
+                            nft.rarity === "legendary"
+                              ? "bg-[#ffc72d]"
+                              : nft.rarity === "epic"
+                                ? "bg-purple-600"
+                                : nft.rarity === "rare"
+                                  ? "bg-blue-600"
+                                  : "bg-zinc-600"
+                          } text-black text-xs px-2 py-0.5 rounded-full`}
                         >
                           {nft.rarity.charAt(0).toUpperCase() + nft.rarity.slice(1)}
                         </div>

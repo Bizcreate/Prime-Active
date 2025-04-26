@@ -26,8 +26,8 @@ export function WalletConnectButton({
     setIsConnecting(true)
 
     try {
-      const success = await connectWallet()
-      console.log("Connection result:", success)
+      await connectWallet()
+      // No need to check success as the state will be updated in the provider
     } catch (error) {
       console.error("Error in handleConnect:", error)
     } finally {

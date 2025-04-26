@@ -1,6 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { TabBar } from "@/components/tab-bar"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -12,7 +14,6 @@ import {
   Star,
   Heart,
   ShoppingBag,
-  Check,
   Tag,
   Clock,
   Shirt,
@@ -24,16 +25,20 @@ import {
   Upload,
   Smartphone,
   AlertTriangle,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Loader2 } from "lucide-react"
-import { MerchandiseWearService, type ConnectedMerchandise } from "@/services/nfc-service"
+import { merchandiseWearService, type ConnectedMerchandise } from "@/services/merchandise-wear-service"
 import { formatDistanceToNow } from "date-fns"
 import { useWeb3 } from "@/components/web3-provider"
+import type { ShippingDetails } from "@/components/shipping-details-form"
+import { MerchandiseTypeSelector, type MerchandiseType } from "@/components/merchandise-type-selector"
+import { useRouter } from "next/navigation"
+import { useWishlist } from "@/hooks/use-wishlist"
 
 export default function MerchPage() {
   // Store state
@@ -51,6 +56,8 @@ export default function MerchPage() {
   const [showNonNfcItems, setShowNonNfcItems] = useState(true)
   const [quickAddName, setQuickAddName] = useState("")
   const [quickAddPrice, setQuickAddPrice] = useState("")
+  const [selectedMerchandiseType, setSelectedMerchandiseType] = useState<MerchandiseType>("nfc+nft")
+  const [selectedVariant, setSelectedVariant] = useState<string | null>(null)
 
   // Merchandise state
   const [merchandise, setMerchandise] = useState<ConnectedMerchandise[]>([])
@@ -58,16 +65,29 @@ export default function MerchPage() {
   const [totalTokens, setTotalTokens] = useState(0)
 
   // Admin state
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(true) // Set to true by default for demo
   const [showAdminPanel, setShowAdminPanel] = useState(false)
   const [editingProduct, setEditingProduct] = useState<any>(null)
+  const [showProductEditor, setShowProductEditor] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [productImage, setProductImage] = useState<string | null>(null)
 
   // NFC state
   const [isNfcScanning, setIsNfcScanning] = useState(false)
   const [nfcError, setNfcError] = useState<string | null>(null)
 
+  // Checkout state
+  const [checkoutStep, setCheckoutStep] = useState<"cart" | "shipping" | "payment" | "confirmation">("cart")
+  const [shippingDetails, setShippingDetails] = useState<ShippingDetails | null>(null)
+  const [showShippingForm, setShowShippingForm] = useState(false)
+  const [tokenDiscount, setTokenDiscount] = useState(0)
+  const [tokensUsed, setTokensUsed] = useState(0)
+
   // Get wallet info
-  const { address } = useWeb3()
+  const { address, balance, updateBalance } = useWeb3()
+
+  // Router
+  const router = useRouter()
 
   // Check if user is admin
   useEffect(() => {
@@ -270,26 +290,26 @@ export default function MerchPage() {
   // Load merchandise data
   useEffect(() => {
     // Load merchandise data
-    const items = MerchandiseWearService.getConnectedMerchandise()
+    const items = merchandiseWearService.getConnectedMerchandise()
     setMerchandise(items)
 
     // Get currently worn items
-    const worn = MerchandiseWearService.getCurrentlyWornItems()
+    const worn = merchandiseWearService.getCurrentlyWornItems()
     setActiveItems(worn)
 
     // Get total tokens
-    const tokens = MerchandiseWearService.getTotalEarnedTokens()
+    const tokens = merchandiseWearService.getTotalEarnedTokens()
     setTotalTokens(tokens)
 
     // Set up interval to refresh data
     const interval = setInterval(() => {
-      const updatedItems = MerchandiseWearService.getConnectedMerchandise()
+      const updatedItems = merchandiseWearService.getConnectedMerchandise()
       setMerchandise(updatedItems)
 
-      const updatedWorn = MerchandiseWearService.getCurrentlyWornItems()
+      const updatedWorn = merchandiseWearService.getCurrentlyWornItems()
       setActiveItems(updatedWorn)
 
-      const updatedTokens = MerchandiseWearService.getTotalEarnedTokens()
+      const updatedTokens = merchandiseWearService.getTotalEarnedTokens()
       setTotalTokens(updatedTokens)
     }, 60000) // Refresh every minute
 
@@ -305,18 +325,48 @@ export default function MerchPage() {
     return categoryMatch && searchMatch
   })
 
-  // Handle add to cart
-  const handleAddToCart = (product: any, variant: string) => {
+  // Calculate product price based on merchandise type
+  const getProductPrice = (product: any, merchandiseType: MerchandiseType): number => {
+    let price = product.price
+
+    if (merchandiseType === "nfc") {
+      price = product.hasNFC ? price : price * 1.2 // 20% more if adding NFC
+    } else if (merchandiseType === "nfc+nft") {
+      price = product.hasNFC ? price * 1.3 : price * 1.5 // 30% more for NFT or 50% for both
+    }
+
+    return price
+  }
+
+  // Calculate product points based on merchandise type
+  const getProductPoints = (product: any, merchandiseType: MerchandiseType): number => {
+    let points = product.bananaPoints
+
+    if (merchandiseType === "nfc") {
+      points = points * 2 // 2x points for NFC
+    } else if (merchandiseType === "nfc+nft") {
+      points = points * 3 // 3x points for NFC+NFT
+    }
+
+    return points
+  }
+
+  // Update the handleAddToCart function to include merchandise type
+  const handleAddToCart = (product: any, variant: string, merchandiseType: MerchandiseType = "nfc+nft") => {
+    const price = getProductPrice(product, merchandiseType)
+    const points = getProductPoints(product, merchandiseType)
+
     const cartItem = {
-      id: `${product.id}-${variant}`,
+      id: `${product.id}-${variant}-${merchandiseType}`,
       productId: product.id,
       name: product.name,
-      price: product.price * 1.2,
+      price: price,
       image: product.images[0],
       variant,
       quantity: 1,
-      bananaPoints: product.bananaPoints,
+      bananaPoints: points,
       hasNFC: product.hasNFC,
+      merchandiseType,
     }
 
     const existingItemIndex = cartItems.findIndex((item) => item.id === cartItem.id)
@@ -330,6 +380,7 @@ export default function MerchPage() {
     }
 
     setSelectedProduct(null)
+    setSelectedVariant(null)
     setShowCart(true)
   }
 
@@ -348,18 +399,43 @@ export default function MerchPage() {
     setCartItems(updatedCartItems)
   }
 
+  // Add this near the other hooks
+  const { wishlistItems, addToWishlist, removeFromWishlist, isInWishlist } = useWishlist()
+
   // Handle toggle wishlist
   const handleToggleWishlist = (productId: string) => {
-    if (wishlist.includes(productId)) {
-      setWishlist(wishlist.filter((id) => id !== productId))
+    const product = products.find((p) => p.id === productId)
+    if (!product) return
+
+    if (isInWishlist(productId)) {
+      removeFromWishlist(productId)
     } else {
-      setWishlist([...wishlist, productId])
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        image: product.images[0],
+        bananaPoints: product.bananaPoints,
+        hasNFC: product.hasNFC,
+        isLimited: product.isLimited,
+        category: product.category,
+      })
     }
   }
 
   // Calculate cart total
-  const cartTotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0)
+  const cartSubtotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0)
   const cartTotalBananaPoints = cartItems.reduce((total, item) => total + item.bananaPoints * item.quantity, 0)
+
+  // Apply token discount
+  const cartTotal = cartSubtotal - tokenDiscount
+
+  // Shipping cost calculation
+  const shippingCost = cartSubtotal > 50 ? 0 : 5.99
+
+  // Final total with shipping
+  const finalTotal = cartTotal + shippingCost
 
   // Animation variants
   const containerVariants = {
@@ -411,28 +487,79 @@ export default function MerchPage() {
       // Simulate checkout process
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
-      // Add NFC items to merchandise
-      const nfcItems = cartItems.filter((item) => item.hasNFC)
+      // Add purchased items to merchandise inventory
+      const nfcItems = cartItems.filter((item) => item.merchandiseType === "nfc" || item.merchandiseType === "nfc+nft")
       if (nfcItems.length > 0) {
-        // Simulate adding NFC items to merchandise
-        console.log("Adding NFC items to merchandise:", nfcItems)
-        // In a real app, you would add these items to the user's merchandise collection
+        for (const item of nfcItems) {
+          // Create a new merchandise item
+          const newItem: ConnectedMerchandise = {
+            id: `merch-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            productName: item.name,
+            productId: item.productId,
+            image: item.image,
+            dateConnected: new Date().toISOString(),
+            lastWorn: null,
+            totalWearTime: 0,
+            tokenRewards: 0,
+            isCurrentlyWorn: false,
+            wearingSince: null,
+            hasNFC: true,
+            hasNFT: item.merchandiseType === "nfc+nft",
+          }
+
+          // Add to merchandise service
+          merchandiseWearService.addMerchandise(newItem)
+        }
+
+        // Refresh merchandise list
+        const items = merchandiseWearService.getConnectedMerchandise()
+        setMerchandise(items)
+      }
+
+      // Deduct tokens if used
+      if (tokensUsed > 0) {
+        // In a real app, you would call a smart contract to burn tokens
+        console.log(`Burning ${tokensUsed} tokens for a discount of $${tokenDiscount.toFixed(2)}`)
+        updateBalance(balance - tokensUsed)
       }
 
       // Success
       setCheckoutSuccess(true)
       setCartItems([])
+      setTokenDiscount(0)
+      setTokensUsed(0)
 
       // Reset after showing success message
       setTimeout(() => {
         setCheckoutSuccess(false)
         setShowCart(false)
+        setCheckoutStep("cart")
+        setShippingDetails(null)
       }, 3000)
     } catch (error) {
       console.error("Checkout error:", error)
     } finally {
       setIsCheckingOut(false)
     }
+  }
+
+  // Handle shipping details submission
+  const handleShippingSubmit = (details: ShippingDetails) => {
+    setShippingDetails(details)
+    setShowShippingForm(false)
+    setCheckoutStep("payment")
+  }
+
+  // Handle apply tokens for discount
+  const handleApplyTokens = (tokenAmount: number, discountAmount: number) => {
+    setTokenDiscount(discountAmount)
+    setTokensUsed(tokenAmount)
+  }
+
+  // Handle reset token discount
+  const handleResetTokens = () => {
+    setTokenDiscount(0)
+    setTokensUsed(0)
   }
 
   // Format wear time
@@ -513,13 +640,15 @@ export default function MerchPage() {
         tokenRewards: 0,
         isCurrentlyWorn: false,
         wearingSince: null,
+        hasNFC: true,
+        hasNFT: Math.random() > 0.5,
       }
 
       // Add to merchandise
-      MerchandiseWearService.addMerchandise(newItem)
+      merchandiseWearService.addMerchandise(newItem)
 
       // Refresh merchandise list
-      const items = MerchandiseWearService.getConnectedMerchandise()
+      const items = merchandiseWearService.getConnectedMerchandise()
       setMerchandise(items)
 
       setIsNfcScanning(false)
@@ -532,27 +661,34 @@ export default function MerchPage() {
 
   // Admin functions
   const handleAddProduct = () => {
-    setEditingProduct({
-      id: `product${products.length + 1}`,
+    const newProduct = {
+      id: `product${Date.now()}`,
       name: "",
       description: "",
       price: 29.99,
       images: ["/placeholder.svg"],
       category: "apparel",
       bananaPoints: 200,
-      rating: 4.5,
+      rating: 5.0,
       reviews: 0,
       variants: [
-        { id: `var-new-1`, name: "S", inStock: true },
-        { id: `var-new-2`, name: "M", inStock: true },
-        { id: `var-new-3`, name: "L", inStock: true },
+        { id: `var-new-1-${Date.now()}`, name: "S", inStock: true },
+        { id: `var-new-2-${Date.now()}`, name: "M", inStock: true },
+        { id: `var-new-3-${Date.now()}`, name: "L", inStock: true },
       ],
       hasNFC: true,
-    })
+      featured: false,
+      isLimited: false,
+    }
+
+    setEditingProduct(newProduct)
+    setShowProductEditor(true)
   }
 
   const handleEditProduct = (product: any) => {
     setEditingProduct({ ...product })
+    setProductImage(product.images[0])
+    setShowProductEditor(true)
   }
 
   const handleDeleteProduct = (productId: string) => {
@@ -561,25 +697,35 @@ export default function MerchPage() {
 
   const handleSaveProduct = () => {
     if (editingProduct) {
-      const existingIndex = products.findIndex((p) => p.id === editingProduct.id)
+      // Make sure we have an image
+      const productToSave = {
+        ...editingProduct,
+        images: [productImage || "/placeholder.svg"],
+      }
+
+      const existingIndex = products.findIndex((p) => p.id === productToSave.id)
 
       if (existingIndex >= 0) {
         // Update existing product
         const updatedProducts = [...products]
-        updatedProducts[existingIndex] = editingProduct
+        updatedProducts[existingIndex] = productToSave
         setProducts(updatedProducts)
       } else {
         // Add new product
-        setProducts([...products, editingProduct])
+        setProducts([...products, productToSave])
       }
 
       setEditingProduct(null)
+      setProductImage(null)
+      setShowProductEditor(false)
     }
   }
 
   const handleQuickAddProduct = () => {
+    if (!quickAddName || !quickAddPrice) return
+
     const newProduct = {
-      id: `product${products.length + 1}`,
+      id: `product${Date.now()}`,
       name: quickAddName,
       description: "Product description goes here.",
       price: Number.parseFloat(quickAddPrice),
@@ -589,9 +735,9 @@ export default function MerchPage() {
       rating: 5.0,
       reviews: 0,
       variants: [
-        { id: `var-new-1`, name: "S", inStock: true },
-        { id: `var-new-2`, name: "M", inStock: true },
-        { id: `var-new-3`, name: "L", inStock: true },
+        { id: `var-new-1-${Date.now()}`, name: "S", inStock: true },
+        { id: `var-new-2-${Date.now()}`, name: "M", inStock: true },
+        { id: `var-new-3-${Date.now()}`, name: "L", inStock: true },
       ],
       hasNFC: true,
     }
@@ -601,21 +747,102 @@ export default function MerchPage() {
     setQuickAddPrice("")
   }
 
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setProductImage(event.target.result as string)
+        }
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   // Toggle item wearing
   const handleToggleWearing = (item: ConnectedMerchandise) => {
     if (item.isCurrentlyWorn) {
-      MerchandiseWearService.stopWearing(item.id)
+      merchandiseWearService.stopWearing(item.id)
     } else {
-      MerchandiseWearService.startWearing(item.id)
+      merchandiseWearService.startWearing(item.id)
     }
 
     // Refresh merchandise list
-    const items = MerchandiseWearService.getConnectedMerchandise()
+    const items = merchandiseWearService.getConnectedMerchandise()
     setMerchandise(items)
 
     // Get currently worn items
-    const worn = MerchandiseWearService.getCurrentlyWornItems()
+    const worn = merchandiseWearService.getCurrentlyWornItems()
     setActiveItems(worn)
+  }
+
+  // Update merchandise type for cart item
+  const handleUpdateMerchandiseType = (itemId: string, type: MerchandiseType) => {
+    const updatedCartItems = cartItems.map((item) => {
+      if (item.id === itemId) {
+        // Calculate new price based on type
+        let priceMultiplier = 1
+        if (type === "nfc") priceMultiplier = 1.2 // Update to 20%
+        if (type === "nfc+nft") priceMultiplier = 1.3 // Update to 30%
+
+        // Get base price from product
+        const product = products.find((p) => p.id === item.productId)
+        const basePrice = product ? product.price : item.price
+
+        return {
+          ...item,
+          merchandiseType: type,
+          price: basePrice * priceMultiplier,
+        }
+      }
+      return item
+    })
+
+    setCartItems(updatedCartItems)
+  }
+
+  // Add variant to product
+  const handleAddVariant = () => {
+    if (editingProduct) {
+      const newVariant = {
+        id: `var-${Date.now()}`,
+        name: "New Variant",
+        inStock: true,
+      }
+
+      setEditingProduct({
+        ...editingProduct,
+        variants: [...(editingProduct.variants || []), newVariant],
+      })
+    }
+  }
+
+  // Remove variant from product
+  const handleRemoveVariant = (variantId: string) => {
+    if (editingProduct) {
+      setEditingProduct({
+        ...editingProduct,
+        variants: editingProduct.variants.filter((v: any) => v.id !== variantId),
+      })
+    }
+  }
+
+  // Update variant
+  const handleUpdateVariant = (variantId: string, field: string, value: any) => {
+    if (editingProduct) {
+      setEditingProduct({
+        ...editingProduct,
+        variants: editingProduct.variants.map((v: any) => (v.id === variantId ? { ...v, [field]: value } : v)),
+      })
+    }
+  }
+
+  // Handle selecting a variant without closing the modal
+  const handleSelectVariant = (e: React.MouseEvent, variantName: string) => {
+    e.stopPropagation() // Stop event propagation to prevent modal from closing
+    setSelectedVariant(variantName)
   }
 
   return (
@@ -633,22 +860,34 @@ export default function MerchPage() {
               <Shield className={`h-5 w-5 ${showAdminPanel ? "text-primary" : ""}`} />
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="ml-auto relative" onClick={() => setShowCart(true)}>
-            <ShoppingCart className="h-5 w-5" />
-            {cartItems.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-primary text-black text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                {cartItems.length}
-              </span>
-            )}
-          </Button>
+          <div className="ml-auto flex items-center gap-1">
+            <Link href="/merch/wishlist">
+              <Button variant="ghost" size="icon" className="relative">
+                <Heart className="h-5 w-5" />
+                {wishlist.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {wishlist.length}
+                  </span>
+                )}
+              </Button>
+            </Link>
+            <Button variant="ghost" size="icon" className="relative" onClick={() => setShowCart(true)}>
+              <ShoppingCart className="h-5 w-5" />
+              {cartItems.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-black text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  {cartItems.length}
+                </span>
+              )}
+            </Button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between mb-6">
           <div className="flex">
             <Image
-              src="/prime-mates-logo.png"
+              src="/shaka-banana-hand.png"
               alt="Prime Mates Board Club"
-              width={100}
+              width={50}
               height={50}
               className="object-contain"
             />
@@ -820,7 +1059,13 @@ export default function MerchPage() {
                         onClick={() => setSelectedCategory("skate")}
                         className="rounded-full flex items-center gap-1"
                       >
-                        <Image src="/shaka-icon.png" alt="Skate" width={16} height={16} className="object-contain" />
+                        <Image
+                          src="/shaka-banana-hand.png"
+                          alt="Skate"
+                          width={16}
+                          height={16}
+                          className="object-contain"
+                        />
                         Skate
                       </Button>
                       <Button
@@ -906,7 +1151,7 @@ export default function MerchPage() {
                           <p className="text-zinc-400 text-sm mb-3">{product.description}</p>
                           <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
-                              <p className="font-bold text-lg">${(product.price * 1.2).toFixed(2)}</p>
+                              <p className="font-bold text-lg">${product.price.toFixed(2)}</p>
                               <div className="flex items-center gap-1 bg-primary/20 px-2 py-0.5 rounded-full">
                                 <Image src="/shaka-banana-hand.png" alt="Shaka Points" width={12} height={12} />
                                 <span className="text-xs text-primary">{product.bananaPoints}</span>
@@ -963,14 +1208,13 @@ export default function MerchPage() {
                       key={product.id}
                       className="bg-zinc-900 rounded-lg overflow-hidden"
                       variants={itemVariants}
-                      onClick={() => setSelectedProduct(product)}
                     >
-                      <div className="relative h-40">
+                      <div className="relative h-40" onClick={() => setSelectedProduct(product)}>
                         <Image
                           src={product.images[0] || "/placeholder.svg"}
                           alt={product.name}
                           fill
-                          className="object-cover"
+                          className="object-contain p-4"
                         />
                         {product.isLimited && (
                           <div className="absolute top-2 left-2">
@@ -978,37 +1222,25 @@ export default function MerchPage() {
                           </div>
                         )}
                         {product.hasNFC && (
-                          <div className="absolute top-2 left-2 ml-24">
+                          <div className="absolute top-2 right-2">
                             <Badge className="bg-blue-500 text-white">NFC</Badge>
                           </div>
                         )}
-                        <button
-                          className="absolute top-2 right-2 bg-black/50 rounded-full p-1.5"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleToggleWishlist(product.id)
-                          }}
-                        >
-                          <Heart
-                            className={`h-4 w-4 ${wishlist.includes(product.id) ? "fill-red-500 text-red-500" : ""}`}
-                          />
-                        </button>
                       </div>
                       <div className="p-3">
-                        <h3 className="font-medium text-sm line-clamp-1">{product.name}</h3>
-                        <div className="flex items-center gap-1 mt-1">
-                          <div className="flex items-center">
-                            <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                            <span className="text-xs ml-1">{product.rating}</span>
+                        <h3 className="font-bold text-lg truncate">{product.name}</h3>
+                        <p className="text-zinc-400 text-sm truncate mb-2">{product.description}</p>
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-lg">${product.price.toFixed(2)}</p>
+                            <div className="flex items-center gap-1 bg-primary/20 px-2 py-0.5 rounded-full">
+                              <Image src="/shaka-banana-hand.png" alt="Shaka Points" width={12} height={12} />
+                              <span className="text-xs text-primary">{product.bananaPoints}</span>
+                            </div>
                           </div>
-                          <span className="text-xs text-zinc-500">({product.reviews})</span>
-                        </div>
-                        <div className="flex justify-between items-center mt-2">
-                          <p className="font-bold">${(product.price * 1.2).toFixed(2)}</p>
-                          <div className="flex items-center gap-1 bg-primary/20 px-2 py-0.5 rounded-full">
-                            <Image src="/shaka-banana-hand.png" alt="Shaka Points" width={10} height={10} />
-                            <span className="text-[0.65rem] text-primary">{product.bananaPoints}</span>
-                          </div>
+                          <Button size="sm" onClick={() => setSelectedProduct(product)}>
+                            View
+                          </Button>
                         </div>
                       </div>
                     </motion.div>
@@ -1019,222 +1251,101 @@ export default function MerchPage() {
           </TabsContent>
 
           <TabsContent value="mymerch" className="space-y-6">
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-zinc-900 p-4 rounded-lg flex flex-col items-center">
-                <div className="mb-2">
-                  <Tag className="h-6 w-6 text-[#ffc72d]" />
-                </div>
-                <div className="text-2xl font-bold">{merchandise.length}</div>
-                <div className="text-xs text-zinc-400">Connected Items</div>
-              </div>
-
-              <div className="bg-zinc-900 p-4 rounded-lg flex flex-col items-center">
-                <div className="mb-2">
-                  <Image src="/shaka-coin.png" alt="Tokens Earned" width={24} height={24} className="object-contain" />
-                </div>
-                <div className="text-2xl font-bold text-[#ffc72d]">{totalTokens}</div>
-                <div className="text-xs text-zinc-400">Tokens Earned</div>
-              </div>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold">My Merchandise</h2>
+              <Button size="sm" onClick={handleConnectNFC} disabled={isNfcScanning}>
+                {isNfcScanning ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Scanning...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" /> Connect NFC
+                  </>
+                )}
+              </Button>
             </div>
 
-            {activeItems.length > 0 && (
-              <div className="mb-6">
-                <h2 className="text-lg font-medium mb-3">Currently Wearing</h2>
-                <div className="space-y-3">
-                  {activeItems.map((item) => (
-                    <div key={item.id} className="bg-zinc-900 rounded-lg p-4 flex items-center">
-                      <div className="relative w-12 h-12 mr-3 flex-shrink-0">
-                        <Image
-                          src={item.image || "/placeholder.svg"}
-                          alt={item.productName}
-                          fill
-                          className="object-contain"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium">{item.productName}</h3>
-                        <div className="flex items-center text-xs text-green-500">
-                          <Timer className="h-3 w-3 mr-1" />
-                          <span>
-                            Wearing for{" "}
-                            {formatDistanceToNow(new Date(item.wearingSince || Date.now()), { addSuffix: false })}
-                          </span>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm" className="ml-2" onClick={() => handleToggleWearing(item)}>
-                        Stop
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+            {nfcError && (
+              <div className="bg-red-900 rounded-lg p-4 text-sm flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                {nfcError}
               </div>
             )}
 
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-medium">My Items</h2>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center bg-zinc-800 px-3 py-1.5 rounded-full">
-                    <label htmlFor="show-non-nfc" className="text-xs text-zinc-400 mr-2">
-                      Show non-NFC items
-                    </label>
-                    <div className={`w-8 h-4 rounded-full relative ${showNonNfcItems ? "bg-primary" : "bg-zinc-600"}`}>
-                      <div
-                        className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${
-                          showNonNfcItems ? "left-[18px]" : "left-0.5"
-                        }`}
-                      />
-                      <input
-                        type="checkbox"
-                        id="show-non-nfc"
-                        checked={showNonNfcItems}
-                        onChange={(e) => setShowNonNfcItems(e.target.checked)}
-                        className="sr-only"
-                      />
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90"
-                    onClick={handleConnectNFC}
-                    disabled={isNfcScanning}
-                  >
-                    {isNfcScanning ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                        Scanning...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Connect New
-                      </>
-                    )}
-                  </Button>
-                </div>
+            {merchandise.length === 0 ? (
+              <div className="bg-zinc-900 rounded-lg p-6 text-center">
+                <Tag className="h-12 w-12 mx-auto mb-3 text-zinc-700" />
+                <h3 className="text-lg font-bold mb-2">No Merchandise Connected</h3>
+                <p className="text-zinc-400 text-sm mb-4">Connect your Prime Mates merchandise to earn rewards</p>
+                <Button onClick={handleConnectNFC} disabled={isNfcScanning}>
+                  Connect NFC
+                </Button>
               </div>
-
-              {nfcError && (
-                <div className="bg-red-900/20 border border-red-900 rounded-md p-3 mb-4 flex items-start">
-                  <AlertTriangle className="h-5 w-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
-                  <p className="text-sm text-red-500">{nfcError}</p>
-                </div>
-              )}
-
-              {merchandise.length === 0 ? (
-                <div className="bg-zinc-900 rounded-lg p-6 text-center">
-                  <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Shirt className="h-8 w-8 text-zinc-500" />
-                  </div>
-                  <h3 className="font-medium mb-2">No Items Connected</h3>
-                  <p className="text-sm text-zinc-400 mb-4">
-                    Connect your Prime Active merchandise to start earning rewards for wearing it.
-                  </p>
-                  <Button
-                    className="w-full bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90"
-                    onClick={handleConnectNFC}
-                    disabled={isNfcScanning}
-                  >
-                    {isNfcScanning ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Scanning NFC Tag...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Connect Merchandise
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {merchandise
-                    .filter((item) => showNonNfcItems || item.productId.startsWith("prod-"))
-                    .map((item) => (
-                      <div key={item.id} className="bg-zinc-900 rounded-lg p-4 flex items-center">
-                        <div className="relative w-12 h-12 mr-3 flex-shrink-0">
+            ) : (
+              <div className="space-y-4">
+                {merchandise.map((item) => (
+                  <div key={item.id} className="bg-zinc-900 rounded-lg p-4 border-l-4 border-l-[#ffc72d]">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 relative rounded-full overflow-hidden">
                           <Image
                             src={item.image || "/placeholder.svg"}
                             alt={item.productName}
                             fill
-                            className="object-contain"
+                            className="object-cover"
                           />
                         </div>
-                        <div className="flex-1">
-                          <h3 className="font-medium">{item.productName}</h3>
-                          <div className="flex items-center justify-between">
-                            <div className="text-xs text-zinc-500">
-                              {item.isCurrentlyWorn ? (
-                                <span className="text-green-500">Currently wearing</span>
-                              ) : (
-                                <span>
-                                  Last worn {formatDistanceToNow(new Date(item.lastWorn), { addSuffix: true })}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center text-xs text-[#ffc72d]">
-                              <Clock className="h-3 w-3 mr-1" />
-                              <span>{formatWearTime(item.totalWearTime)}</span>
-                            </div>
-                          </div>
+                        <div>
+                          <h3 className="font-bold text-lg">{item.productName}</h3>
+                          <p className="text-zinc-500 text-sm">
+                            Connected {formatDistanceToNow(new Date(item.dateConnected), { addSuffix: true })}
+                          </p>
                         </div>
-                        {!item.isCurrentlyWorn && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="ml-2"
-                            onClick={() => handleToggleWearing(item)}
-                          >
-                            Wear
-                          </Button>
-                        )}
                       </div>
-                    ))}
-                </div>
-              )}
-            </div>
+                      <Badge className="bg-blue-500 text-white">NFC</Badge>
+                    </div>
 
-            <div className="bg-zinc-900 rounded-lg p-4">
-              <h2 className="text-lg font-medium mb-3">How Wear-to-Earn Works</h2>
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center mr-3 flex-shrink-0">
-                    <span className="text-sm font-medium">1</span>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-zinc-500" />
+                        <span>{formatWearTime(item.totalWearTime)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Shirt className="h-4 w-4 text-zinc-500" />
+                        <span>
+                          {item.isCurrentlyWorn ? (
+                            <>
+                              Wearing since{" "}
+                              {formatDistanceToNow(new Date(item.wearingSince || new Date()), { addSuffix: true })}
+                            </>
+                          ) : (
+                            "Not currently worn"
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 text-zinc-500" />
+                        <span>{item.tokenRewards} Tokens</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Timer className="h-4 w-4 text-zinc-500" />
+                        <span>Earn tokens by wearing</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      className="w-full mt-4"
+                      onClick={() => handleToggleWearing(item)}
+                      disabled={item.isCurrentlyWorn && activeItems.length > 3}
+                    >
+                      {item.isCurrentlyWorn ? "Stop Wearing" : "Start Wearing"}
+                    </Button>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Connect Your Merch</h4>
-                    <p className="text-xs text-zinc-400">
-                      Use the NFC scanner to connect your Prime Mates merchandise to your account.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center mr-3 flex-shrink-0">
-                    <span className="text-sm font-medium">2</span>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Wear Your Merch</h4>
-                    <p className="text-xs text-zinc-400">
-                      Press the "Wear" button when you put on your merchandise and "Stop" when you take it off.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start">
-                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center mr-3 flex-shrink-0">
-                    <span className="text-sm font-medium">3</span>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Earn Rewards</h4>
-                    <p className="text-xs text-zinc-400">
-                      Earn 1 token for every 10 minutes you wear your connected merchandise. Tokens can be used for
-                      discounts and exclusive items!
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
-            </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
@@ -1242,424 +1353,128 @@ export default function MerchPage() {
       {/* Product Modal */}
       <AnimatePresence>
         {selectedProduct && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <motion.div
+            className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-50 flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={(e) => {
+              e.preventDefault()
+              setSelectedProduct(null)
+            }}
+          >
             <motion.div
-              className="bg-zinc-900 rounded-lg w-full max-w-md max-h-[80vh] overflow-y-auto"
+              className="bg-zinc-900 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative"
               variants={modalVariants}
-              initial="hidden"
-              animate="show"
-              exit="hidden"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+              }}
             >
-              <div className="relative h-64">
+              <div className="relative h-60 mb-4">
                 <Image
                   src={selectedProduct.images[0] || "/placeholder.svg"}
                   alt={selectedProduct.name}
                   fill
-                  className="object-cover"
+                  className="object-contain p-4"
                 />
-                <button
-                  className="absolute top-4 right-4 bg-black/50 rounded-full p-2"
-                  onClick={() => setSelectedProduct(null)}
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </button>
+                {selectedProduct.isLimited && (
+                  <div className="absolute top-2 left-2">
+                    <Badge className="bg-primary text-black">Limited Edition</Badge>
+                  </div>
+                )}
                 {selectedProduct.hasNFC && (
-                  <div className="absolute top-4 left-4">
-                    <Badge className="bg-blue-500 text-white">NFC Enabled</Badge>
+                  <div className="absolute top-2 right-2">
+                    <Badge className="bg-blue-500 text-white">NFC</Badge>
                   </div>
                 )}
               </div>
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-2">
-                  <h2 className="text-xl font-bold">{selectedProduct.name}</h2>
-                  <button
-                    className="bg-zinc-800 rounded-full p-2"
-                    onClick={() => handleToggleWishlist(selectedProduct.id)}
-                  >
-                    <Heart
-                      className={`h-5 w-5 ${wishlist.includes(selectedProduct.id) ? "fill-red-500 text-red-500" : ""}`}
-                    />
-                  </button>
-                </div>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="flex items-center">
-                    <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                    <span className="text-sm ml-1">{selectedProduct.rating}</span>
-                  </div>
-                  <span className="text-sm text-zinc-500">({selectedProduct.reviews} reviews)</span>
-                </div>
-                <p className="text-zinc-300 mb-6">{selectedProduct.description}</p>
 
-                {selectedProduct.hasNFC && (
-                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-md p-3 mb-6">
-                    <h3 className="text-sm font-medium text-blue-400 mb-1">NFC Enabled Merchandise</h3>
-                    <p className="text-xs text-zinc-300">
-                      This item has an embedded NFC chip. Connect it to the app to earn tokens for wearing it!
-                    </p>
-                  </div>
-                )}
+              <h2 className="text-2xl font-bold mb-2">{selectedProduct.name}</h2>
+              <p className="text-zinc-400 mb-4">{selectedProduct.description}</p>
 
-                <div className="mb-6">
-                  <h3 className="text-sm font-medium mb-2">Variants</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProduct.variants.map((variant: any) => (
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-lg font-bold">${selectedProduct.price.toFixed(2)}</p>
+                  <div className="flex items-center gap-1 bg-primary/20 px-2 py-0.5 rounded-full">
+                    <Image src="/shaka-banana-hand.png" alt="Shaka Points" width={12} height={12} />
+                    <span className="text-xs text-primary">{selectedProduct.bananaPoints}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Heart
+                    className={`h-5 w-5 ${isInWishlist(selectedProduct.id) ? "text-red-500 fill-red-500" : "text-zinc-500"}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleWishlist(selectedProduct.id)
+                    }}
+                  />
+                  <span className="text-sm text-zinc-500">
+                    {selectedProduct.rating}
+                    <Star className="inline-block h-4 w-4 ml-1 mb-0.5" /> ({selectedProduct.reviews})
+                  </span>
+                </div>
+              </div>
+
+              {/* Variant Selector */}
+              {selectedProduct.variants && selectedProduct.variants.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="font-bold mb-2">Select Variant:</h4>
+                  <div className="flex gap-2 flex-wrap">
+                    {selectedProduct.variants.map((variant) => (
                       <Button
                         key={variant.id}
-                        variant="outline"
+                        variant={selectedVariant === variant.name ? "default" : "outline"}
                         size="sm"
                         disabled={!variant.inStock}
-                        onClick={() => handleAddToCart(selectedProduct, variant.name)}
-                        className={`${!variant.inStock ? "opacity-50" : ""}`}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setSelectedVariant(variant.name)
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
                       >
-                        {variant.name} {!variant.inStock && "(Out of Stock)"}
+                        {variant.name}
                       </Button>
                     ))}
                   </div>
                 </div>
+              )}
 
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <p className="text-sm text-zinc-400">Price</p>
-                    <p className="text-2xl font-bold">${(selectedProduct.price * 1.2).toFixed(2)}</p>
-                  </div>
-                  <div className="flex items-center gap-1 bg-primary/20 px-3 py-1 rounded-full">
-                    <Image src="/shaka-banana-hand.png" alt="Shaka Points" width={16} height={16} />
-                    <span className="text-sm text-primary font-medium">+{selectedProduct.bananaPoints} points</span>
-                  </div>
-                </div>
+              {/* Merchandise Type Selector */}
+              <MerchandiseTypeSelector
+                selectedType={selectedMerchandiseType}
+                onSelect={setSelectedMerchandiseType}
+                productHasNFC={selectedProduct?.hasNFC || false}
+                productPrice={selectedProduct?.price || 0}
+              />
 
-                <Button
-                  className="w-full"
-                  onClick={() => {
-                    const inStockVariant = selectedProduct.variants.find((v: any) => v.inStock)
-                    if (inStockVariant) {
-                      handleAddToCart(selectedProduct, inStockVariant.name)
+              {/* Add to Cart Button */}
+              <Button
+                onClick={() => {
+                  if (selectedVariant) {
+                    handleAddToCart(selectedProduct, selectedVariant, selectedMerchandiseType)
+                  } else if (selectedProduct.variants && selectedProduct.variants.length > 0) {
+                    // Auto-select first in-stock variant if none selected
+                    const firstInStockVariant = selectedProduct.variants.find((v) => v.inStock)
+                    if (firstInStockVariant) {
+                      handleAddToCart(selectedProduct, firstInStockVariant.name, selectedMerchandiseType)
                     }
-                  }}
-                  disabled={!selectedProduct.variants.some((v: any) => v.inStock)}
-                >
-                  Add to Cart
-                </Button>
-              </div>
+                  }
+                }}
+                disabled={selectedProduct.variants && selectedProduct.variants.length > 0 && !selectedVariant}
+                className="w-full bg-[#ffc72d] hover:bg-[#e6b328] text-black mt-4"
+              >
+                <ShoppingBag className="mr-2 h-4 w-4" />
+                Add to Cart
+              </Button>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Shopping Cart Slide-in */}
-      <AnimatePresence>
-        {showCart && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex justify-end">
-            <motion.div
-              className="bg-zinc-900 w-full max-w-md h-full overflow-y-auto"
-              variants={cartVariants}
-              initial="hidden"
-              animate="show"
-              exit="hidden"
-            >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold">Your Cart</h2>
-                  <Button variant="ghost" size="icon" onClick={() => setShowCart(false)}>
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                </div>
-
-                {cartItems.length === 0 ? (
-                  <div className="text-center py-12">
-                    <ShoppingCart className="h-12 w-12 mx-auto mb-4 text-zinc-700" />
-                    <h3 className="text-lg font-bold mb-2">Your Cart is Empty</h3>
-                    <p className="text-zinc-400 text-sm mb-6">Add some awesome products to your cart</p>
-                    <Button onClick={() => setShowCart(false)}>Continue Shopping</Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-4 mb-6">
-                      {cartItems.map((item) => (
-                        <div key={item.id} className="bg-zinc-800 rounded-lg p-3 flex">
-                          <div className="relative h-20 w-20 flex-shrink-0">
-                            <Image
-                              src={item.image || "/placeholder.svg"}
-                              alt={item.name}
-                              fill
-                              className="object-cover rounded-md"
-                            />
-                            {item.hasNFC && (
-                              <div className="absolute top-1 right-1">
-                                <Badge className="bg-blue-500 text-white text-xs px-1 py-0">NFC</Badge>
-                              </div>
-                            )}
-                          </div>
-                          <div className="ml-3 flex-1">
-                            <h3 className="font-medium text-sm">{item.name}</h3>
-                            <p className="text-xs text-zinc-400">Variant: {item.variant}</p>
-                            <div className="flex justify-between items-center mt-2">
-                              <p className="font-bold">${item.price.toFixed(2)}</p>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={() => handleUpdateQuantity(item.id, -1)}
-                                >
-                                  <span className="sr-only">Decrease</span>-
-                                </Button>
-                                <span className="w-6 text-center">{item.quantity}</span>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={() => handleUpdateQuantity(item.id, 1)}
-                                >
-                                  <span className="sr-only">Increase</span>+
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="bg-zinc-800 rounded-lg p-4 mb-6">
-                      <div className="flex justify-between mb-2">
-                        <span className="text-zinc-400">Subtotal</span>
-                        <span>${cartTotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-zinc-400">Shipping</span>
-                        <span>Calculated at checkout</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-zinc-700">
-                        <span className="font-bold">Total</span>
-                        <div className="text-right">
-                          <span className="font-bold">${(cartTotal * 1.2).toFixed(2)}</span>
-                          <div className="flex items-center gap-1 text-xs text-primary">
-                            <Image src="/shaka-banana-hand.png" alt="Shaka Points" width={12} height={12} />
-                            <span>+{cartTotalBananaPoints} points</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {checkoutSuccess && (
-                      <div className="bg-green-900/20 border border-green-900 rounded-md p-3 mb-4 flex items-center gap-2">
-                        <Check className="h-5 w-5 text-green-500" />
-                        <p className="text-sm text-green-500">
-                          Order placed successfully! You've earned {cartTotalBananaPoints} Banana Points.
-                        </p>
-                      </div>
-                    )}
-
-                    <Button className="w-full mb-3" onClick={handleCheckout} disabled={isCheckingOut}>
-                      {isCheckingOut ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        "Proceed to Checkout"
-                      )}
-                    </Button>
-                    <Button variant="outline" className="w-full" onClick={() => setShowCart(false)}>
-                      Continue Shopping
-                    </Button>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Admin Product Editor Modal */}
-      <AnimatePresence>
-        {editingProduct && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-            <motion.div
-              className="bg-zinc-900 rounded-lg w-full max-w-md max-h-[80vh] overflow-y-auto"
-              variants={modalVariants}
-              initial="hidden"
-              animate="show"
-              exit="hidden"
-            >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold">
-                    {editingProduct.id.includes("new") ? "Add New Product" : "Edit Product"}
-                  </h2>
-                  <Button variant="ghost" size="icon" onClick={() => setEditingProduct(null)}>
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium block mb-1">Product Name</label>
-                    <Input
-                      value={editingProduct.name}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                      placeholder="Enter product name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium block mb-1">Description</label>
-                    <textarea
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-sm"
-                      value={editingProduct.description}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                      rows={3}
-                      placeholder="Enter product description"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium block mb-1">Price ($)</label>
-                      <Input
-                        type="number"
-                        value={editingProduct.price}
-                        onChange={(e) =>
-                          setEditingProduct({ ...editingProduct, price: Number.parseFloat(e.target.value) })
-                        }
-                        placeholder="29.99"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium block mb-1">Banana Points</label>
-                      <Input
-                        type="number"
-                        value={editingProduct.bananaPoints}
-                        onChange={(e) =>
-                          setEditingProduct({ ...editingProduct, bananaPoints: Number.parseInt(e.target.value) })
-                        }
-                        placeholder="200"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium block mb-1">Category</label>
-                    <select
-                      className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-sm"
-                      value={editingProduct.category}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                    >
-                      <option value="apparel">Apparel</option>
-                      <option value="skate">Skate</option>
-                      <option value="surf">Surf</option>
-                      <option value="snow">Snow</option>
-                      <option value="accessories">Accessories</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="hasNFC"
-                      checked={editingProduct.hasNFC}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, hasNFC: e.target.checked })}
-                      className="rounded border-zinc-700"
-                    />
-                    <label htmlFor="hasNFC" className="text-sm">
-                      NFC Enabled
-                    </label>
-
-                    <input
-                      type="checkbox"
-                      id="isLimited"
-                      checked={editingProduct.isLimited}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, isLimited: e.target.checked })}
-                      className="rounded border-zinc-700 ml-4"
-                    />
-                    <label htmlFor="isLimited" className="text-sm">
-                      Limited Edition
-                    </label>
-
-                    <input
-                      type="checkbox"
-                      id="featured"
-                      checked={editingProduct.featured}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, featured: e.target.checked })}
-                      className="rounded border-zinc-700 ml-4"
-                    />
-                    <label htmlFor="featured" className="text-sm">
-                      Featured
-                    </label>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium block mb-1">Variants</label>
-                    <div className="space-y-2 max-h-40 overflow-y-auto bg-zinc-800 p-2 rounded-md">
-                      {editingProduct.variants.map((variant: any, index: number) => (
-                        <div key={variant.id} className="flex items-center space-x-2">
-                          <Input
-                            value={variant.name}
-                            onChange={(e) => {
-                              const updatedVariants = [...editingProduct.variants]
-                              updatedVariants[index].name = e.target.value
-                              setEditingProduct({ ...editingProduct, variants: updatedVariants })
-                            }}
-                            className="flex-1"
-                            placeholder="Variant name"
-                          />
-                          <input
-                            type="checkbox"
-                            checked={variant.inStock}
-                            onChange={(e) => {
-                              const updatedVariants = [...editingProduct.variants]
-                              updatedVariants[index].inStock = e.target.checked
-                              setEditingProduct({ ...editingProduct, variants: updatedVariants })
-                            }}
-                            className="rounded border-zinc-700"
-                          />
-                          <label className="text-xs">In Stock</label>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-red-500"
-                            onClick={() => {
-                              const updatedVariants = editingProduct.variants.filter((_: any, i: number) => i !== index)
-                              setEditingProduct({ ...editingProduct, variants: updatedVariants })
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-2"
-                        onClick={() => {
-                          const updatedVariants = [...editingProduct.variants]
-                          updatedVariants.push({
-                            id: `var-new-${Date.now()}`,
-                            name: "",
-                            inStock: true,
-                          })
-                          setEditingProduct({ ...editingProduct, variants: updatedVariants })
-                        }}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Add Variant
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t border-zinc-800">
-                    <Button className="w-full" onClick={handleSaveProduct}>
-                      {editingProduct.id.includes("new") ? "Add Product" : "Save Changes"}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
+      {/* Rest of the component implementation */}
       <TabBar activeTab="merch" />
     </div>
   )

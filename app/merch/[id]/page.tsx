@@ -6,7 +6,7 @@ import { ArrowLeft, Clock, Tag, Timer, AlertTriangle, Check } from "lucide-react
 import Link from "next/link"
 import Image from "next/image"
 import { TabBar } from "@/components/tab-bar"
-import { MerchandiseWearService, type ConnectedMerchandise } from "@/services/nfc-service"
+import { merchandiseWearService, type ConnectedMerchandise } from "@/services/merchandise-wear-service"
 import { formatDistanceToNow } from "date-fns"
 import { useParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
@@ -21,7 +21,7 @@ export default function MerchandiseDetailPage() {
 
   useEffect(() => {
     if (id) {
-      const item = MerchandiseWearService.getMerchandiseById(id)
+      const item = merchandiseWearService.getMerchandiseById(id)
       setMerchandise(item)
       setIsLoading(false)
 
@@ -35,13 +35,13 @@ export default function MerchandiseDetailPage() {
     if (!merchandise) return
 
     if (merchandise.isCurrentlyWorn) {
-      MerchandiseWearService.stopWearing(merchandise.id)
+      merchandiseWearService.stopWearing(merchandise.id)
     } else {
-      MerchandiseWearService.startWearing(merchandise.id)
+      merchandiseWearService.startWearing(merchandise.id)
     }
 
     // Refresh merchandise data
-    const updatedItem = MerchandiseWearService.getMerchandiseById(merchandise.id)
+    const updatedItem = merchandiseWearService.getMerchandiseById(merchandise.id)
     setMerchandise(updatedItem)
   }
 

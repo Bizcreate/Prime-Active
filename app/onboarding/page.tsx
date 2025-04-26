@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   ChevronRight,
@@ -15,17 +15,40 @@ import {
   MapPin,
   Heart,
   Trophy,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useWeb3 } from "@/components/web3-provider"
-import { WalletConnectButton } from "@/components/wallet-connect-button"
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [selectedActivities, setSelectedActivities] = useState<string[]>([])
+  const [isConnecting, setIsConnecting] = useState(false)
   const router = useRouter()
-  const { isConnected } = useWeb3()
+  const { isConnected, connectWallet } = useWeb3()
+
+  // Check if connected on initial load and when connection state changes
+  useEffect(() => {
+    if (isConnected && step === 1) {
+      // Move to next step if wallet is connected
+      setTimeout(() => setStep(2), 500)
+    }
+  }, [isConnected, step])
+
+  const handleConnectWallet = async () => {
+    console.log("Attempting to connect wallet from onboarding page")
+    setIsConnecting(true)
+    try {
+      const result = await connectWallet()
+      console.log("Connect wallet result:", result)
+      // The useEffect above will handle moving to the next step if successful
+    } catch (error) {
+      console.error("Failed to connect wallet:", error)
+    } finally {
+      setIsConnecting(false)
+    }
+  }
 
   const nextStep = () => {
     if (step < 4) {
@@ -49,10 +72,7 @@ export default function OnboardingPage() {
     }
   }
 
-  // Check if connected and move to next step
-  if (step === 1 && isConnected) {
-    nextStep()
-  }
+  console.log("Onboarding page render state:", { isConnected, isConnecting, step })
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-6 bg-black">
@@ -90,7 +110,28 @@ export default function OnboardingPage() {
                   Sign Up with Email
                 </Button>
 
-                <WalletConnectButton className="w-full" />
+                <Button
+                  className="w-full bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90"
+                  onClick={handleConnectWallet}
+                  disabled={isConnecting || isConnected}
+                >
+                  {isConnecting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : isConnected ? (
+                    <>
+                      <Wallet className="mr-2 h-4 w-4" />
+                      Wallet Connected
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="mr-2 h-4 w-4" />
+                      Connect Wallet
+                    </>
+                  )}
+                </Button>
               </div>
 
               <p className="text-sm text-zinc-500 mb-8 text-center">
@@ -106,7 +147,6 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {/* Rest of the steps remain the same */}
           {/* Step 2 - Activities */}
           {step === 2 && (
             <div className="flex flex-col flex-1">
@@ -115,7 +155,7 @@ export default function OnboardingPage() {
 
               <div className="grid grid-cols-2 gap-3 mb-8">
                 <Button
-                  variant={selectedActivities.includes("running") ? "default" : "activity"}
+                  variant={selectedActivities.includes("running") ? "default" : "outline"}
                   className="h-auto py-4 flex flex-col items-center gap-2"
                   onClick={() => toggleActivity("running")}
                 >
@@ -124,7 +164,7 @@ export default function OnboardingPage() {
                 </Button>
 
                 <Button
-                  variant={selectedActivities.includes("walking") ? "default" : "activity"}
+                  variant={selectedActivities.includes("walking") ? "default" : "outline"}
                   className="h-auto py-4 flex flex-col items-center gap-2"
                   onClick={() => toggleActivity("walking")}
                 >
@@ -133,7 +173,7 @@ export default function OnboardingPage() {
                 </Button>
 
                 <Button
-                  variant={selectedActivities.includes("skateboarding") ? "default" : "activity"}
+                  variant={selectedActivities.includes("skateboarding") ? "default" : "outline"}
                   className="h-auto py-4 flex flex-col items-center gap-2"
                   onClick={() => toggleActivity("skateboarding")}
                 >
@@ -142,7 +182,7 @@ export default function OnboardingPage() {
                 </Button>
 
                 <Button
-                  variant={selectedActivities.includes("snowboarding") ? "default" : "activity"}
+                  variant={selectedActivities.includes("snowboarding") ? "default" : "outline"}
                   className="h-auto py-4 flex flex-col items-center gap-2"
                   onClick={() => toggleActivity("snowboarding")}
                 >
@@ -151,7 +191,7 @@ export default function OnboardingPage() {
                 </Button>
 
                 <Button
-                  variant={selectedActivities.includes("surfing") ? "default" : "activity"}
+                  variant={selectedActivities.includes("surfing") ? "default" : "outline"}
                   className="h-auto py-4 flex flex-col items-center gap-2"
                   onClick={() => toggleActivity("surfing")}
                 >
@@ -160,7 +200,7 @@ export default function OnboardingPage() {
                 </Button>
 
                 <Button
-                  variant={selectedActivities.includes("biking") ? "default" : "activity"}
+                  variant={selectedActivities.includes("biking") ? "default" : "outline"}
                   className="h-auto py-4 flex flex-col items-center gap-2"
                   onClick={() => toggleActivity("biking")}
                 >

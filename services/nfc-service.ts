@@ -1,28 +1,31 @@
 "use client"
 
-// Define the NFC tag data structure
-export interface NFCMerchandiseTag {
-  id: string
-  productId: string
-  productType: "hat" | "tshirt" | "hoodie" | "shoes" | "accessory"
-  productName: string
-  serialNumber: string
-  manufactureDate: string
-  isAuthentic: boolean
-}
-
-// Mock data for connected merchandise
+// Define the connected merchandise interface
 export interface ConnectedMerchandise {
   id: string
   productName: string
   productId: string
   image: string
   dateConnected: string
-  lastWorn: string
+  lastWorn: string | null
   totalWearTime: number // in minutes
   tokenRewards: number
   isCurrentlyWorn: boolean
   wearingSince: string | null
+  hasNFC: boolean
+  hasNFT: boolean
+  nftTokenId?: string
+  nftImage?: string
+}
+
+// Define the NFC tag interface
+export interface NFCMerchandiseTag {
+  id: string
+  productId: string
+  productName: string
+  productType: string
+  hasNFT?: boolean
+  nftTokenId?: string
 }
 
 // Mock initial data
@@ -38,6 +41,8 @@ const initialMerchandise: ConnectedMerchandise[] = [
     tokenRewards: 72,
     isCurrentlyWorn: false,
     wearingSince: null,
+    hasNFC: false,
+    hasNFT: false,
   },
   {
     id: "merch-2",
@@ -50,6 +55,8 @@ const initialMerchandise: ConnectedMerchandise[] = [
     tokenRewards: 48,
     isCurrentlyWorn: false,
     wearingSince: null,
+    hasNFC: false,
+    hasNFT: false,
   },
 ]
 
@@ -148,11 +155,10 @@ export class NFCService {
     return {
       id: `tag_${Math.random().toString(36).substring(2, 11)}`,
       productId: `prod_${Math.random().toString(36).substring(2, 11)}`,
-      productType: randomType,
       productName: productName,
-      serialNumber: `SN${Math.floor(Math.random() * 1000000)}`,
-      manufactureDate: new Date(Date.now() - Math.random() * 31536000000).toISOString(), // Random date within the last year
-      isAuthentic: true,
+      productType: randomType,
+      hasNFT: Math.random() > 0.5,
+      nftTokenId: Math.random().toString(36).substring(2, 15),
     }
   }
 
@@ -160,7 +166,7 @@ export class NFCService {
   static async verifyNFCTag(tag: NFCMerchandiseTag): Promise<boolean> {
     // In a real implementation, we would verify the tag against a database
     // For this demo, we'll just return true
-    return tag.isAuthentic
+    return true
   }
 
   // Simulate writing to an NFC tag (for future use)
@@ -224,112 +230,205 @@ export class NFCService {
   }
 }
 
-export const MerchandiseWearService = {
-  // Get all connected merchandise
-  getConnectedMerchandise: (): ConnectedMerchandise[] => {
-    return getStoredMerchandise()
-  },
+// Export the MerchandiseWearService class
+export class MerchandiseWearService {
+  static merchandise: ConnectedMerchandise[] = []
+  private static storageKey = "prime-mates-merchandise"
+  private static initialized = false
 
-  // Get merchandise by ID
-  getMerchandiseById: (id: string): ConnectedMerchandise | null => {
-    const merchandise = getStoredMerchandise()
-    return merchandise.find((item) => item.id === id) || null
-  },
+  // Initialize the service
+  static initialize() {
+    if (this.initialized) return
+    this.initialized = true
 
-  // Add new merchandise
-  addMerchandise: (item: ConnectedMerchandise): void => {
-    const merchandise = getStoredMerchandise()
-    merchandise.push(item)
-    saveMerchandise(merchandise)
-  },
+    this.loadMerchandise()
 
-  // Start wearing an item
-  startWearing: (id: string): void => {
-    const merchandise = getStoredMerchandise()
-    const updatedMerchandise = merchandise.map((item) => {
-      if (item.id === id) {
-        return {
-          ...item,
-          isCurrentlyWorn: true,
-          wearingSince: new Date().toISOString(),
-        }
+    // Add mock data if empty
+    if (this.merchandise.length === 0) {
+      this.addMockMerchandise()
+    }
+
+    // Start tracking interval
+    this.startTrackingInterval()
+  }
+
+  private static loadMerchandise() {
+    if (typeof window !== "undefined") {
+      const storedMerchandise = localStorage.getItem(this.storageKey)
+      if (storedMerchandise) {
+        this.merchandise = JSON.parse(storedMerchandise)
       }
-      return item
-    })
-    saveMerchandise(updatedMerchandise)
-  },
+    }
+  }
 
-  // Stop wearing an item
-  stopWearing: (id: string): void => {
-    const merchandise = getStoredMerchandise()
-    const updatedMerchandise = merchandise.map((item) => {
-      if (item.id === id && item.isCurrentlyWorn && item.wearingSince) {
-        const wearingSince = new Date(item.wearingSince)
+  private static saveMerchandise() {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(this.storageKey, JSON.stringify(this.merchandise))
+    }
+  }
+
+  private static addMockMerchandise() {
+    const mockMerchandise: ConnectedMerchandise[] = [
+      {
+        id: "merch-1",
+        productName: "Prime Mates Classic T-Shirt",
+        productId: "product1",
+        image: "/prime-mates-tshirt.png",
+        dateConnected: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        lastWorn: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        totalWearTime: 480, // 8 hours
+        tokenRewards: 48,
+        isCurrentlyWorn: false,
+        wearingSince: null,
+        hasNFC: true,
+        hasNFT: true,
+        nftTokenId: "0x123456789",
+        nftImage: "/prime-mates-tshirt.png",
+      },
+      {
+        id: "merch-2",
+        productName: "Prime Mates Board Club Snapback",
+        productId: "product2",
+        image: "/prime-mates-snapback.png",
+        dateConnected: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+        lastWorn: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        totalWearTime: 720, // 12 hours
+        tokenRewards: 72,
+        isCurrentlyWorn: false,
+        wearingSince: null,
+        hasNFC: true,
+        hasNFT: false,
+      },
+    ]
+
+    this.merchandise = mockMerchandise
+    this.saveMerchandise()
+  }
+
+  private static startTrackingInterval() {
+    if (typeof window !== "undefined") {
+      // Update worn items every minute
+      setInterval(() => {
         const now = new Date()
-        const wearTimeMinutes = Math.floor((now.getTime() - wearingSince.getTime()) / (1000 * 60))
-        const tokenEarned = Math.floor(wearTimeMinutes / 10) // 1 token per 10 minutes
+        let updated = false
 
-        return {
-          ...item,
-          isCurrentlyWorn: false,
-          wearingSince: null,
-          lastWorn: now.toISOString(),
-          totalWearTime: item.totalWearTime + wearTimeMinutes,
-          tokenRewards: item.tokenRewards + tokenEarned,
+        this.merchandise.forEach((item) => {
+          if (item.isCurrentlyWorn && item.wearingSince) {
+            const wearingSince = new Date(item.wearingSince)
+            const elapsedMinutes = Math.floor((now.getTime() - wearingSince.getTime()) / (60 * 1000))
+
+            // Award 1 token for every 10 minutes
+            const newTokens = Math.floor(elapsedMinutes / 10) - Math.floor(item.totalWearTime / 10)
+
+            if (newTokens > 0) {
+              item.tokenRewards += newTokens
+              item.totalWearTime = elapsedMinutes
+              updated = true
+            }
+          }
+        })
+
+        if (updated) {
+          this.saveMerchandise()
         }
-      }
-      return item
-    })
-    saveMerchandise(updatedMerchandise)
-  },
+      }, 60000) // Check every minute
+    }
+  }
 
-  // Get currently worn items
-  getCurrentlyWornItems: (): ConnectedMerchandise[] => {
-    const merchandise = getStoredMerchandise()
-    return merchandise.filter((item) => item.isCurrentlyWorn)
-  },
+  static getConnectedMerchandise(): ConnectedMerchandise[] {
+    this.initialize()
+    return [...this.merchandise]
+  }
 
-  // Update wear time and rewards for currently worn items
-  updateWearTimeAndRewards: (): void => {
-    const merchandise = getStoredMerchandise()
+  static getCurrentlyWornItems(): ConnectedMerchandise[] {
+    this.initialize()
+    return this.merchandise.filter((item) => item.isCurrentlyWorn)
+  }
+
+  static getTotalEarnedTokens(): number {
+    this.initialize()
+    return this.merchandise.reduce((total, item) => total + item.tokenRewards, 0)
+  }
+
+  static startWearing(itemId: string): boolean {
+    this.initialize()
+    const itemIndex = this.merchandise.findIndex((item) => item.id === itemId)
+    if (itemIndex === -1) return false
+
+    this.merchandise[itemIndex].isCurrentlyWorn = true
+    this.merchandise[itemIndex].wearingSince = new Date().toISOString()
+    this.merchandise[itemIndex].lastWorn = new Date().toISOString()
+
+    this.saveMerchandise()
+    return true
+  }
+
+  static stopWearing(itemId: string): boolean {
+    this.initialize()
+    const itemIndex = this.merchandise.findIndex((item) => item.id === itemId)
+    if (itemIndex === -1 || !this.merchandise[itemIndex].isCurrentlyWorn) return false
+
+    const item = this.merchandise[itemIndex]
+    const wearingSince = new Date(item.wearingSince || new Date())
     const now = new Date()
 
-    const updatedMerchandise = merchandise.map((item) => {
-      if (item.isCurrentlyWorn && item.wearingSince) {
-        const wearingSince = new Date(item.wearingSince)
-        const wearTimeMinutes = Math.floor((now.getTime() - wearingSince.getTime()) / (1000 * 60))
-        const tokenEarned = Math.floor(wearTimeMinutes / 10) // 1 token per 10 minutes
+    // Calculate additional wear time
+    const additionalMinutes = Math.floor((now.getTime() - wearingSince.getTime()) / (60 * 1000))
 
-        return {
-          ...item,
-          totalWearTime: item.totalWearTime + wearTimeMinutes,
-          tokenRewards: item.tokenRewards + tokenEarned,
-          wearingSince: now.toISOString(), // Reset the wearing since time
-        }
-      }
-      return item
-    })
+    // Update item
+    this.merchandise[itemIndex].isCurrentlyWorn = false
+    this.merchandise[itemIndex].wearingSince = null
+    this.merchandise[itemIndex].lastWorn = now.toISOString()
+    this.merchandise[itemIndex].totalWearTime += additionalMinutes
 
-    saveMerchandise(updatedMerchandise)
-  },
+    // Award tokens (1 token per 10 minutes)
+    const newTokens = Math.floor(additionalMinutes / 10)
+    this.merchandise[itemIndex].tokenRewards += newTokens
 
-  // Get total earned tokens
-  getTotalEarnedTokens: (): number => {
-    const merchandise = getStoredMerchandise()
-    return merchandise.reduce((total, item) => total + item.tokenRewards, 0)
-  },
+    this.saveMerchandise()
+    return true
+  }
 
-  // Remove merchandise
-  removeMerchandise: (id: string): void => {
-    const merchandise = getStoredMerchandise()
-    const updatedMerchandise = merchandise.filter((item) => item.id !== id)
-    saveMerchandise(updatedMerchandise)
-  },
+  static addMerchandise(item: ConnectedMerchandise): ConnectedMerchandise {
+    // Ensure the item has all required properties
+    const newItem: ConnectedMerchandise = {
+      id: item.id || `merch-${Date.now()}`,
+      productName: item.productName,
+      productId: item.productId,
+      image: item.image,
+      dateConnected: item.dateConnected || new Date().toISOString(),
+      lastWorn: item.lastWorn || null,
+      totalWearTime: item.totalWearTime || 0,
+      tokenRewards: item.tokenRewards || 0,
+      isCurrentlyWorn: item.isCurrentlyWorn || false,
+      wearingSince: item.wearingSince || null,
+      hasNFC: item.hasNFC !== undefined ? item.hasNFC : true,
+      hasNFT: item.hasNFT !== undefined ? item.hasNFT : false,
+    }
+
+    this.merchandise.push(newItem)
+    this.saveMerchandise()
+    return newItem
+  }
+
+  static removeMerchandise(itemId: string): boolean {
+    this.initialize()
+    const initialLength = this.merchandise.length
+    this.merchandise = this.merchandise.filter((item) => item.id !== itemId)
+
+    if (this.merchandise.length !== initialLength) {
+      this.saveMerchandise()
+      return true
+    }
+
+    return false
+  }
 }
 
-// Set up an interval to update wear time and rewards
+// Initialize the service
 if (typeof window !== "undefined") {
-  setInterval(() => {
-    MerchandiseWearService.updateWearTimeAndRewards()
-  }, 60000) // Update every minute
+  // Initialize on the client side
+  setTimeout(() => {
+    MerchandiseWearService.initialize()
+  }, 0)
 }

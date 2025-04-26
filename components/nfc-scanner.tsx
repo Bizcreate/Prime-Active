@@ -1,10 +1,19 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { NFCService, type NFCMerchandiseTag } from "@/services/nfc-service"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2, Smartphone, AlertCircle } from "lucide-react"
+import { Smartphone, X, CheckCircle, AlertTriangle } from "lucide-react"
+import Image from "next/image"
+
+export interface NFCMerchandiseTag {
+  id: string
+  productId: string
+  productName: string
+  productType: string
+  serialNumber: string
+  manufacturingDate: string
+}
 
 interface NFCScannerProps {
   onTagDetected: (tag: NFCMerchandiseTag) => void
@@ -12,140 +21,178 @@ interface NFCScannerProps {
 }
 
 export function NFCScanner({ onTagDetected, onCancel }: NFCScannerProps) {
-  const [isScanning, setIsScanning] = useState(false)
+  const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [compatibilityInfo, setCompatibilityInfo] = useState(NFCService.getDeviceCompatibilityInfo())
+  const [progress, setProgress] = useState(0)
+  const [detectedTag, setDetectedTag] = useState<NFCMerchandiseTag | null>(null)
 
+  // Start scanning when component mounts
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout
+    startScanning()
+    return () => {
+      // Clean up any resources if needed
+    }
+  }, [])
 
-    const scanTag = async () => {
-      try {
-        setIsScanning(true)
-        setError(null)
+  // Simulate scanning progress
+  useEffect(() => {
+    if (scanning) {
+      const interval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(interval)
+            return 100
+          }
+          return prev + 5
+        })
+      }, 150)
 
-        // For demo/preview purposes, simulate a successful scan after 3 seconds
-        if (!compatibilityInfo.isCompatible) {
-          timeoutId = setTimeout(() => {
-            const simulatedTag: NFCMerchandiseTag = {
-              id: `tag_${Math.random().toString(36).substring(2, 11)}`,
-              productId: `prod_${Math.random().toString(36).substring(2, 11)}`,
-              productType: "hoodie",
-              productName: "Board Club Hoodie",
-              serialNumber: `SN${Math.floor(Math.random() * 1000000)}`,
-              manufactureDate: new Date().toISOString(),
-              isAuthentic: true,
-            }
-            onTagDetected(simulatedTag)
-            setIsScanning(false)
-          }, 3000)
-          return
-        }
+      // Simulate tag detection after a random time
+      const detectionTimeout = setTimeout(
+        () => {
+          const randomProductTypes = ["tshirt", "snapback", "jumper", "board", "wristband"]
+          const randomProductType = randomProductTypes[Math.floor(Math.random() * randomProductTypes.length)]
 
-        const tag = await NFCService.scanNFCTag()
-        if (tag) {
-          onTagDetected(tag)
-        } else {
-          setError("No NFC tag detected. Please try again.")
-        }
-      } catch (err: any) {
-        setError(err.message || "Failed to scan NFC tag")
-      } finally {
-        setIsScanning(false)
+          const mockTag: NFCMerchandiseTag = {
+            id: `nfc-${Date.now()}`,
+            productId: `prod-${Math.floor(Math.random() * 10000)}`,
+            productName: `Prime Mates ${randomProductType.charAt(0).toUpperCase() + randomProductType.slice(1)}`,
+            productType: randomProductType,
+            serialNumber: `PM${Math.floor(Math.random() * 10000)}`,
+            manufacturingDate: new Date().toISOString(),
+          }
+
+          setDetectedTag(mockTag)
+          setScanning(false)
+          clearInterval(interval)
+          setProgress(100)
+        },
+        Math.random() * 3000 + 2000,
+      ) // Between 2-5 seconds
+
+      return () => {
+        clearInterval(interval)
+        clearTimeout(detectionTimeout)
       }
     }
+  }, [scanning])
 
-    scanTag()
+  const startScanning = () => {
+    setScanning(true)
+    setError(null)
+    setProgress(0)
+    setDetectedTag(null)
 
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId)
+    // Check if browser supports NFC
+    if (typeof window !== "undefined" && !("NDEFReader" in window)) {
+      setError("NFC is not supported on this device. Please try using a different device.")
+      setScanning(false)
+      return
     }
-  }, [onTagDetected, compatibilityInfo.isCompatible])
+  }
+
+  const handleConfirm = () => {
+    if (detectedTag) {
+      onTagDetected(detectedTag)
+    }
+  }
 
   return (
-    <Card className="bg-zinc-900 border-zinc-800">
+    <Card className="bg-zinc-900 border-zinc-800 overflow-hidden">
+      <div className="relative h-12 bg-zinc-800 flex items-center justify-center">
+        <h3 className="font-medium">NFC Scanner</h3>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute right-2 top-1/2 transform -translate-y-1/2"
+          onClick={onCancel}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
       <CardContent className="p-6">
-        <div className="flex flex-col items-center text-center">
-          {!compatibilityInfo.isCompatible && (
-            <div className="mb-4 p-3 bg-yellow-900/30 border border-yellow-800 rounded-lg text-left w-full">
-              <div className="flex items-start">
-                <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-yellow-500 mb-1">NFC compatibility warning</p>
-                  <p className="text-xs text-zinc-400">
-                    {compatibilityInfo.reason}. For this demo, we'll simulate NFC scanning.
-                  </p>
+        {error ? (
+          <div className="text-center">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">NFC Error</h3>
+            <p className="text-sm text-red-400 mb-4">{error}</p>
+            <Button onClick={startScanning}>Try Again</Button>
+          </div>
+        ) : detectedTag ? (
+          <div className="text-center">
+            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">NFC Tag Detected!</h3>
+
+            <div className="bg-zinc-800 rounded-lg p-4 mb-4">
+              <div className="flex items-center mb-3">
+                <div className="relative w-16 h-16 mr-3">
+                  <Image
+                    src={`/prime-mates-${detectedTag.productType}.png`}
+                    alt={detectedTag.productName}
+                    fill
+                    className="object-contain"
+                    onError={(e) => {
+                      // Fallback to placeholder if image fails to load
+                      ;(e.target as HTMLImageElement).src = "/prime-mates-tshirt.png"
+                    }}
+                  />
+                </div>
+                <div className="text-left">
+                  <h4 className="font-medium">{detectedTag.productName}</h4>
+                  <p className="text-xs text-zinc-500">Serial: {detectedTag.serialNumber}</p>
                 </div>
               </div>
             </div>
-          )}
 
-          <div className="relative mb-6">
-            {isScanning ? (
-              <div className="relative">
-                <div className="w-32 h-32 rounded-full bg-zinc-800 flex items-center justify-center">
-                  <Smartphone className="h-12 w-12 text-primary" />
-                </div>
-                <div className="absolute inset-0 rounded-full border-4 border-primary border-dashed animate-[spin_3s_linear_infinite]"></div>
-              </div>
-            ) : error ? (
-              <div className="w-32 h-32 rounded-full bg-red-900/20 flex items-center justify-center">
-                <AlertCircle className="h-12 w-12 text-red-500" />
-              </div>
-            ) : (
-              <div className="w-32 h-32 rounded-full bg-zinc-800 flex items-center justify-center">
-                <Smartphone className="h-12 w-12 text-primary" />
-              </div>
-            )}
+            <p className="text-sm text-zinc-400 mb-4">
+              This merchandise has been detected and is ready to be connected to your account.
+            </p>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={startScanning}>
+                Scan Again
+              </Button>
+              <Button className="flex-1" onClick={handleConfirm}>
+                Connect Item
+              </Button>
+            </div>
           </div>
+        ) : (
+          <div className="text-center">
+            <div className="relative w-32 h-32 mx-auto mb-4">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Smartphone className="h-16 w-16 text-zinc-700" />
+                {scanning && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-full h-full rounded-full border-4 border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                  </div>
+                )}
+              </div>
+            </div>
 
-          <h2 className="text-xl font-bold mb-2">
-            {isScanning ? "Scanning for NFC Tag..." : error ? "Scanning Failed" : "Ready to Scan"}
-          </h2>
+            <h3 className="text-lg font-medium mb-2">Scanning for NFC Tag</h3>
+            <p className="text-sm text-zinc-400 mb-4">
+              Hold your phone near the NFC tag on your merchandise to connect it.
+            </p>
 
-          <p className="text-zinc-400 mb-6">
-            {isScanning
-              ? "Hold your phone near the NFC tag on your merchandise"
-              : error
-                ? error
-                : "Tap the button below to start scanning for your Prime Active merchandise"}
-          </p>
+            <div className="w-full bg-zinc-800 rounded-full h-2 mb-2">
+              <div
+                className="bg-primary h-2 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
 
-          {isScanning ? (
-            <Button disabled className="w-full mb-3">
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Scanning...
+            <div className="flex justify-between text-xs text-zinc-500 mb-4">
+              <span>Scanning...</span>
+              <span>{progress}%</span>
+            </div>
+
+            <Button variant="outline" onClick={onCancel} disabled={false}>
+              Cancel
             </Button>
-          ) : (
-            <Button
-              onClick={() => {
-                setIsScanning(true)
-                setError(null)
-                // Restart the scanning process
-                setTimeout(() => {
-                  const simulatedTag: NFCMerchandiseTag = {
-                    id: `tag_${Math.random().toString(36).substring(2, 11)}`,
-                    productId: `prod_${Math.random().toString(36).substring(2, 11)}`,
-                    productType: "hoodie",
-                    productName: "Board Club Hoodie",
-                    serialNumber: `SN${Math.floor(Math.random() * 1000000)}`,
-                    manufactureDate: new Date().toISOString(),
-                    isAuthentic: true,
-                  }
-                  onTagDetected(simulatedTag)
-                  setIsScanning(false)
-                }, 3000)
-              }}
-              className="w-full mb-3 bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90"
-            >
-              {error ? "Try Again" : "Start Scanning"}
-            </Button>
-          )}
-
-          <Button variant="outline" onClick={onCancel} className="w-full">
-            Cancel
-          </Button>
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

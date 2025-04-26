@@ -11,6 +11,7 @@ import { ArrowRight, Calendar, Clock, MapPin, Users, User } from "lucide-react"
 import Link from "next/link"
 import { HealthTracker } from "@/components/health-tracker"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { BoardClubStatus } from "@/components/board-club-status"
 
 export default function DashboardPage() {
   const { isConnected } = useWeb3()
@@ -45,6 +46,8 @@ export default function DashboardPage() {
           </div>
           <HealthTracker />
         </div>
+
+        <BoardClubStatus />
 
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">

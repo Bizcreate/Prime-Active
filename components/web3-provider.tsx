@@ -18,7 +18,8 @@ interface Web3ContextType {
   isSimulated: boolean
 }
 
-const Web3Context = createContext<Web3ContextType>({
+// Create a default context value
+const defaultContextValue: Web3ContextType = {
   isConnected: false,
   connectWallet: async () => false,
   disconnectWallet: () => {},
@@ -31,7 +32,9 @@ const Web3Context = createContext<Web3ContextType>({
   verifyNFTOwnership: async () => false,
   isVerifying: false,
   isSimulated: true,
-})
+}
+
+const Web3Context = createContext<Web3ContextType>(defaultContextValue)
 
 export const useWeb3 = () => useContext(Web3Context)
 
@@ -116,16 +119,23 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
 
   // Check if wallet is already connected
   useEffect(() => {
-    const savedConnection = localStorage.getItem("walletConnected")
-    if (savedConnection === "true") {
-      console.log("Restoring saved wallet connection")
-      setIsConnected(true)
-      setAddress("0x1234...5678")
-      setBalance(250)
-      setOwnedNFTs(mockNFTs)
-      setStakedNFTs(mockStakedNFTs)
-      setStakingRewards(200)
-      setHasAccess(true)
+    const checkSavedConnection = () => {
+      const savedConnection = localStorage.getItem("walletConnected")
+      if (savedConnection === "true") {
+        console.log("Restoring saved wallet connection")
+        setIsConnected(true)
+        setAddress("0x1234...5678")
+        setBalance(250)
+        setOwnedNFTs(mockNFTs)
+        setStakedNFTs(mockStakedNFTs)
+        setStakingRewards(200)
+        setHasAccess(true)
+      }
+    }
+
+    // Run on client-side only
+    if (typeof window !== "undefined") {
+      checkSavedConnection()
     }
   }, [])
 
@@ -149,7 +159,9 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
       setHasAccess(true)
 
       // Save connection state to localStorage
-      localStorage.setItem("walletConnected", "true")
+      if (typeof window !== "undefined") {
+        localStorage.setItem("walletConnected", "true")
+      }
 
       return true
     } catch (error) {
@@ -185,27 +197,26 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     setStakedNFTs([])
     setStakingRewards(0)
     setHasAccess(false)
-    localStorage.removeItem("walletConnected")
+
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("walletConnected")
+    }
   }
 
-  return (
-    <Web3Context.Provider
-      value={{
-        isConnected,
-        connectWallet,
-        disconnectWallet,
-        address,
-        balance,
-        ownedNFTs,
-        stakedNFTs,
-        stakingRewards,
-        hasAccess,
-        verifyNFTOwnership,
-        isVerifying,
-        isSimulated,
-      }}
-    >
-      {children}
-    </Web3Context.Provider>
-  )
+  const contextValue: Web3ContextType = {
+    isConnected,
+    connectWallet,
+    disconnectWallet,
+    address,
+    balance,
+    ownedNFTs,
+    stakedNFTs,
+    stakingRewards,
+    hasAccess,
+    verifyNFTOwnership,
+    isVerifying,
+    isSimulated,
+  }
+
+  return <Web3Context.Provider value={contextValue}>{children}</Web3Context.Provider>
 }

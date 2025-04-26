@@ -99,7 +99,7 @@ export default function OnboardingPage() {
           ))}
         </div>
 
-        <div className="flex-1 flex flex-col">
+        <div className="flex flex-col">
           {step === 1 && (
             <div className="flex flex-col flex-1">
               <h2 className="text-2xl font-bold mb-2">Welcome to Prime Active</h2>
@@ -153,10 +153,10 @@ export default function OnboardingPage() {
               <h2 className="text-2xl font-bold mb-2">Choose Your Favorite Activities</h2>
               <p className="text-zinc-400 mb-6">Pick your favorite activities, and we'll help you track them</p>
 
-              <div className="grid grid-cols-2 gap-3 mb-8">
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 <Button
                   variant={selectedActivities.includes("running") ? "default" : "outline"}
-                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  className="h-20 py-2 flex flex-col items-center gap-1"
                   onClick={() => toggleActivity("running")}
                 >
                   <Activity className="h-6 w-6" />
@@ -165,7 +165,7 @@ export default function OnboardingPage() {
 
                 <Button
                   variant={selectedActivities.includes("walking") ? "default" : "outline"}
-                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  className="h-20 py-2 flex flex-col items-center gap-1"
                   onClick={() => toggleActivity("walking")}
                 >
                   <Footprints className="h-6 w-6" />
@@ -174,7 +174,7 @@ export default function OnboardingPage() {
 
                 <Button
                   variant={selectedActivities.includes("skateboarding") ? "default" : "outline"}
-                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  className="h-20 py-2 flex flex-col items-center gap-1"
                   onClick={() => toggleActivity("skateboarding")}
                 >
                   <Skateboard className="h-6 w-6" />
@@ -183,7 +183,7 @@ export default function OnboardingPage() {
 
                 <Button
                   variant={selectedActivities.includes("snowboarding") ? "default" : "outline"}
-                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  className="h-20 py-2 flex flex-col items-center gap-1"
                   onClick={() => toggleActivity("snowboarding")}
                 >
                   <Snowflake className="h-6 w-6" />
@@ -192,7 +192,7 @@ export default function OnboardingPage() {
 
                 <Button
                   variant={selectedActivities.includes("surfing") ? "default" : "outline"}
-                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  className="h-20 py-2 flex flex-col items-center gap-1"
                   onClick={() => toggleActivity("surfing")}
                 >
                   <Waves className="h-6 w-6" />
@@ -201,7 +201,7 @@ export default function OnboardingPage() {
 
                 <Button
                   variant={selectedActivities.includes("biking") ? "default" : "outline"}
-                  className="h-auto py-4 flex flex-col items-center gap-2"
+                  className="h-20 py-2 flex flex-col items-center gap-1"
                   onClick={() => toggleActivity("biking")}
                 >
                   <Bike className="h-6 w-6" />
@@ -209,7 +209,7 @@ export default function OnboardingPage() {
                 </Button>
               </div>
 
-              <Button onClick={nextStep} className="mt-auto">
+              <Button onClick={nextStep} className="mt-6">
                 Continue <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>

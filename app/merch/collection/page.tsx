@@ -1,38 +1,96 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Clock, Smartphone, Sparkles, Timer, Trophy, Loader2 } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { TabBar } from "@/components/tab-bar"
+import {
+  ArrowLeft,
+  Clock,
+  Shirt,
+  Star,
+  Timer,
+  Smartphone,
+  Plus,
+  Loader2,
+  AlertTriangle,
+  ShoppingBag,
+  ExternalLink,
+} from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { TabBar } from "@/components/tab-bar"
-import { nfcMerchandiseService, type MerchandiseItem } from "@/services/nfc-merchandise-service"
+import { merchandiseWearService, type ConnectedMerchandise } from "@/services/merchandise-wear-service"
 import { formatDistanceToNow } from "date-fns"
 import { Badge } from "@/components/ui/badge"
+import { useSearchParams, useRouter } from "next/navigation"
+import { motion } from "framer-motion"
+import { useToast } from "@/hooks/use-toast"
 
 export default function MerchandiseCollectionPage() {
-  const [items, setItems] = useState<MerchandiseItem[]>([])
-  const [activeItems, setActiveItems] = useState<MerchandiseItem[]>([])
+  const [merchandise, setMerchandise] = useState<ConnectedMerchandise[]>([])
+  const [activeItems, setActiveItems] = useState<ConnectedMerchandise[]>([])
   const [totalTokens, setTotalTokens] = useState(0)
-  const [isScanning, setIsScanning] = useState(false)
-  const [scanResult, setScanResult] = useState<{ success: boolean; message: string; item?: MerchandiseItem } | null>(
-    null,
-  )
+  const [isLoading, setIsLoading] = useState(true)
+  const [isNfcScanning, setIsNfcScanning] = useState(false)
+  const [nfcError, setNfcError] = useState<string | null>(null)
+  const [newItemHighlight, setNewItemHighlight] = useState<string | null>(null)
+  const { toast } = useToast()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const highlightId = searchParams?.get("highlight")
 
+  // Load merchandise data
   useEffect(() => {
-    // Load merchandise data
-    const merchandiseItems = nfcMerchandiseService.getAllItems()
-    setItems(merchandiseItems)
+    const loadData = async () => {
+      try {
+        setIsLoading(true)
+        setNfcError(null)
 
-    // Get currently worn items
-    const worn = nfcMerchandiseService.getCurrentlyWornItems()
-    setActiveItems(worn)
+        // Add a slight delay to simulate loading
+        await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    // Get total tokens
-    const tokens = nfcMerchandiseService.getTotalTokensEarned()
-    setTotalTokens(tokens)
-  }, [])
+        // Load merchandise data
+        const items = merchandiseWearService.getConnectedMerchandise()
+
+        // Ensure we have at least some demo items if none exist
+        if (!items || items.length === 0 || items.length < 3) {
+          merchandiseWearService.addDemoItems()
+        }
+
+        const updatedItems = merchandiseWearService.getConnectedMerchandise()
+        setMerchandise(updatedItems || [])
+
+        // Get currently worn items
+        const worn = merchandiseWearService.getCurrentlyWornItems()
+        setActiveItems(worn || [])
+
+        // Get total tokens
+        const tokens = merchandiseWearService.getTotalEarnedTokens()
+        setTotalTokens(tokens || 0)
+
+        // Check if we should highlight a new item
+        if (highlightId) {
+          setNewItemHighlight(highlightId)
+
+          // Clear the highlight after 5 seconds
+          setTimeout(() => {
+            setNewItemHighlight(null)
+          }, 5000)
+        }
+      } catch (error) {
+        console.error("Error loading merchandise data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load merchandise data. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [highlightId, toast])
 
   // Format wear time
   const formatWearTime = (minutes: number): string => {
@@ -54,60 +112,134 @@ export default function MerchandiseCollectionPage() {
   }
 
   // Toggle item wearing
-  const handleToggleWearing = (item: MerchandiseItem) => {
-    if (item.isCurrentlyWorn) {
-      const tokensEarned = nfcMerchandiseService.stopWearing(item.id)
-      if (tokensEarned > 0) {
-        setScanResult({
-          success: true,
-          message: `You earned ${tokensEarned} tokens for wearing this item!`,
+  const handleToggleWearing = (item: ConnectedMerchandise) => {
+    try {
+      if (item.isCurrentlyWorn) {
+        merchandiseWearService.stopWearing(item.id)
+        toast({
+          title: "Stopped wearing",
+          description: `You've stopped wearing ${item.productName}`,
+        })
+      } else {
+        merchandiseWearService.startWearing(item.id)
+        toast({
+          title: "Started wearing",
+          description: `You're now wearing ${item.productName}`,
         })
       }
-    } else {
-      nfcMerchandiseService.startWearing(item.id)
-    }
 
-    // Refresh data
-    const merchandiseItems = nfcMerchandiseService.getAllItems()
-    setItems(merchandiseItems)
-    const worn = nfcMerchandiseService.getCurrentlyWornItems()
-    setActiveItems(worn)
-    const tokens = nfcMerchandiseService.getTotalTokensEarned()
-    setTotalTokens(tokens)
+      // Refresh merchandise list
+      const items = merchandiseWearService.getConnectedMerchandise()
+      setMerchandise(items || [])
+
+      // Get currently worn items
+      const worn = merchandiseWearService.getCurrentlyWornItems()
+      setActiveItems(worn || [])
+    } catch (error) {
+      console.error("Error toggling wear status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update wear status. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  // Scan NFC
-  const handleScanNFC = async () => {
-    setIsScanning(true)
-    setScanResult(null)
-
+  // Connect NFC item
+  const handleConnectNFC = async () => {
     try {
-      const result = await nfcMerchandiseService.scanNFC()
+      setIsNfcScanning(true)
+      setNfcError(null)
 
-      if (result) {
-        setScanResult({
-          success: true,
-          message: "NFC tag scanned successfully!",
-          item: result,
-        })
-
-        // Refresh data
-        const merchandiseItems = nfcMerchandiseService.getAllItems()
-        setItems(merchandiseItems)
-      } else {
-        setScanResult({
-          success: false,
-          message: "No NFC tag detected. Please try again.",
-        })
+      // Check if NFC is available
+      if (typeof window !== "undefined" && !("NDEFReader" in window)) {
+        setNfcError("NFC is not supported on this device. Please try using a different device.")
+        setIsNfcScanning(false)
+        return
       }
-    } catch (error) {
-      setScanResult({
-        success: false,
-        message: "Error scanning NFC tag. Please try again.",
+
+      // Simulate NFC scanning
+      await new Promise((resolve) => setTimeout(resolve, 3000))
+
+      // Generate a random merchandise item
+      const productTypes = ["hat", "tshirt", "hoodie", "shoes", "accessory"]
+      const randomType = productTypes[Math.floor(Math.random() * productTypes.length)]
+
+      // Get product name and image based on type
+      let productName = ""
+      let image = ""
+
+      switch (randomType) {
+        case "hat":
+          productName = "Prime Mates Snapback"
+          image = "/prime-mates-snapback.png"
+          break
+        case "tshirt":
+          productName = "Prime Mates T-Shirt"
+          image = "/prime-mates-tshirt.png"
+          break
+        case "hoodie":
+          productName = "Prime Mates Jumper"
+          image = "/prime-mates-jumper.png"
+          break
+        case "shoes":
+          productName = "Prime Mates Sneakers"
+          image = "/banana-board.png" // Placeholder
+          break
+        case "accessory":
+          productName = "Prime Mates Wristband"
+          image = "/banana-grip.png" // Placeholder
+          break
+      }
+
+      // Create new merchandise item
+      const newItem: ConnectedMerchandise = {
+        id: `merch-${Date.now()}`,
+        productName,
+        productId: `prod-${Date.now()}`,
+        image,
+        dateConnected: new Date().toISOString(),
+        lastWorn: new Date().toISOString(),
+        totalWearTime: 0,
+        tokenRewards: 0,
+        isCurrentlyWorn: false,
+        wearingSince: null,
+        hasNFC: true,
+        hasNFT: Math.random() > 0.5,
+      }
+
+      // Add to merchandise
+      merchandiseWearService.addMerchandise(newItem)
+
+      // Refresh merchandise list
+      const items = merchandiseWearService.getConnectedMerchandise()
+      setMerchandise(items || [])
+
+      // Highlight the new item
+      setNewItemHighlight(newItem.id)
+      setTimeout(() => setNewItemHighlight(null), 5000)
+
+      toast({
+        title: "NFC Connected",
+        description: `${productName} has been added to your collection!`,
       })
-    } finally {
-      setIsScanning(false)
+
+      setIsNfcScanning(false)
+    } catch (error) {
+      console.error("NFC scan error:", error)
+      setNfcError("Failed to scan NFC tag. Please try again.")
+      setIsNfcScanning(false)
+
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect NFC tag. Please try again.",
+        variant: "destructive",
+      })
     }
+  }
+
+  const handleItemClick = (itemId: string) => {
+    router.push(`/merch/${itemId}`)
   }
 
   return (
@@ -120,243 +252,156 @@ export default function MerchandiseCollectionPage() {
             </Button>
           </Link>
           <h1 className="text-xl font-bold">My Collection</h1>
+
+          <div className="ml-auto">
+            <Button size="sm" onClick={handleConnectNFC} disabled={isNfcScanning}>
+              {isNfcScanning ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Scanning...
+                </>
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" /> Connect NFC
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-l-4 border-[#ffc72d]">
-              <CardContent className="p-4 flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center mb-2">
-                  <Smartphone className="h-5 w-5 text-[#ffc72d]" />
-                </div>
-                <div className="text-2xl font-bold">{items.length}</div>
-                <div className="text-xs text-zinc-400">Connected Items</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-l-4 border-[#ffc72d]">
-              <CardContent className="p-4 flex flex-col items-center">
-                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center mb-2">
-                  <Image src="/shaka-coin.png" alt="Tokens" width={20} height={20} />
-                </div>
-                <div className="text-2xl font-bold text-[#ffc72d]">{totalTokens}</div>
-                <div className="text-xs text-zinc-400">Tokens Earned</div>
-              </CardContent>
-            </Card>
+        {nfcError && (
+          <div className="bg-red-900 rounded-lg p-4 text-sm flex items-center gap-2 mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            {nfcError}
           </div>
+        )}
 
-          <Button
-            className="w-full bg-[#ffc72d] hover:bg-[#e6b328] text-black"
-            onClick={handleScanNFC}
-            disabled={isScanning}
-          >
-            {isScanning ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Scanning NFC Tag...
-              </>
-            ) : (
-              <>
-                <Smartphone className="h-4 w-4 mr-2" />
-                Scan NFC Tag
-              </>
-            )}
-          </Button>
-
-          {scanResult && (
-            <Card
-              className={
-                scanResult.success
-                  ? "bg-green-900/20 border-l-4 border-green-500"
-                  : "bg-red-900/20 border-l-4 border-red-500"
-              }
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start">
-                  {scanResult.success ? (
-                    <div className="w-8 h-8 rounded-full bg-green-900/30 flex items-center justify-center mr-3 flex-shrink-0">
-                      <Trophy className="h-4 w-4 text-green-500" />
-                    </div>
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-red-900/30 flex items-center justify-center mr-3 flex-shrink-0">
-                      <Smartphone className="h-4 w-4 text-red-500" />
-                    </div>
-                  )}
-                  <div>
-                    <h4 className="font-medium mb-1">{scanResult.success ? "Success!" : "Scan Failed"}</h4>
-                    <p className="text-sm text-zinc-400">{scanResult.message}</p>
-                    {scanResult.item && (
-                      <div className="mt-2 flex items-center">
-                        <div className="relative w-10 h-10 mr-2">
-                          <Image
-                            src={scanResult.item.image || "/placeholder.svg"}
-                            alt={scanResult.item.name}
-                            fill
-                            className="object-contain rounded"
-                          />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{scanResult.item.name}</p>
-                          <Badge
-                            className={scanResult.item.type === "nfc+nft" ? "bg-purple-500" : "bg-[#ffc72d] text-black"}
-                          >
-                            {scanResult.item.type === "nfc+nft" ? "NFC+NFT" : "NFC"}
-                          </Badge>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {activeItems.length > 0 && (
-            <div>
-              <h2 className="text-lg font-medium mb-3">Currently Wearing</h2>
-              <div className="space-y-3">
-                {activeItems.map((item) => (
-                  <Card
-                    key={item.id}
-                    className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-l-4 border-[#ffc72d]"
-                  >
-                    <CardContent className="p-4 flex items-center">
-                      <div className="relative w-12 h-12 mr-3 flex-shrink-0">
-                        <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-contain" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium">{item.name}</h3>
-                        <div className="flex items-center text-xs text-green-500">
-                          <Timer className="h-3 w-3 mr-1" />
-                          <span>
-                            Wearing for{" "}
-                            {formatDistanceToNow(new Date(item.wearingSince || Date.now()), { addSuffix: false })}
-                          </span>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm" className="ml-2" onClick={() => handleToggleWearing(item)}>
-                        Stop
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+        {/* Stats card */}
+        <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-l-4 border-l-[#ffc72d] mb-6">
+          <CardContent className="p-4">
+            <h2 className="font-bold mb-3">Wear Stats</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm text-zinc-400">Active Items</div>
+                <div className="text-xl font-bold">{activeItems?.length || 0}</div>
+              </div>
+              <div>
+                <div className="text-sm text-zinc-400">Tokens Earned</div>
+                <div className="text-xl font-bold">{totalTokens}</div>
               </div>
             </div>
-          )}
+          </CardContent>
+        </Card>
 
-          <div>
-            <h2 className="text-lg font-medium mb-3">My Items</h2>
-            {items.length === 0 ? (
-              <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-l-4 border-[#ffc72d]">
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Smartphone className="h-8 w-8 text-zinc-500" />
-                  </div>
-                  <h3 className="font-medium mb-2">No Items Connected</h3>
-                  <p className="text-sm text-zinc-400 mb-4">
-                    Connect your Prime Active merchandise to start earning rewards for wearing it.
-                  </p>
-                  <Button
-                    className="w-full bg-[#ffc72d] hover:bg-[#e6b328] text-black"
-                    onClick={handleScanNFC}
-                    disabled={isScanning}
-                  >
-                    {isScanning ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Scanning...
-                      </>
-                    ) : (
-                      "Scan NFC Tag"
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {items
-                  .filter((item) => !item.isCurrentlyWorn)
-                  .map((item) => (
-                    <Card
-                      key={item.id}
-                      className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-l-4 border-[#ffc72d]"
-                    >
-                      <CardContent className="p-4 flex items-center">
-                        <div className="relative w-12 h-12 mr-3 flex-shrink-0">
-                          <Image
-                            src={item.image || "/placeholder.svg"}
-                            alt={item.name}
-                            fill
-                            className="object-contain"
-                          />
-                          {item.type === "nfc+nft" && (
-                            <div className="absolute -top-1 -right-1">
-                              <Badge className="bg-purple-500 text-white text-xs px-1 py-0">NFT</Badge>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center">
-                            <h3 className="font-medium">{item.name}</h3>
-                            {item.type === "nfc+nft" && <Sparkles className="h-3 w-3 ml-1 text-purple-400" />}
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="text-xs text-zinc-500">
-                              {item.lastWorn ? (
-                                <span>
-                                  Last worn {formatDistanceToNow(new Date(item.lastWorn), { addSuffix: true })}
-                                </span>
-                              ) : (
-                                <span>Never worn</span>
-                              )}
-                            </div>
-                            <div className="flex items-center text-xs text-[#ffc72d]">
-                              <Clock className="h-3 w-3 mr-1" />
-                              <span>{formatWearTime(item.totalWearTime)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <Button variant="outline" size="sm" className="ml-2" onClick={() => handleToggleWearing(item)}>
-                          Wear
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
-            )}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-zinc-400">Loading your collection...</p>
           </div>
+        ) : !merchandise || merchandise.length === 0 ? (
+          <div className="bg-zinc-900 rounded-lg p-6 text-center">
+            <div className="bg-zinc-800 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <Smartphone className="h-8 w-8 text-zinc-600" />
+            </div>
+            <h3 className="text-lg font-bold mb-2">No Merchandise Connected</h3>
+            <p className="text-zinc-400 text-sm mb-4">Connect your Prime Mates merchandise to earn rewards</p>
+            <div className="flex flex-col gap-3">
+              <Button className="bg-[#ffc72d] hover:bg-[#e6b328] text-black" onClick={handleConnectNFC}>
+                <Smartphone className="mr-2 h-4 w-4" />
+                Connect NFC Item
+              </Button>
+              <Link href="/store">
+                <Button variant="outline" className="w-full">
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Shop Now
+                </Button>
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {merchandise.map((item) => (
+              <motion.div
+                key={item.id}
+                initial={newItemHighlight === item.id ? { scale: 0.9, opacity: 0 } : false}
+                animate={newItemHighlight === item.id ? { scale: 1, opacity: 1 } : false}
+                className={`bg-zinc-900 rounded-lg p-4 border-l-4 border-l-[#ffc72d] ${
+                  newItemHighlight === item.id ? "ring-2 ring-[#ffc72d] ring-opacity-50" : ""
+                }`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div
+                    className="flex items-center gap-3 flex-1 cursor-pointer"
+                    onClick={() => handleItemClick(item.id)}
+                  >
+                    <div className="w-12 h-12 relative rounded-full overflow-hidden bg-zinc-800">
+                      <Image
+                        src={item.image || "/placeholder.svg?height=48&width=48&query=merchandise"}
+                        alt={item.productName}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div>
+                      <h3 className="font-bold">{item.productName}</h3>
+                      <p className="text-zinc-500 text-sm">
+                        Connected {formatDistanceToNow(new Date(item.dateConnected), { addSuffix: true })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    {item.hasNFC && <Badge className="bg-blue-500 text-white">NFC</Badge>}
+                    {item.hasNFT && <Badge className="bg-purple-500 text-white">NFT</Badge>}
+                    {newItemHighlight === item.id && <Badge className="bg-green-500 text-white">NEW</Badge>}
+                  </div>
+                </div>
 
-          <Card className="border-l-4 border-[#ffc72d] bg-gradient-to-br from-zinc-900 to-zinc-950">
-            <CardHeader>
-              <CardTitle>Wear-to-Earn Stats</CardTitle>
-              <CardDescription>Your merchandise earning statistics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400">Total Wear Time:</span>
-                  <span className="font-medium">
-                    {formatWearTime(items.reduce((total, item) => total + item.totalWearTime, 0))}
-                  </span>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-zinc-500" />
+                    <span>{formatWearTime(item.totalWearTime)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Shirt className="h-4 w-4 text-zinc-500" />
+                    <span>
+                      {item.isCurrentlyWorn ? (
+                        <>
+                          Wearing since{" "}
+                          {formatDistanceToNow(new Date(item.wearingSince || new Date()), { addSuffix: true })}
+                        </>
+                      ) : (
+                        "Not currently worn"
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-zinc-500" />
+                    <span>{item.tokenRewards} Tokens</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Timer className="h-4 w-4 text-zinc-500" />
+                    <span>Earn tokens by wearing</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400">Total Tokens Earned:</span>
-                  <span className="font-medium text-[#ffc72d]">{totalTokens}</span>
+
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    variant={item.isCurrentlyWorn ? "destructive" : "outline"}
+                    className={`flex-1 ${item.isCurrentlyWorn ? "" : "hover:bg-[#ffc72d] hover:text-black"}`}
+                    onClick={() => handleToggleWearing(item)}
+                  >
+                    {item.isCurrentlyWorn ? "Stop Wearing" : "Start Wearing"}
+                  </Button>
+
+                  <Link href={`/merch/${item.id}`}>
+                    <Button variant="outline" size="icon">
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </Link>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400">Wear Sessions:</span>
-                  <span className="font-medium">{items.reduce((total, item) => total + item.wearCount, 0)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400">NFT-Backed Items:</span>
-                  <span className="font-medium">
-                    {items.filter((item) => item.type === "nfc+nft").length} / {items.length}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
 
       <TabBar activeTab="merch" />

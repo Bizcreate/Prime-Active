@@ -1,4 +1,4 @@
-"use client"
+"\"use client"
 
 import type React from "react"
 
@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-export interface ShippingDetails {
+export interface ShippingAddress {
   name: string
   email: string
   address: string
@@ -29,19 +29,19 @@ export interface ShippingDetails {
 interface ShippingDetailsFormProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (details: ShippingDetails) => void
+  onSubmit: (address: ShippingAddress) => void
   productName?: string
-  initialDetails?: Partial<ShippingDetails>
+  initialDetails?: Partial<ShippingAddress>
 }
 
-export function ShippingDetailsForm({
+export function ShippingAddressForm({
   isOpen,
   onClose,
   onSubmit,
   productName = "merchandise",
   initialDetails = {},
 }: ShippingDetailsFormProps) {
-  const [details, setDetails] = useState<ShippingDetails>({
+  const [details, setDetails] = useState<ShippingAddress>({
     name: initialDetails.name || "",
     email: initialDetails.email || "",
     address: initialDetails.address || "",
@@ -52,44 +52,15 @@ export function ShippingDetailsForm({
     phone: initialDetails.phone || "",
   })
 
-  const [errors, setErrors] = useState<Partial<Record<keyof ShippingDetails, string>>>({})
-
-  const handleChange = (field: keyof ShippingDetails, value: string) => {
-    setDetails((prev) => ({ ...prev, [field]: value }))
-    // Clear error when field is edited
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }))
-    }
-  }
-
-  const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof ShippingDetails, string>> = {}
-    let isValid = true
-
-    // Required fields
-    const requiredFields: (keyof ShippingDetails)[] = ["name", "email", "address", "city", "zip", "country"]
-    requiredFields.forEach((field) => {
-      if (!details[field]) {
-        newErrors[field] = "This field is required"
-        isValid = false
-      }
-    })
-
-    // Email validation
-    if (details.email && !/^\S+@\S+\.\S+$/.test(details.email)) {
-      newErrors.email = "Please enter a valid email address"
-      isValid = false
-    }
-
-    setErrors(newErrors)
-    return isValid
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setDetails((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (validateForm()) {
-      onSubmit(details)
-    }
+    onSubmit(details)
+    onClose()
   }
 
   return (
@@ -100,105 +71,121 @@ export function ShippingDetailsForm({
           <DialogDescription>Enter your shipping details to receive your {productName}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="grid grid-cols-4 gap-4">
-            <Label htmlFor="name" className="text-right pt-2">
-              Name
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="name"
-                value={details.name}
-                onChange={(e) => handleChange("name", e.target.value)}
-                className={errors.name ? "border-red-500" : ""}
-              />
-              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-            </div>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div>
+            <Label htmlFor="name">Full Name</Label>
+            <Input
+              type="text"
+              id="name"
+              name="name"
+              required
+              value={details.name}
+              onChange={handleChange}
+              className="w-full p-2 bg-zinc-800 border border-zinc-700 rounded-md"
+            />
+          </div>
 
-            <Label htmlFor="email" className="text-right pt-2">
-              Email
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="email"
-                type="email"
-                value={details.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-            </div>
+          <div>
+            <Label htmlFor="address">Street Address</Label>
+            <Input
+              type="text"
+              id="address"
+              name="address"
+              required
+              value={details.address}
+              onChange={handleChange}
+              className="w-full p-2 bg-zinc-800 border border-zinc-700 rounded-md"
+            />
+          </div>
 
-            <Label htmlFor="address" className="text-right pt-2">
-              Address
-            </Label>
-            <div className="col-span-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="city">City</Label>
               <Input
-                id="address"
-                value={details.address}
-                onChange={(e) => handleChange("address", e.target.value)}
-                className={errors.address ? "border-red-500" : ""}
-              />
-              {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
-            </div>
-
-            <Label htmlFor="city" className="text-right pt-2">
-              City
-            </Label>
-            <div className="col-span-3">
-              <Input
+                type="text"
                 id="city"
+                name="city"
+                required
                 value={details.city}
-                onChange={(e) => handleChange("city", e.target.value)}
-                className={errors.city ? "border-red-500" : ""}
+                onChange={handleChange}
+                className="w-full p-2 bg-zinc-800 border border-zinc-700 rounded-md"
               />
-              {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
             </div>
-
-            <Label htmlFor="state" className="text-right pt-2">
-              State
-            </Label>
-            <div className="col-span-3">
-              <Input id="state" value={details.state} onChange={(e) => handleChange("state", e.target.value)} />
-            </div>
-
-            <Label htmlFor="zip" className="text-right pt-2">
-              ZIP
-            </Label>
-            <div className="col-span-3">
+            <div>
+              <Label htmlFor="state">State/Province</Label>
               <Input
+                type="text"
+                id="state"
+                name="state"
+                required
+                value={details.state}
+                onChange={handleChange}
+                className="w-full p-2 bg-zinc-800 border border-zinc-700 rounded-md"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="zip">ZIP/Postal Code</Label>
+              <Input
+                type="text"
                 id="zip"
+                name="zip"
+                required
                 value={details.zip}
-                onChange={(e) => handleChange("zip", e.target.value)}
-                className={errors.zip ? "border-red-500" : ""}
+                onChange={handleChange}
+                className="w-full p-2 bg-zinc-800 border border-zinc-700 rounded-md"
               />
-              {errors.zip && <p className="text-red-500 text-xs mt-1">{errors.zip}</p>}
             </div>
-
-            <Label htmlFor="country" className="text-right pt-2">
-              Country
-            </Label>
-            <div className="col-span-3">
-              <Input
+            <div>
+              <Label htmlFor="country">Country</Label>
+              <select
                 id="country"
+                name="country"
+                required
                 value={details.country}
-                onChange={(e) => handleChange("country", e.target.value)}
-                className={errors.country ? "border-red-500" : ""}
-              />
-              {errors.country && <p className="text-red-500 text-xs mt-1">{errors.country}</p>}
+                onChange={handleChange}
+                className="w-full p-2 bg-zinc-800 border border-zinc-700 rounded-md"
+              >
+                <option value="United States">United States</option>
+                <option value="Canada">Canada</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="Australia">Australia</option>
+                <option value="Germany">Germany</option>
+                <option value="France">France</option>
+                <option value="Japan">Japan</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
+          </div>
 
-            <Label htmlFor="phone" className="text-right pt-2">
-              Phone
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="phone"
-                type="tel"
-                value={details.phone}
-                onChange={(e) => handleChange("phone", e.target.value)}
-              />
-            </div>
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium mb-1">
+              Phone Number (optional)
+            </label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={details.phone || ""}
+              onChange={handleChange}
+              className="w-full p-2 bg-zinc-800 border border-zinc-700 rounded-md"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium mb-1">
+              Email (optional)
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={details.email || ""}
+              onChange={handleChange}
+              className="w-full p-2 bg-zinc-800 border border-zinc-700 rounded-md"
+            />
           </div>
 
           <DialogFooter>
@@ -211,3 +198,5 @@ export function ShippingDetailsForm({
     </Dialog>
   )
 }
+
+export type ShippingDetails = ShippingAddress

@@ -2,105 +2,100 @@
 
 import type React from "react"
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Clock, Smartphone, Sparkles, Heart } from "lucide-react"
 import Image from "next/image"
-import type { ConnectedMerchandise } from "@/services/nfc-service"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Heart, Star } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { useWishlist } from "@/hooks/use-wishlist"
-import { useState } from "react"
-import { motion } from "framer-motion"
 
 interface MerchandiseCardProps {
-  item: ConnectedMerchandise
+  id: string
+  name: string
+  price: number
+  image: string
+  rating?: number
+  reviews?: number
+  bananaPoints?: number
+  isNew?: boolean
+  isLimited?: boolean
+  hasNFC?: boolean
+  onClick?: () => void
 }
 
-export function MerchandiseCard({ item }: MerchandiseCardProps) {
+export function MerchandiseCard({
+  id,
+  name,
+  price,
+  image,
+  rating = 0,
+  reviews = 0,
+  bananaPoints = 0,
+  isNew = false,
+  isLimited = false,
+  hasNFC = false,
+  onClick,
+}: MerchandiseCardProps) {
   const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist()
-  const [isWishlisted, setIsWishlisted] = useState(isInWishlist(item.id))
-  const [isAnimating, setIsAnimating] = useState(false)
+  const inWishlist = isInWishlist(id)
 
-  const formatWearTime = (minutes: number): string => {
-    if (minutes < 60) {
-      return `${minutes}m`
-    }
-
-    const hours = Math.floor(minutes / 60)
-    const remainingMinutes = minutes % 60
-
-    if (hours < 24) {
-      return `${hours}h ${remainingMinutes}m`
-    }
-
-    const days = Math.floor(hours / 24)
-    const remainingHours = hours % 24
-
-    return `${days}d ${remainingHours}h`
-  }
-
-  const handleToggleWishlist = (e: React.MouseEvent) => {
+  const handleWishlistToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
-    e.preventDefault()
 
-    setIsAnimating(true)
-    setTimeout(() => setIsAnimating(false), 500)
-
-    if (isWishlisted) {
-      removeFromWishlist(item.id)
+    if (inWishlist) {
+      removeFromWishlist(id)
     } else {
       addToWishlist({
-        id: item.id,
-        name: item.productName,
-        description: "Premium merchandise from Prime Mates Board Club",
-        price: 29.99, // Default price
-        image: item.image || "/placeholder.svg",
-        bananaPoints: 200, // Default points
-        hasNFC: item.hasNFC,
+        id,
+        name,
+        price,
+        image,
+        bananaPoints,
+        hasNFC,
+        isLimited,
       })
     }
-
-    setIsWishlisted(!isWishlisted)
   }
 
   return (
-    <Card className="bg-gradient-to-br from-zinc-900 to-zinc-950 border-none overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 border-[#ffc72d] relative">
-      <div className="relative aspect-square bg-gradient-to-br from-zinc-800 to-zinc-900">
-        <Image src={item.image || "/placeholder.svg"} alt={item.productName} fill className="object-contain p-4" />
-        {item.isCurrentlyWorn && (
-          <div className="absolute top-2 right-2 bg-[#ffc72d] text-black text-xs px-2 py-0.5 rounded-full">Active</div>
-        )}
-        {item.hasNFC && (
-          <div className="absolute top-2 left-2 bg-zinc-800 text-[#ffc72d] text-xs px-2 py-0.5 rounded-full flex items-center">
-            <Smartphone className="h-3 w-3 mr-1" />
-            NFC
+    <Card
+      className="bg-zinc-900 border-0 overflow-hidden cursor-pointer transition-transform hover:scale-[1.02]"
+      onClick={onClick}
+    >
+      <CardContent className="p-0">
+        <div className="relative h-40 w-full bg-zinc-800">
+          <Image src={image || "/placeholder.svg"} alt={name} fill className="object-cover" />
+          <div className="absolute top-2 right-2 flex flex-col gap-1">
+            {isNew && <Badge className="bg-[#ffc72d] text-black">New</Badge>}
+            {isLimited && <Badge className="bg-purple-600">Limited</Badge>}
+            {hasNFC && <Badge className="bg-blue-600">NFC</Badge>}
           </div>
-        )}
-        {item.hasNFT && (
-          <div className="absolute bottom-2 left-2 bg-zinc-800 text-purple-400 text-xs px-2 py-0.5 rounded-full flex items-center">
-            <Sparkles className="h-3 w-3 mr-1" />
-            NFT
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 left-2 h-8 w-8 rounded-full bg-black bg-opacity-50 hover:bg-opacity-70"
+            onClick={handleWishlistToggle}
+          >
+            <Heart className={`h-4 w-4 ${inWishlist ? "fill-red-500 text-red-500" : "text-white"}`} />
+          </Button>
+        </div>
+        <div className="p-3">
+          <h3 className="font-medium text-sm mb-1 line-clamp-1">{name}</h3>
+          <div className="flex justify-between items-center">
+            <p className="text-[#ffc72d] font-bold">${price.toFixed(2)}</p>
+            {rating > 0 && (
+              <div className="flex items-center text-xs text-zinc-400">
+                <Star className="h-3 w-3 mr-1 text-[#ffc72d]" />
+                {rating}
+              </div>
+            )}
           </div>
-        )}
-
-        <button
-          className="absolute top-2 right-2 w-8 h-8 bg-black/40 rounded-full flex items-center justify-center z-10"
-          onClick={handleToggleWishlist}
-        >
-          <motion.div animate={isAnimating ? { scale: [1, 1.5, 1] } : {}} transition={{ duration: 0.5 }}>
-            <Heart className={`h-4 w-4 ${isWishlisted ? "text-red-500 fill-red-500" : "text-white"}`} />
-          </motion.div>
-        </button>
-      </div>
-      <CardContent className="p-3 bg-gradient-to-br from-zinc-900 to-zinc-950">
-        <h3 className="font-medium truncate">{item.productName}</h3>
-        <div className="flex justify-between items-center mt-1">
-          <div className="flex items-center text-xs text-zinc-400">
-            <Clock className="h-3 w-3 mr-1" />
-            <span>{formatWearTime(item.totalWearTime)}</span>
-          </div>
-          <div className="flex items-center text-xs text-[#ffc72d]">
-            <Image src="/shaka-banana-hand.png" alt="Tokens" width={12} height={12} className="mr-1" />
-            <span>{item.tokenRewards}</span>
-          </div>
+          {bananaPoints > 0 && (
+            <div className="flex items-center mt-1">
+              <Image src="/shaka-banana-hand.png" alt="Banana Points" width={12} height={12} />
+              <span className="text-xs text-[#ffc72d] ml-1">{bananaPoints} pts</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

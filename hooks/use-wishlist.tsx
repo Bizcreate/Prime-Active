@@ -1,132 +1,108 @@
 "use client"
 
-import { useState, useEffect, createContext, useContext, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 
+// Define the wishlist item type
 export interface WishlistItem {
   id: string
   name: string
   description: string
   price: number
   image: string
-  bananaPoints: number
-  hasNFC: boolean
-  isLimited?: boolean
-  category?: string
+  bananaPoints?: number
+  hasNFC?: boolean
 }
 
+// Define the context type
 interface WishlistContextType {
-  wishlistItems: WishlistItem[]
-  addToWishlist: (item: WishlistItem) => void
-  removeFromWishlist: (id: string) => void
+  wishlist: WishlistItem[]
+  addToWishlist: (item: WishlistItem) => Promise<void>
+  removeFromWishlist: (id: string) => Promise<void>
   isInWishlist: (id: string) => boolean
-  clearWishlist: () => void
-  moveToCart: (id: string) => void
+  clearWishlist: () => Promise<void>
 }
 
+// Create the context
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined)
 
-export const WishlistProvider = ({ children }: { children: ReactNode }) => {
-  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([])
-  const [cartItems, setCartItems] = useState<any[]>([])
+// Storage key
+const WISHLIST_STORAGE_KEY = "prime_active_wishlist"
 
-  // Load wishlist from localStorage on mount
+// Provider component
+export function WishlistProvider({ children }: { children: ReactNode }) {
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([])
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  // Load wishlist from storage on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedWishlist = localStorage.getItem("primeActiveWishlist")
-      if (savedWishlist) {
-        try {
-          setWishlistItems(JSON.parse(savedWishlist))
-        } catch (error) {
-          console.error("Failed to parse wishlist from localStorage:", error)
-          setWishlistItems([])
+    const loadWishlist = () => {
+      try {
+        const storedWishlist = localStorage.getItem(WISHLIST_STORAGE_KEY)
+        if (storedWishlist) {
+          setWishlist(JSON.parse(storedWishlist))
         }
+      } catch (error) {
+        console.error("Error loading wishlist:", error)
+      } finally {
+        setIsInitialized(true)
       }
+    }
 
-      const savedCart = localStorage.getItem("primeActiveCart")
-      if (savedCart) {
-        try {
-          setCartItems(JSON.parse(savedCart))
-        } catch (error) {
-          console.error("Failed to parse cart from localStorage:", error)
-          setCartItems([])
-        }
-      }
+    if (typeof window !== "undefined") {
+      loadWishlist()
     }
   }, [])
 
-  // Save wishlist to localStorage whenever it changes
+  // Save wishlist to storage whenever it changes
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("primeActiveWishlist", JSON.stringify(wishlistItems))
+    if (isInitialized && typeof window !== "undefined") {
+      localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(wishlist))
     }
-  }, [wishlistItems])
+  }, [wishlist, isInitialized])
 
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("primeActiveCart", JSON.stringify(cartItems))
-    }
-  }, [cartItems])
-
-  const addToWishlist = (item: WishlistItem) => {
-    if (!isInWishlist(item.id)) {
-      setWishlistItems((prev) => [...prev, item])
-    }
+  // Add item to wishlist
+  const addToWishlist = async (item: WishlistItem): Promise<void> => {
+    return new Promise((resolve) => {
+      setWishlist((prev) => {
+        // Check if item already exists
+        if (prev.some((i) => i.id === item.id)) {
+          return prev
+        }
+        return [...prev, item]
+      })
+      resolve()
+    })
   }
 
-  const removeFromWishlist = (id: string) => {
-    setWishlistItems((prev) => prev.filter((item) => item.id !== id))
+  // Remove item from wishlist
+  const removeFromWishlist = async (id: string): Promise<void> => {
+    return new Promise((resolve) => {
+      setWishlist((prev) => prev.filter((item) => item.id !== id))
+      resolve()
+    })
   }
 
-  const isInWishlist = (id: string) => {
-    return wishlistItems.some((item) => item.id === id)
+  // Check if item is in wishlist
+  const isInWishlist = (id: string): boolean => {
+    return wishlist.some((item) => item.id === id)
   }
 
-  const clearWishlist = () => {
-    setWishlistItems([])
-  }
-
-  const moveToCart = (id: string) => {
-    const item = wishlistItems.find((item) => item.id === id)
-    if (item) {
-      // Add to cart
-      const cartItem = {
-        id: `${item.id}-standard-one-size`,
-        productId: item.id,
-        name: item.name,
-        price: item.price,
-        image: item.image,
-        variant: "One Size",
-        quantity: 1,
-        bananaPoints: item.bananaPoints,
-        hasNFC: item.hasNFC,
-        merchandiseType: "standard",
-      }
-
-      const existingItemIndex = cartItems.findIndex((i) => i.id === cartItem.id)
-
-      if (existingItemIndex !== -1) {
-        const updatedCartItems = [...cartItems]
-        updatedCartItems[existingItemIndex].quantity += 1
-        setCartItems(updatedCartItems)
-      } else {
-        setCartItems([...cartItems, cartItem])
-      }
-
-      // Remove from wishlist
-      removeFromWishlist(id)
-    }
+  // Clear wishlist
+  const clearWishlist = async (): Promise<void> => {
+    return new Promise((resolve) => {
+      setWishlist([])
+      resolve()
+    })
   }
 
   return (
     <WishlistContext.Provider
       value={{
-        wishlistItems,
+        wishlist,
         addToWishlist,
         removeFromWishlist,
         isInWishlist,
         clearWishlist,
-        moveToCart,
       }}
     >
       {children}
@@ -134,7 +110,8 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   )
 }
 
-export const useWishlist = () => {
+// Hook to use the wishlist context
+export function useWishlist() {
   const context = useContext(WishlistContext)
   if (context === undefined) {
     throw new Error("useWishlist must be used within a WishlistProvider")

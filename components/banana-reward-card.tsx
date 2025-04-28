@@ -1,7 +1,7 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Lock } from "lucide-react"
 import Image from "next/image"
@@ -41,8 +41,7 @@ export function BananaRewardCard({
           )}
         </div>
         <div className="absolute top-2 right-2 bg-primary/90 text-black text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
-          {/* Update to Shaka Banana logo */}
-          <Image src="/shaka-banana.png" alt="Banana Points" width={14} height={14} className="object-contain" />
+          <Image src="/banana-icon.png" alt="Activity Tokens" width={14} height={14} className="object-contain" />
           {bananaPoints} points
         </div>
       </div>
@@ -64,7 +63,7 @@ export function BananaRewardCard({
         >
           {progressPercentage >= 100 ? (
             <>
-              <Image src="/shaka-coin.png" alt="Claim" width={16} height={16} className="object-contain" />
+              <Image src="/banana-icon.png" alt="Claim" width={16} height={16} className="object-contain" />
               Claim Reward
             </>
           ) : unlocked ? (

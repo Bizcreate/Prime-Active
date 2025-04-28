@@ -47,7 +47,7 @@ export default function RewardsPage() {
       name: "VIP Challenge Access",
       description: "Access to exclusive challenges with higher rewards",
       pointsRequired: 500,
-      image: "/placeholder.svg?height=200&width=400&query=vip+access+badge+with+banana",
+      image: "/banana-vip-badge.png",
       category: "challenge",
     },
     {
@@ -55,7 +55,7 @@ export default function RewardsPage() {
       name: "Prime Mates Profile Badge",
       description: "Show off your status with a custom profile badge",
       pointsRequired: 750,
-      image: "/placeholder.svg?height=200&width=400&query=profile+badge+with+banana+and+shaka+sign",
+      image: "/banana-shaka-badge.png",
       category: "badge",
     },
   ]
@@ -109,22 +109,16 @@ export default function RewardsPage() {
               </div>
               <div className="bg-zinc-900 p-4 rounded-lg flex flex-col items-center">
                 <div className="mb-2">
-                  <Image
-                    src="/shaka-banana.png"
-                    alt="Banana Points"
-                    width={48}
-                    height={48}
-                    className="object-contain"
-                  />
+                  <Image src="/shaka-coin.png" alt="Shaka Coins" width={48} height={48} className="object-contain" />
                 </div>
                 <div className="text-2xl font-bold text-yellow-500">42</div>
-                <div className="text-xs text-zinc-400">Banana Points</div>
+                <div className="text-xs text-zinc-400">Shaka Tokens</div>
               </div>
             </div>
 
             <div className="banana-card p-4 mb-6">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="font-bold">Your Banana Points</h2>
+                <h2 className="font-bold">Your Shaka Tokens</h2>
                 {hasAccess && (
                   <Badge variant="success" className="text-xs">
                     Verified Prime Mate
@@ -133,11 +127,17 @@ export default function RewardsPage() {
               </div>
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <Image src="/banana-icon.png" alt="Banana Points" width={48} height={48} className="object-contain" />
+                  <Image
+                    src="/activity-token-icon.png"
+                    alt="Activity Tokens"
+                    width={48}
+                    height={48}
+                    className="object-contain"
+                  />
                 </div>
                 <div>
                   <p className="text-3xl font-bold">{points}</p>
-                  <p className="text-xs text-zinc-400">Based on your activity and NFT ownership</p>
+                  <p className="text-xs text-zinc-400">Earned through activities and NFT ownership</p>
                 </div>
               </div>
             </div>
@@ -241,13 +241,13 @@ export default function RewardsPage() {
                           <div className="flex justify-between items-center">
                             <div className="flex items-center gap-1">
                               <Image
-                                src="/banana-icon.png"
-                                alt="Banana Points"
+                                src="/activity-token-icon.png"
+                                alt="Activity Tokens"
                                 width={16}
                                 height={16}
                                 className="object-contain"
                               />
-                              <p className="text-xs">{reward.pointsRequired} points required</p>
+                              <p className="text-xs">{reward.pointsRequired} tokens required</p>
                             </div>
                             {isAvailable ? (
                               <Button size="sm">Claim</Button>
@@ -256,7 +256,7 @@ export default function RewardsPage() {
                                 <Lock className="h-4 w-4" />
                                 <span className="text-xs">
                                   {hasAccess
-                                    ? `Need ${reward.pointsRequired - points} more points`
+                                    ? `Need ${reward.pointsRequired - points} more tokens`
                                     : "Verify NFT ownership"}
                                 </span>
                               </div>

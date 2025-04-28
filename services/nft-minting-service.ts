@@ -1,25 +1,32 @@
-// Types for NFT minting
+// NFT Minting Service
+// This service simulates minting NFTs and storing them in a user's wallet
+
 export type MerchandiseType = "standard" | "nfc" | "nfc+nft"
+
+export interface NFTAttribute {
+  trait_type: string
+  value: string | number
+}
+
+export interface NFTMetadata {
+  id?: string
+  name: string
+  description: string
+  image: string
+  attributes: NFTAttribute[]
+  owner: string
+  collection: string
+  rarity: string
+}
 
 export interface MintingRequest {
   productId: string
   productName: string
   productImage: string
   recipientAddress: string
-  merchandiseType: MerchandiseType
+  merchandiseType: string
   transactionId: string
   nfcId?: string
-}
-
-export interface NFTMetadata {
-  name: string
-  description: string
-  image: string
-  attributes: {
-    trait_type: string
-    value: string
-  }[]
-  owner?: string // Add owner field to NFTMetadata
 }
 
 export interface MintingResult {
@@ -30,89 +37,103 @@ export interface MintingResult {
   errorMessage?: string
 }
 
-// Mock NFT Minting Service
-export class NFTMintingService {
-  private static mintingRequests: Map<string, MintingRequest> = new Map()
-  private static mintedNFTs: { [tokenId: string]: NFTMetadata } = {} // Store minted NFTs
+class NFTMintingServiceClass {
+  private mintingRequests: { [id: string]: MintingRequest } = {}
+  private nfts: NFTMetadata[] = []
 
-  // Create a minting request and return a request ID
-  static createMintingRequest(request: MintingRequest): string {
-    const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
-    this.mintingRequests.set(requestId, request)
+  constructor() {
+    this.nfts = []
+  }
+
+  // Create a new minting request
+  createMintingRequest(mintingRequest: MintingRequest): string {
+    const requestId = `mint-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+    this.mintingRequests[requestId] = mintingRequest
     return requestId
   }
 
-  // Process a minting request and return the result
-  static async processMintingRequest(requestId: string): Promise<MintingResult> {
-    const request = this.mintingRequests.get(requestId)
+  // Process a minting request
+  async processMintingRequest(requestId: string): Promise<MintingResult> {
+    const request = this.mintingRequests[requestId]
 
     if (!request) {
-      return {
-        success: false,
-        errorMessage: "Minting request not found",
-      }
+      return { success: false, errorMessage: "Minting request not found" }
     }
 
-    // Simulate minting delay
-    await new Promise((resolve) => setTimeout(resolve, 3000))
-
-    // Simulate minting success (95% success rate)
-    const success = Math.random() < 0.95
-
-    if (success) {
-      const tokenId = `${Math.floor(Math.random() * 1000000)}`
-      const transactionHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(
-        "",
-      )}`
+    try {
+      // Simulate minting process
+      await new Promise((resolve) => setTimeout(resolve, 2000))
 
       // Create NFT metadata
       const nftMetadata: NFTMetadata = {
-        name: `${request.productName} #${tokenId}`,
-        description: `Digital collectible representing your ${request.productName} purchase.`,
+        name: request.productName,
+        description: `Digital collectible for ${request.productName}`,
         image: request.productImage,
         attributes: [
-          {
-            trait_type: "Product",
-            value: request.productName,
-          },
-          {
-            trait_type: "Type",
-            value: "Physical Merchandise",
-          },
-          {
-            trait_type: "Collection",
-            value: "Prime Mates",
-          },
-          {
-            trait_type: "Purchase Date",
-            value: new Date().toISOString().split("T")[0],
-          },
+          { trait_type: "Product ID", value: request.productId },
+          { trait_type: "Merchandise Type", value: request.merchandiseType },
         ],
-        owner: request.recipientAddress, // Set the owner of the NFT
+        owner: request.recipientAddress,
+        collection: "Prime Mates Merchandise",
+        rarity: "common",
       }
 
-      // Store the minted NFT
-      this.mintedNFTs[tokenId] = nftMetadata
+      // Generate a mock token ID and transaction hash
+      const tokenId = `token-${Date.now()}`
+      const transactionHash = `0x${Math.random().toString(36).substring(2, 20)}`
+
+      // Add NFT to the collection
+      const newNFT = this.mintNFT(nftMetadata)
 
       return {
         success: true,
-        tokenId,
-        transactionHash,
-        nftMetadata,
+        tokenId: tokenId,
+        transactionHash: transactionHash,
+        nftMetadata: newNFT,
       }
-    } else {
-      return {
-        success: false,
-        errorMessage: "Failed to mint NFT. The blockchain transaction was rejected.",
-      }
+    } catch (error) {
+      console.error("Error minting NFT:", error)
+      return { success: false, errorMessage: "Failed to mint NFT" }
+    } finally {
+      // Clean up request
+      delete this.mintingRequests[requestId]
     }
   }
 
-  // Make sure the getMintedNFTsByOwner function is properly implemented
-  // This function should return NFTs owned by a specific address
+  // Mint a new NFT
+  mintNFT(metadata: NFTMetadata): NFTMetadata {
+    const id = metadata.id || `nft-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+    const newNFT = {
+      ...metadata,
+      id,
+    }
 
-  // Update the class to ensure the function exists and works correctly
-  static getMintedNFTsByOwner(ownerAddress: string): NFTMetadata[] {
-    return Object.values(this.mintedNFTs).filter((nft) => nft.owner === ownerAddress)
+    this.nfts.push(newNFT)
+    console.log(`Minted new NFT: ${newNFT.name} (${id})`)
+    return newNFT
+  }
+
+  // Get all NFTs for the current user
+  getUserNFTs(): NFTMetadata[] {
+    return this.nfts
+  }
+
+  // Get a specific NFT by ID
+  getNFTById(id: string): NFTMetadata | undefined {
+    return this.nfts.find((nft) => nft.id === id)
+  }
+
+  // Transfer an NFT to another address
+  transferNFT(nftId: string, toAddress: string): boolean {
+    const nftIndex = this.nfts.findIndex((nft) => nft.id === nftId)
+    if (nftIndex === -1) return false
+
+    this.nfts[nftIndex].owner = toAddress
+    return true
   }
 }
+
+// Create a singleton instance
+export const NFTMintingService = new NFTMintingServiceClass()
+
+export type { MintingRequest, MintingResult }

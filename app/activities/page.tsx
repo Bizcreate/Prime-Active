@@ -15,12 +15,13 @@ import {
   Footprints,
 } from "lucide-react"
 import Link from "next/link"
+import { AppShell } from "@/components/app-shell"
 
 export default function ActivitiesPage() {
   const [filter, setFilter] = useState("all")
 
   return (
-    <main className="flex min-h-screen flex-col bg-black pb-20">
+    <AppShell>
       <div className="p-6">
         <div className="flex items-center mb-6">
           <Link href="/dashboard">
@@ -297,6 +298,6 @@ export default function ActivitiesPage() {
       </div>
 
       <TabBar activeTab="activities" />
-    </main>
+    </AppShell>
   )
 }

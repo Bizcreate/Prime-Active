@@ -116,8 +116,6 @@ export function CouponInput({
                   {success}
                 </div>
               )}
-
-              <p className="text-xs text-zinc-500">Enter 'FREE' to get your order for free</p>
             </>
           )}
         </div>

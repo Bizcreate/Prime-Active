@@ -10,12 +10,13 @@ import { NFTVerification } from "@/components/nft-verification"
 import { Badge } from "@/components/ui/badge"
 import { WalletConnectButton } from "@/components/wallet-connect-button"
 import Image from "next/image"
+import { AppShell } from "@/components/app-shell"
 
 export default function ProfilePage() {
   const { address, isConnected, disconnectWallet, points, hasAccess } = useWeb3()
 
   return (
-    <main className="flex min-h-screen flex-col bg-black pb-20">
+    <AppShell>
       <div className="p-6">
         <div className="flex items-center mb-6">
           <Link href="/dashboard">
@@ -246,6 +247,6 @@ export default function ProfilePage() {
       </div>
 
       <TabBar activeTab="profile" />
-    </main>
+    </AppShell>
   )
 }

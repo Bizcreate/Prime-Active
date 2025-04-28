@@ -1,330 +1,329 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { TabBar } from "@/components/tab-bar"
-import { ArrowLeft, ExternalLink, Share2, Send, Shield, Award, Zap, Clock } from "lucide-react"
-import Link from "next/link"
-import { useWeb3 } from "@/components/web3-provider"
-import Image from "next/image"
-import { NFTTransferModal } from "@/components/nft-transfer-modal"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
+import { ArrowLeft, Heart, Share2, ExternalLink, Copy } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
+import { useParams, useRouter } from "next/navigation"
+import { TabBar } from "@/components/tab-bar"
+import { useWishlist } from "@/hooks/use-wishlist"
+import { useToast } from "@/hooks/use-toast"
+import { useWeb3 } from "@/components/web3-provider"
+import { nftService, type NFT, PMBC_CONTRACT_ADDRESS } from "@/services/nft-service"
 
-export default function NFTDetailsPage() {
+export default function NFTDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { ownedNFTs, stakedNFTs } = useWeb3()
-  const [nft, setNft] = useState<any>(null)
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false)
-  const [isStaked, setIsStaked] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const { isInWishlist, toggleWishlist } = useWishlist()
+  const { address, balance } = useWeb3()
+  const [nft, setNft] = useState<NFT | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isPurchasing, setIsPurchasing] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
-    // Find the NFT in either owned or staked NFTs
-    const id = params.id as string
-    let foundNFT = ownedNFTs.find((n) => n.id === id)
-    let staked = false
+    // Load NFT data
+    const loadData = async () => {
+      try {
+        setIsLoading(true)
+        const id = params.id as string
 
-    if (!foundNFT) {
-      foundNFT = stakedNFTs.find((n) => n.id === id)
-      staked = !!foundNFT
+        // Get NFT from service
+        const nftData = nftService.getNFTById(id)
+
+        if (nftData) {
+          setNft(nftData)
+        } else {
+          // If not found, create a mock NFT
+          const mockNft: NFT = {
+            id,
+            name: id.includes("420")
+              ? "PMBC #420"
+              : id.includes("721")
+                ? "PMBC #721"
+                : id.includes("999")
+                  ? "PMBC #999"
+                  : "PMBC #" + Math.floor(Math.random() * 1000),
+            image: "/digital-art-collection.png",
+            description:
+              "A unique collectible NFT from the Prime Mates Board Club collection. This NFT grants special access to exclusive events and merchandise.",
+            price: id.includes("1") ? "1500" : id.includes("2") ? "850" : id.includes("3") ? "1200" : "950",
+            rarity: id.includes("legendary")
+              ? "legendary"
+              : id.includes("epic")
+                ? "epic"
+                : id.includes("rare")
+                  ? "rare"
+                  : id.includes("7")
+                    ? "legendary"
+                    : "rare",
+            tokenId: id.includes("420")
+              ? "420"
+              : id.includes("721")
+                ? "721"
+                : id.includes("999")
+                  ? "999"
+                  : String(Math.floor(Math.random() * 1000)),
+            collection: "Prime Mates Board Club",
+            contractAddress: PMBC_CONTRACT_ADDRESS,
+            attributes: [
+              { trait_type: "Background", value: "Cosmic" },
+              { trait_type: "Fur", value: "Golden" },
+              { trait_type: "Eyes", value: "Laser" },
+              { trait_type: "Clothing", value: "Hawaiian Shirt" },
+              { trait_type: "Accessory", value: "Diamond Chain" },
+            ],
+          } as any
+
+          setNft(mockNft)
+        }
+      } catch (error) {
+        console.error("Error loading NFT:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load NFT details. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    if (foundNFT) {
-      setNft(foundNFT)
-      setIsStaked(staked)
+    loadData()
+  }, [params, toast])
+
+  const handleToggleWishlist = () => {
+    if (!nft) return
+
+    const isAdded = toggleWishlist(nft.id)
+
+    if (isAdded) {
+      toast({
+        title: "Added to wishlist",
+        description: `${nft.name} has been added to your wishlist.`,
+      })
     } else {
-      // If NFT not found, redirect to wallet
-      router.push("/wallet")
+      toast({
+        title: "Removed from wishlist",
+        description: `${nft.name} has been removed from your wishlist.`,
+      })
     }
+  }
 
-    setLoading(false)
-  }, [params.id, ownedNFTs, stakedNFTs, router])
+  const handleBuyNow = () => {
+    if (!nft) return
 
-  if (loading || !nft) {
+    setIsPurchasing(true)
+
+    // Simulate purchase process
+    setTimeout(() => {
+      toast({
+        title: "Purchase successful!",
+        description: `You have successfully purchased ${nft.name}.`,
+      })
+
+      router.push("/marketplace/purchase-success?id=" + nft.id)
+    }, 2000)
+  }
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case "common":
+        return "bg-zinc-500"
+      case "uncommon":
+        return "bg-green-500"
+      case "rare":
+        return "bg-blue-500"
+      case "epic":
+        return "bg-purple-500"
+      case "legendary":
+        return "bg-yellow-500"
+      default:
+        return "bg-zinc-500"
+    }
+  }
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        toast({
+          title: "Copied",
+          description: "Address copied to clipboard!",
+        })
+      })
+      .catch((err) => {
+        console.error("Failed to copy: ", err)
+        toast({
+          title: "Error",
+          description: "Failed to copy address to clipboard.",
+          variant: "destructive",
+        })
+      })
+  }
+
+  if (isLoading) {
     return (
-      <main className="flex min-h-screen flex-col bg-black p-6">
-        <div className="flex items-center mb-6">
-          <Link href="/wallet">
-            <Button variant="ghost" size="icon" className="mr-2">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <h1 className="text-xl font-bold">Loading NFT...</h1>
-        </div>
-        <div className="flex items-center justify-center h-[70vh]">
-          <div className="animate-pulse flex flex-col items-center">
-            <div className="rounded-lg bg-zinc-800 h-64 w-64 mb-4"></div>
-            <div className="h-4 bg-zinc-800 rounded w-48 mb-2"></div>
-            <div className="h-3 bg-zinc-800 rounded w-32"></div>
-          </div>
-        </div>
-      </main>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-black">
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 text-zinc-400">Loading NFT details...</p>
+      </div>
     )
   }
 
-  // Define benefits based on NFT rarity
-  const benefits = {
-    common: [
-      { icon: <Shield className="h-4 w-4" />, name: "Basic Access", description: "Access to standard features" },
-      { icon: <Award className="h-4 w-4" />, name: "Community Access", description: "Join the PMBC community" },
-    ],
-    uncommon: [
-      { icon: <Shield className="h-4 w-4" />, name: "Basic Access", description: "Access to standard features" },
-      { icon: <Award className="h-4 w-4" />, name: "Community Access", description: "Join the PMBC community" },
-      { icon: <Zap className="h-4 w-4" />, name: "10% Bonus", description: "10% bonus on all rewards" },
-    ],
-    rare: [
-      { icon: <Shield className="h-4 w-4" />, name: "Basic Access", description: "Access to standard features" },
-      { icon: <Award className="h-4 w-4" />, name: "Community Access", description: "Join the PMBC community" },
-      { icon: <Zap className="h-4 w-4" />, name: "15% Bonus", description: "15% bonus on all rewards" },
-      { icon: <Clock className="h-4 w-4" />, name: "Early Access", description: "Early access to new features" },
-    ],
-    epic: [
-      { icon: <Shield className="h-4 w-4" />, name: "Basic Access", description: "Access to standard features" },
-      { icon: <Award className="h-4 w-4" />, name: "Community Access", description: "Join the PMBC community" },
-      { icon: <Zap className="h-4 w-4" />, name: "25% Bonus", description: "25% bonus on all rewards" },
-      { icon: <Clock className="h-4 w-4" />, name: "Early Access", description: "Early access to new features" },
-      {
-        icon: <Image src="/shaka-banana-hand.png" alt="Exclusive" width={16} height={16} />,
-        name: "Exclusive Challenges",
-        description: "Access to exclusive challenges",
-      },
-    ],
-    legendary: [
-      { icon: <Shield className="h-4 w-4" />, name: "Basic Access", description: "Access to standard features" },
-      { icon: <Award className="h-4 w-4" />, name: "Community Access", description: "Join the PMBC community" },
-      { icon: <Zap className="h-4 w-4" />, name: "50% Bonus", description: "50% bonus on all rewards" },
-      { icon: <Clock className="h-4 w-4" />, name: "Early Access", description: "Early access to new features" },
-      {
-        icon: <Image src="/shaka-banana-hand.png" alt="Exclusive" width={16} height={16} />,
-        name: "Exclusive Challenges",
-        description: "Access to exclusive challenges",
-      },
-      {
-        icon: <Image src="/shaka-coin.png" alt="Rewards" width={16} height={16} />,
-        name: "Daily Rewards",
-        description: "Daily Shaka Coin rewards",
-      },
-    ],
-  }
-
-  // Get benefits based on NFT rarity
-  const nftBenefits = benefits[nft.rarity as keyof typeof benefits] || benefits.common
-
-  // Define attributes based on NFT name
-  const getAttributes = () => {
-    // In a real app, these would come from the NFT metadata
-    if (nft.name.includes("420")) {
-      return [
-        { trait_type: "Background", value: "Blue" },
-        { trait_type: "Fur", value: "Orange" },
-        { trait_type: "Hair", value: "Green Mohawk" },
-        { trait_type: "Clothes", value: "Flamingo Shirt" },
-        { trait_type: "Accessory", value: "Skateboard" },
-        { trait_type: "Mouth", value: "Cigar" },
-      ]
-    } else if (nft.name.includes("721")) {
-      return [
-        { trait_type: "Background", value: "Purple" },
-        { trait_type: "Fur", value: "Brown" },
-        { trait_type: "Hair", value: "Dreadlocks" },
-        { trait_type: "Clothes", value: "Military Jacket" },
-        { trait_type: "Accessory", value: "Sandwich Board" },
-        { trait_type: "Eyes", value: "Ski Goggles" },
-      ]
-    } else if (nft.name.includes("1337")) {
-      return [
-        { trait_type: "Background", value: "Gradient" },
-        { trait_type: "Fur", value: "Gray" },
-        { trait_type: "Head", value: "Horns" },
-        { trait_type: "Clothes", value: "Blue Wetsuit" },
-        { trait_type: "Accessory", value: "Surfboard" },
-        { trait_type: "Eyes", value: "Broken Glasses" },
-      ]
-    } else if (nft.name.includes("888")) {
-      return [
-        { trait_type: "Background", value: "Blue" },
-        { trait_type: "Fur", value: "Pink Face" },
-        { trait_type: "Hair", value: "Dreadlocks" },
-        { trait_type: "Clothes", value: "Brown Jacket" },
-        { trait_type: "Accessory", value: "Skateboard" },
-        { trait_type: "Eyes", value: "Bulging" },
-        { trait_type: "Mouth", value: "Cigar" },
-      ]
-    }
-
-    return [
-      { trait_type: "Collection", value: "Prime Mates Board Club" },
-      { trait_type: "Rarity", value: nft.rarity.charAt(0).toUpperCase() + nft.rarity.slice(1) },
-    ]
-  }
-
-  const attributes = getAttributes()
-
-  const rarityColors = {
-    common: "bg-zinc-600",
-    uncommon: "bg-green-600",
-    rare: "bg-blue-600",
-    epic: "bg-purple-600",
-    legendary: "bg-[#ffc72d]",
+  if (!nft) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-black">
+        <div className="bg-zinc-900 p-6 rounded-lg text-center">
+          <h1 className="text-xl font-bold mb-4">NFT Not Found</h1>
+          <p className="text-zinc-400 mb-6">The NFT you're looking for doesn't exist or has been removed.</p>
+          <Link href="/marketplace">
+            <Button>Back to Marketplace</Button>
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <main className="flex min-h-screen flex-col bg-black pb-20">
+    <div className="flex min-h-screen flex-col bg-black pb-20">
       <div className="p-6">
         <div className="flex items-center mb-6">
-          <Link href="/wallet">
+          <Link href="/marketplace">
             <Button variant="ghost" size="icon" className="mr-2">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <h1 className="text-xl font-bold">NFT Details</h1>
+          <h1 className="text-xl font-bold">{nft.name}</h1>
+          <div className="flex ml-auto">
+            <Button variant="ghost" size="icon" onClick={handleToggleWishlist}>
+              <Heart className={`h-5 w-5 ${isInWishlist(nft.id) ? "fill-red-500 text-red-500" : ""}`} />
+            </Button>
+            <Button variant="ghost" size="icon">
+              <Share2 className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
-        <div className="bg-zinc-900 rounded-lg overflow-hidden mb-6">
-          <div className="relative aspect-square">
-            <Image src={nft.image || "/placeholder.svg"} alt={nft.name} fill className="object-cover" />
-            <div className="absolute top-2 left-2 bg-black/50 px-2 py-1 rounded-md">
-              <Image src="/prime-mates-logo.png" alt="Prime Mates" width={30} height={15} className="object-contain" />
-            </div>
-            <div
-              className={`absolute top-2 right-2 ${
-                rarityColors[nft.rarity as keyof typeof rarityColors]
-              } text-black text-xs px-2 py-0.5 rounded-full`}
-            >
+        <div className="mb-6">
+          <div className="relative aspect-square w-full mb-4">
+            <Image
+              src={nft?.image || "/placeholder.svg?height=400&width=400&query=nft"}
+              alt={nft?.name || "NFT"}
+              fill
+              className="object-cover rounded-lg"
+            />
+          </div>
+
+          <div className="flex items-center justify-between mb-4">
+            <Badge className={`${getRarityColor(nft.rarity)} text-white`}>
               {nft.rarity.charAt(0).toUpperCase() + nft.rarity.slice(1)}
+            </Badge>
+            <div className="text-sm text-zinc-400">Token ID: {nft.tokenId}</div>
+          </div>
+
+          <div className="mb-4">
+            <h2 className="text-lg font-bold mb-2">{nft.name}</h2>
+            <p className="text-zinc-400 text-sm">
+              {nft.description || "A unique collectible NFT from the Prime Mates Board Club collection."}
+            </p>
+          </div>
+
+          {/* Contract Address */}
+          <div className="mb-4">
+            <div className="text-sm text-zinc-400 mb-2">Contract Address</div>
+            <div className="bg-zinc-900 rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="font-mono text-sm truncate">{nft.contractAddress}</div>
+                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(nft.contractAddress || "")}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div className="p-4">
-            <h2 className="text-xl font-bold">{nft.name}</h2>
-            <p className="text-sm text-zinc-400">{nft.collection}</p>
-
-            <div className="flex gap-2 mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => setIsTransferModalOpen(true)}
-                disabled={isStaked}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Transfer
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1">
-                <ExternalLink className="h-4 w-4 mr-2" />
-                View on OpenSea
-              </Button>
-            </div>
-
-            {isStaked && (
-              <div className="mt-4 bg-zinc-800 rounded-lg p-3">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium">Staking Progress</span>
-                  <span className="text-xs text-zinc-400">{nft.stakingProgress}% Complete</span>
-                </div>
-                <Progress value={nft.stakingProgress} className="h-2" />
-                <div className="flex justify-between text-xs text-zinc-400 mt-2">
-                  <span>Staked: {new Date(nft.stakedAt).toLocaleDateString()}</span>
-                  <span>Unlocks: {new Date(nft.unlockAt).toLocaleDateString()}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-zinc-900 rounded-lg p-4 mb-6">
-          <h3 className="text-lg font-medium mb-3">Benefits</h3>
-          <div className="space-y-3">
-            {nftBenefits.map((benefit, index) => (
-              <div key={index} className="flex items-start">
-                <div className="mt-0.5 mr-3 h-6 w-6 rounded-full bg-zinc-800 flex items-center justify-center text-[#ffc72d]">
-                  {benefit.icon}
-                </div>
-                <div>
-                  <p className="font-medium text-sm">{benefit.name}</p>
-                  <p className="text-xs text-zinc-400">{benefit.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-zinc-900 rounded-lg p-4 mb-6">
-          <h3 className="text-lg font-medium mb-3">Attributes</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {attributes.map((attr, index) => (
-              <div key={index} className="bg-zinc-800 rounded-md p-2">
-                <p className="text-xs text-zinc-400">{attr.trait_type}</p>
-                <p className="font-medium text-sm">{attr.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-zinc-900 rounded-lg p-4">
-          <h3 className="text-lg font-medium mb-3">Activity</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
+          {/* Price (if in marketplace) */}
+          {(nft as any).price && (
+            <div className="mb-6">
+              <div className="text-sm text-zinc-400 mb-1">Price</div>
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center mr-3 text-[#ffc72d]">
-                  <Award className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Minted</p>
-                  <p className="text-xs text-zinc-400">Mar 2022</p>
-                </div>
+                <Image src="/shaka-coin.png" alt="SHAKA" width={24} height={24} className="mr-2" />
+                <span className="text-2xl font-bold">{(nft as any).price}</span>
+                <span className="text-lg font-bold text-primary ml-2">SHAKA</span>
               </div>
-              <Badge variant="outline">Genesis</Badge>
             </div>
+          )}
 
-            <Separator />
-
-            <div className="flex items-center justify-between">
+          <div className="mb-6">
+            <div className="text-sm text-zinc-400 mb-2">Collection</div>
+            <div className="flex items-center justify-between bg-zinc-900 rounded-lg p-3">
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center mr-3 text-[#ffc72d]">
-                  <Send className="h-4 w-4" />
+                <div className="w-10 h-10 relative rounded-lg overflow-hidden mr-3">
+                  <Image src="/prime-mates-logo.png" alt={nft.collection} fill className="object-cover" />
                 </div>
                 <div>
-                  <p className="font-medium text-sm">Transferred to you</p>
-                  <p className="text-xs text-zinc-400">2 months ago</p>
+                  <h3 className="font-medium">{nft.collection}</h3>
+                  <p className="text-xs text-zinc-400">Floor: 450 SHAKA</p>
                 </div>
               </div>
-              <Badge variant="outline">Transfer</Badge>
+              <Button variant="ghost" size="icon">
+                <ExternalLink className="h-4 w-4" />
+              </Button>
             </div>
+          </div>
 
-            {isStaked && (
-              <>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center mr-3 text-[#ffc72d]">
-                      <Clock className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">Staked</p>
-                      <p className="text-xs text-zinc-400">{new Date(nft.stakedAt).toLocaleDateString()}</p>
-                    </div>
+          {/* Attributes */}
+          {(nft as any).attributes && (
+            <div className="mb-6">
+              <div className="text-sm text-zinc-400 mb-2">Attributes</div>
+              <div className="grid grid-cols-2 gap-2">
+                {(nft as any).attributes.map((attr: any, index: number) => (
+                  <div key={index} className="bg-zinc-900 rounded-lg p-2">
+                    <div className="text-xs text-zinc-400">{attr.trait_type}</div>
+                    <div className="font-medium truncate">{attr.value}</div>
                   </div>
-                  <Badge variant="outline">Staking</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Owner */}
+          {(nft as any).seller && (
+            <div className="mb-4">
+              <div className="text-sm text-zinc-400 mb-2">Owner</div>
+              <div className="bg-zinc-900 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="font-mono text-sm truncate">{(nft as any).seller}</div>
+                  <Button variant="ghost" size="icon">
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+            </div>
+          )}
+
+          {/* Buy button (if in marketplace) */}
+          {(nft as any).price && (
+            <Button className="w-full" onClick={handleBuyNow} disabled={isPurchasing}>
+              {isPurchasing ? "Processing..." : "Buy Now"}
+            </Button>
+          )}
+
+          {/* Stake/Unstake button (if owned) */}
+          {nft.isStaked !== undefined && (
+            <Button
+              className={`w-full mt-4 ${nft.isStaked ? "bg-red-500 hover:bg-red-600" : "bg-[#ffc72d] hover:bg-[#e6b328] text-black"}`}
+              onClick={() => router.push(`/staking?nft=${nft.id}`)}
+            >
+              {nft.isStaked ? "Manage Staking" : "Stake This NFT"}
+            </Button>
+          )}
         </div>
       </div>
 
-      <NFTTransferModal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} nft={nft} />
-
       <TabBar activeTab="wallet" />
-    </main>
+    </div>
   )
 }

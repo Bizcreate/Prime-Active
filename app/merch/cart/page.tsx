@@ -8,13 +8,42 @@ import { Separator } from "@/components/ui/separator"
 import { useRouter } from "next/navigation"
 import { CouponInput } from "@/components/coupon-input"
 import { useCart } from "@/contexts/cart-context"
+import { useEffect, useState } from "react"
+import { useToast } from "@/hooks/use-toast"
 
 type MerchandiseType = "standard" | "nfc" | "nfc+nft"
 
 export default function CartPage() {
   const router = useRouter()
-  const { appliedCoupon, couponDiscount, selectedType, setAppliedCoupon, setCouponDiscount, setSelectedType } =
-    useCart()
+  const { toast } = useToast()
+  const [isProcessing, setIsProcessing] = useState(false)
+  const {
+    appliedCoupon,
+    couponDiscount,
+    selectedType,
+    cartItems,
+    setAppliedCoupon,
+    setCouponDiscount,
+    setSelectedType,
+    setCartItems,
+  } = useCart()
+
+  // Initialize cart with a default item if empty
+  useEffect(() => {
+    if (cartItems.length === 0) {
+      // Add a default test item
+      setCartItems([
+        {
+          id: "prime-tshirt-1",
+          name: "Prime Mates Classic T-Shirt",
+          size: "L",
+          color: "Black",
+          price: pricing[selectedType],
+          image: "/prime-mates-tshirt.png",
+        },
+      ])
+    }
+  }, [cartItems.length, selectedType, setCartItems])
 
   // Product pricing based on type
   const pricing = {
@@ -40,17 +69,46 @@ export default function CartPage() {
   const bananaPoints = selectedType === "nfc+nft" ? 600 : selectedType === "nfc" ? 400 : 200
 
   const handleProceedToCheckout = () => {
-    router.push("/merch/checkout")
+    setIsProcessing(true)
+
+    // Show processing toast
+    toast({
+      title: "Processing your order...",
+      description: "Please wait while we prepare your checkout.",
+    })
+
+    // Simulate a network request
+    setTimeout(() => {
+      setIsProcessing(false)
+
+      // Determine the correct route based on whether it's a free order
+      const checkoutRoute = isFreeOrder ? "/merch/demo-checkout-success" : "/merch/checkout"
+
+      // Navigate to the appropriate page
+      router.push(checkoutRoute)
+    }, 1500)
   }
 
   const handleApplyCoupon = (code: string, discount: number) => {
     setAppliedCoupon(code)
     setCouponDiscount(discount)
+
+    // Show success toast
+    toast({
+      title: "Coupon applied!",
+      description: `Coupon "${code}" has been applied to your order.`,
+      variant: "success",
+    })
   }
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null)
     setCouponDiscount(0)
+
+    toast({
+      title: "Coupon removed",
+      description: "The coupon has been removed from your order.",
+    })
   }
 
   // Check if order is free
@@ -218,9 +276,13 @@ export default function CartPage() {
           </div>
 
           {/* Checkout Button */}
-          <Button onClick={handleProceedToCheckout} className="w-full bg-[#ffc72d] hover:bg-[#e6b328] text-black py-6">
+          <Button
+            onClick={handleProceedToCheckout}
+            disabled={isProcessing}
+            className="w-full bg-[#ffc72d] hover:bg-[#e6b328] text-black py-6 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
             <ShoppingBag className="mr-2 h-5 w-5" />
-            {isFreeOrder ? "Proceed to Free Checkout" : "Proceed to Checkout"}
+            {isProcessing ? "Processing..." : isFreeOrder ? "Proceed to Free Checkout" : "Proceed to Checkout"}
           </Button>
         </div>
       </div>

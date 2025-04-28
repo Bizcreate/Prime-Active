@@ -1,40 +1,45 @@
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import type { NFTMetadata } from "@/types/nft-types"
 import Link from "next/link"
+import type { NFTMetadata } from "@/services/nft-minting-service"
 
 interface MerchandiseNFTCardProps {
-  nft: NFTMetadata
+  nft: NFTMetadata & {
+    id?: string
+    rarity?: string
+    collection?: string
+  }
 }
 
 export function MerchandiseNFTCard({ nft }: MerchandiseNFTCardProps) {
+  // Extract product name from NFT name (remove the #number part)
+  const productName = nft.name.split("#")[0].trim()
+
+  // Get rarity color
+  const getRarityColor = (rarity = "common") => {
+    switch (rarity.toLowerCase()) {
+      case "rare":
+        return "bg-blue-500"
+      case "epic":
+        return "bg-purple-500"
+      case "legendary":
+        return "bg-amber-500"
+      default:
+        return "bg-green-500"
+    }
+  }
+
   return (
-    <Link href={`/merchandise/${nft.id}`}>
+    <Link href={`/nft/${nft.id}`}>
       <Card className="overflow-hidden bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-all">
         <div className="relative aspect-square">
           <Image src={nft.image || "/placeholder.svg"} alt={nft.name} fill className="object-cover" />
-          <div className="absolute top-2 left-2 bg-black/50 px-2 py-1 rounded text-xs">
-            <Image src="/prime-mates-logo.png" alt="Prime Mates" width={40} height={20} className="object-contain" />
-          </div>
-          <Badge
-            className={`absolute top-2 right-2 ${
-              nft?.rarity === "legendary"
-                ? "bg-[#ffc72d] text-black"
-                : nft?.rarity === "rare"
-                  ? "bg-blue-600"
-                  : nft?.rarity === "uncommon"
-                    ? "bg-green-600"
-                    : "bg-zinc-600"
-            }`}
-          >
-            {nft?.rarity ? nft.rarity.charAt(0).toUpperCase() + nft.rarity.slice(1) : "Common"}
-          </Badge>
-          <Badge className="absolute bottom-2 left-2 bg-[#ffc72d] text-black">Merchandise</Badge>
+          <Badge className={`absolute top-2 right-2 ${getRarityColor(nft.rarity)}`}>{nft.rarity || "Common"}</Badge>
         </div>
         <CardContent className="p-3">
-          <h3 className="font-medium text-sm truncate">{nft.name}</h3>
-          <p className="text-xs text-zinc-400 truncate">{nft.collection}</p>
+          <h3 className="font-medium text-sm truncate">{productName}</h3>
+          <p className="text-xs text-zinc-400 truncate">{nft.collection || "Prime Mates"}</p>
         </CardContent>
       </Card>
     </Link>

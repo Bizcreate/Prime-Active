@@ -1,18 +1,170 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { TabBar } from "@/components/tab-bar"
-import { ArrowLeft, Info, ChevronsUp, Wallet } from "lucide-react"
+import { ArrowLeft, Info, ChevronsUp, Wallet, Loader2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import NFTStaking from "@/components/nft-staking"
+import { nftService, type NFT } from "@/services/nft-service"
 import { useWeb3 } from "@/components/web3-provider"
 import { WalletConnectButton } from "@/components/wallet-connect-button"
+import { useToast } from "@/hooks/use-toast"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
 export default function StakingPage() {
-  const { isConnected, balance, stakingRewards, stakedNFTs } = useWeb3()
+  const { isConnected } = useWeb3()
   const [showSuccess, setShowSuccess] = useState(false)
+  const [nfts, setNfts] = useState<NFT[]>([])
+  const [stakedNfts, setStakedNfts] = useState<NFT[]>([])
+  const [unstakedNfts, setUnstakedNfts] = useState<NFT[]>([])
+  const [stakingRewards, setStakingRewards] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isStaking, setIsStaking] = useState(false)
+  const [isUnstaking, setIsUnstaking] = useState(false)
+  const [selectedNft, setSelectedNft] = useState<string | null>(null)
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Simulate loading delay
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        // Update staking rewards
+        nftService.updateStakingRewards()
+
+        // Get all NFTs
+        const allNfts = nftService.getAllNFTs()
+        setNfts(allNfts)
+
+        // Get staked NFTs
+        const staked = nftService.getStakedNFTs()
+        setStakedNfts(staked)
+
+        // Get unstaked NFTs
+        const unstaked = nftService.getUnstakedNFTs()
+        setUnstakedNfts(unstaked)
+
+        // Get total staking rewards
+        const rewards = nftService.getTotalStakingRewards()
+        setStakingRewards(rewards)
+      } catch (error) {
+        console.error("Error loading staking data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load staking data. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [toast])
+
+  const handleStake = async (nftId: string) => {
+    try {
+      setIsStaking(true)
+      setSelectedNft(nftId)
+
+      // Simulate staking delay
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      // Stake the NFT
+      nftService.stakeNFT(nftId)
+
+      // Refresh data
+      const allNfts = nftService.getAllNFTs()
+      setNfts(allNfts)
+
+      const staked = nftService.getStakedNFTs()
+      setStakedNfts(staked)
+
+      const unstaked = nftService.getUnstakedNFTs()
+      setUnstakedNfts(unstaked)
+
+      // Show success message
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 5000)
+
+      toast({
+        title: "Staking Successful",
+        description: "Your NFT has been staked and is now earning rewards.",
+      })
+    } catch (error) {
+      console.error("Error staking NFT:", error)
+      toast({
+        title: "Staking Failed",
+        description: "Failed to stake your NFT. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsStaking(false)
+      setSelectedNft(null)
+    }
+  }
+
+  const handleUnstake = async (nftId: string) => {
+    try {
+      setIsUnstaking(true)
+      setSelectedNft(nftId)
+
+      // Simulate unstaking delay
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      // Unstake the NFT and get rewards
+      const rewards = nftService.unstakeNFT(nftId)
+
+      // Refresh data
+      const allNfts = nftService.getAllNFTs()
+      setNfts(allNfts)
+
+      const staked = nftService.getStakedNFTs()
+      setStakedNfts(staked)
+
+      const unstaked = nftService.getUnstakedNFTs()
+      setUnstakedNfts(unstaked)
+
+      // Update rewards
+      const totalRewards = nftService.getTotalStakingRewards()
+      setStakingRewards(totalRewards)
+
+      toast({
+        title: "Unstaking Successful",
+        description: `Your NFT has been unstaked. You earned ${rewards} SHAKA tokens.`,
+      })
+    } catch (error) {
+      console.error("Error unstaking NFT:", error)
+      toast({
+        title: "Unstaking Failed",
+        description: "Failed to unstake your NFT. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUnstaking(false)
+      setSelectedNft(null)
+    }
+  }
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case "common":
+        return "bg-zinc-500"
+      case "uncommon":
+        return "bg-green-500"
+      case "rare":
+        return "bg-blue-500"
+      case "epic":
+        return "bg-purple-500"
+      case "legendary":
+        return "bg-yellow-500"
+      default:
+        return "bg-zinc-500"
+    }
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-black pb-20">
@@ -42,11 +194,11 @@ export default function StakingPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-zinc-800 p-3 rounded-lg">
                 <p className="text-xs text-zinc-400">Total Staked</p>
-                <p className="text-lg font-bold text-[#ffc72d]">{stakedNFTs.length} NFTs</p>
+                <p className="text-lg font-bold text-[#ffc72d]">{stakedNfts.length} NFTs</p>
               </div>
               <div className="bg-zinc-800 p-3 rounded-lg">
                 <p className="text-xs text-zinc-400">Daily Rewards</p>
-                <p className="text-lg font-bold text-[#ffc72d]">+{stakingRewards / 30} $SHKA</p>
+                <p className="text-lg font-bold text-[#ffc72d]">+{stakingRewards} $SHKA</p>
               </div>
             </div>
           </div>
@@ -92,7 +244,119 @@ export default function StakingPage() {
           </div>
         )}
 
-        <NFTStaking onSuccess={() => setShowSuccess(true)} />
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-zinc-400">Loading staking data...</p>
+          </div>
+        ) : (
+          <>
+            {/* Staked NFTs */}
+            {stakedNfts.length > 0 && (
+              <div className="mb-6">
+                <h2 className="font-bold text-lg mb-3 text-[#ffc72d]">Staked NFTs</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {stakedNfts.map((nft) => (
+                    <Card key={nft.id} className="bg-zinc-900 border-0 overflow-hidden">
+                      <div className="relative aspect-square">
+                        <Image
+                          src={nft.image || "/placeholder.svg?height=200&width=200&query=nft"}
+                          alt={nft.name}
+                          fill
+                          className="object-cover"
+                        />
+                        <Badge className={`absolute top-2 right-2 ${getRarityColor(nft.rarity)} text-white`}>
+                          {nft.rarity.charAt(0).toUpperCase() + nft.rarity.slice(1)}
+                        </Badge>
+                        <Badge className="absolute top-2 left-2 bg-[#ffc72d] text-black">Staked</Badge>
+                      </div>
+                      <CardContent className="p-3">
+                        <h3 className="font-medium text-sm mb-1">{nft.name}</h3>
+                        <div className="flex justify-between items-center text-xs text-zinc-400 mb-2">
+                          <span>APY: {nft.stakingAPY}%</span>
+                          <span>Rewards: {nft.earnedRewards}</span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-1"
+                          onClick={() => handleUnstake(nft.id)}
+                          disabled={isUnstaking && selectedNft === nft.id}
+                        >
+                          {isUnstaking && selectedNft === nft.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Unstaking...
+                            </>
+                          ) : (
+                            "Unstake"
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Unstaked NFTs */}
+            {unstakedNfts.length > 0 && (
+              <div className="mb-6">
+                <h2 className="font-bold text-lg mb-3 text-[#ffc72d]">Available NFTs</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {unstakedNfts.map((nft) => (
+                    <Card key={nft.id} className="bg-zinc-900 border-0 overflow-hidden">
+                      <div className="relative aspect-square">
+                        <Image
+                          src={nft.image || "/placeholder.svg?height=200&width=200&query=nft"}
+                          alt={nft.name}
+                          fill
+                          className="object-cover"
+                        />
+                        <Badge className={`absolute top-2 right-2 ${getRarityColor(nft.rarity)} text-white`}>
+                          {nft.rarity.charAt(0).toUpperCase() + nft.rarity.slice(1)}
+                        </Badge>
+                      </div>
+                      <CardContent className="p-3">
+                        <h3 className="font-medium text-sm mb-1">{nft.name}</h3>
+                        <div className="flex justify-between items-center text-xs text-zinc-400 mb-2">
+                          <span>APY: {nft.stakingAPY}%</span>
+                          <span>Collection: PMBC</span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-1 hover:bg-[#ffc72d] hover:text-black"
+                          onClick={() => handleStake(nft.id)}
+                          disabled={isStaking && selectedNft === nft.id}
+                        >
+                          {isStaking && selectedNft === nft.id ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Staking...
+                            </>
+                          ) : (
+                            "Stake"
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {nfts.length === 0 && (
+              <div className="bg-zinc-900 rounded-lg p-6 text-center">
+                <h3 className="font-bold text-lg mb-2">No NFTs Found</h3>
+                <p className="text-zinc-400 text-sm mb-4">
+                  You don't have any NFTs to stake. Visit the marketplace to get some!
+                </p>
+                <Link href="/marketplace">
+                  <Button className="bg-[#ffc72d] hover:bg-[#e6b328] text-black">Browse Marketplace</Button>
+                </Link>
+              </div>
+            )}
+          </>
+        )}
 
         <div className="mt-6 bg-zinc-900 rounded-lg p-4">
           <h2 className="font-bold text-lg mb-3 flex items-center gap-2">

@@ -1,227 +1,368 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { AppShell } from "@/components/app-shell"
 import { Button } from "@/components/ui/button"
-import { ActivityCard } from "@/components/activity-card"
-import { ArrowLeft, Clock, MapPin, Heart, Flame, Play, Pause, StopCircle } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useActivityTypes } from "@/services/activity-types-service"
+import { useActivityTemplates } from "@/services/activity-templates-service"
+import { ArrowLeft, Plus } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { formatTime, formatDistance, formatCalories } from "@/lib/utils"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
+import { merchandiseWearService, type ConnectedMerchandise } from "@/services/merchandise-wear-service"
 
 export default function StartActivityPage() {
-  const [isActive, setIsActive] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
-  const [activityType, setActivityType] = useState<string>("running")
-  const [elapsedTime, setElapsedTime] = useState(0)
-  const [distance, setDistance] = useState(0)
-  const [calories, setCalories] = useState(0)
-  const [heartRate, setHeartRate] = useState(0)
-
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { activityTypes, isLoading: loadingTypes } = useActivityTypes()
+  const {
+    templates,
+    isLoading: loadingTemplates,
+    getTemplateById,
+    useTemplate,
+    getMostUsedTemplates,
+  } = useActivityTemplates()
+  const { toast } = useToast()
+  const [selectedType, setSelectedType] = useState("")
+  const [activityName, setActivityName] = useState("")
+  const [location, setLocation] = useState("")
+  const [mostUsedTemplates, setMostUsedTemplates] = useState([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
+  const [availableMerchandise, setAvailableMerchandise] = useState<ConnectedMerchandise[]>([])
+  const [selectedMerchandise, setSelectedMerchandise] = useState<string[]>([])
 
-  const toggleActivity = () => {
-    if (!isActive) {
-      // Start activity
-      setIsActive(true)
-      setIsPaused(false)
-      // In a real app, we would start tracking location, etc.
-      startMockDataUpdates()
-    } else if (!isPaused) {
-      // Pause activity
-      setIsPaused(true)
-      // In a real app, we would pause tracking
-    } else {
-      // Resume activity
-      setIsPaused(false)
-      // In a real app, we would resume tracking
-    }
-  }
+  // Memoize the function to get most used templates to prevent recreation on each render
+  const fetchMostUsedTemplates = useCallback(() => {
+    return getMostUsedTemplates(3)
+  }, [getMostUsedTemplates])
 
-  const stopActivity = () => {
-    setIsActive(false)
-    setIsPaused(false)
-    // In a real app, we would stop tracking and save the activity
-    router.push("/activity-summary")
-  }
+  // Initialize most used templates once when component mounts
+  useEffect(() => {
+    setMostUsedTemplates(fetchMostUsedTemplates())
+  }, [fetchMostUsedTemplates])
 
-  // Mock data updates for demo purposes
-  const startMockDataUpdates = () => {
-    const interval = setInterval(() => {
-      if (isActive && !isPaused) {
-        setElapsedTime((prev) => prev + 1)
-        setDistance((prev) => prev + 0.001)
-        setCalories((prev) => prev + 0.1)
-        setHeartRate(120 + Math.floor(Math.random() * 20))
+  // Handle URL parameters separately from the most used templates
+  useEffect(() => {
+    // Check if a template ID was provided in the URL
+    const templateId = searchParams.get("template")
+    if (templateId) {
+      const template = getTemplateById(templateId)
+      if (template) {
+        setSelectedType(template.activityTypeId)
+        setActivityName(template.name)
+        setLocation(template.location || "")
+        setSelectedTemplateId(templateId)
       }
-    }, 1000)
+    }
 
-    return () => clearInterval(interval)
+    // Check if an activity type was provided in the URL
+    const activityType = searchParams.get("type")
+    if (activityType && !templateId) {
+      setSelectedType(activityType)
+    }
+  }, [searchParams, getTemplateById])
+
+  // Use the template when selectedTemplateId changes
+  // useEffect(() => {
+  //   if (selectedTemplateId) {
+  //     useTemplate(selectedTemplateId)
+  //   }
+  // }, [selectedTemplateId, useTemplate])
+  useTemplate(selectedTemplateId || undefined)
+
+  // Fetch available merchandise
+  useEffect(() => {
+    // Only fetch merchandise once when component mounts
+    const merchandise = merchandiseWearService.getConnectedMerchandise()
+    setAvailableMerchandise(merchandise)
+  }, []) // Empty dependency array means this runs once on mount
+
+  // Toggle merchandise selection
+  const toggleMerchandiseSelection = (id: string) => {
+    setSelectedMerchandise((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((item) => item !== id)
+      } else {
+        return [...prev, id]
+      }
+    })
   }
+
+  const handleStartActivity = () => {
+    if (!selectedType) {
+      toast({
+        title: "Select an activity type",
+        description: "Please select an activity type to continue",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Start wearing selected merchandise
+    selectedMerchandise.forEach((id) => {
+      merchandiseWearService.startWearing(id)
+    })
+
+    // In a real app, this would start tracking the activity
+    toast({
+      title: "Activity started",
+      description: `${activityName || getActivityTypeName(selectedType)} tracking has begun${selectedMerchandise.length > 0 ? " with your gear" : ""}`,
+    })
+
+    // Navigate to activity tracking page with merchandise info
+    router.push(
+      `/activity-tracking?type=${selectedType}&name=${encodeURIComponent(activityName)}&location=${encodeURIComponent(location)}&merchandise=${encodeURIComponent(JSON.stringify(selectedMerchandise))}`,
+    )
+  }
+
+  const getActivityTypeName = (id: string) => {
+    const type = activityTypes.find((type) => type.id === id)
+    return type ? type.name : "Unknown"
+  }
+
+  // Group activity types by category
+  const groupedTypes = activityTypes.reduce(
+    (acc, type) => {
+      if (!acc[type.category]) {
+        acc[type.category] = []
+      }
+      acc[type.category].push(type)
+      return acc
+    },
+    {} as Record<string, typeof activityTypes>,
+  )
+
+  // Handle template selection
+  const handleTemplateSelect = useCallback((template: any) => {
+    setSelectedType(template.activityTypeId)
+    setActivityName(template.name)
+    setLocation(template.location || "")
+    setSelectedTemplateId(template.id)
+    // Don't update mostUsedTemplates here to avoid the infinite loop
+  }, [])
 
   return (
-    <main className="flex min-h-screen flex-col bg-black">
-      <div className="p-6">
+    <AppShell>
+      <div className="min-h-screen bg-black p-6 pb-20">
         <div className="flex items-center mb-6">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="icon" className="mr-2">
-              <ArrowLeft className="h-5 w-5" />
+          <Link href="/dashboard" className="mr-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-xl font-bold">{isActive ? "Activity in Progress" : "Start Activity"}</h1>
+          <h1 className="text-xl font-bold">Start Activity</h1>
         </div>
 
-        {!isActive && (
-          <div className="mb-6">
-            <h2 className="text-lg font-medium mb-3">Choose Activity Type</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <ActivityCard
-                type="running"
-                title="Running"
-                value="Track"
-                unit="run"
-                onClick={() => setActivityType("running")}
-              />
-              <ActivityCard
-                type="walking"
-                title="Walking"
-                value="Track"
-                unit="walk"
-                onClick={() => setActivityType("walking")}
-              />
-              <ActivityCard
-                type="skateboarding"
-                title="Skateboarding"
-                value="Track"
-                unit="skate"
-                onClick={() => setActivityType("skateboarding")}
-              />
-              <ActivityCard
-                type="surfing"
-                title="Surfing"
-                value="Track"
-                unit="surf"
-                onClick={() => setActivityType("surfing")}
-              />
-              <ActivityCard
-                type="snowboarding"
-                title="Snowboarding"
-                value="Track"
-                unit="snow"
-                onClick={() => setActivityType("snowboarding")}
-              />
-              <ActivityCard
-                type="mountainbiking"
-                title="Biking"
-                value="Track"
-                unit="bike"
-                onClick={() => setActivityType("mountainbiking")}
-              />
+        {loadingTypes || loadingTemplates ? (
+          <div className="flex justify-center py-12">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <Tabs defaultValue="types">
+              <TabsList className="grid grid-cols-2 mb-6">
+                <TabsTrigger value="types">Activity Types</TabsTrigger>
+                <TabsTrigger value="templates">Templates</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="types">
+                <div className="space-y-6">
+                  {Object.entries(groupedTypes).map(([category, types]) => (
+                    <div key={category}>
+                      <h2 className="text-lg font-semibold mb-3">{category}</h2>
+                      <div className="grid grid-cols-2 gap-3">
+                        {types.map((type) => (
+                          <Card
+                            key={type.id}
+                            className={`bg-zinc-900 border-zinc-800 cursor-pointer transition-colors ${
+                              selectedType === type.id ? "border-primary" : ""
+                            }`}
+                            onClick={() => setSelectedType(type.id)}
+                          >
+                            <CardContent className="p-4 flex items-center gap-3">
+                              <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                  selectedType === type.id ? "bg-primary text-black" : "bg-zinc-800"
+                                }`}
+                              >
+                                {/* Icon would go here - using placeholder */}
+                                <span className="text-lg">{type.name.charAt(0)}</span>
+                              </div>
+                              <div>
+                                <h3 className="font-medium">{type.name}</h3>
+                                <p className="text-xs text-zinc-400">{type.metrics.slice(0, 3).join(" • ")}</p>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                        <Link href="/activity-types">
+                          <Card className="bg-zinc-900 border-zinc-800 cursor-pointer h-full">
+                            <CardContent className="p-4 flex items-center justify-center h-full">
+                              <div className="flex flex-col items-center">
+                                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center mb-2">
+                                  <Plus className="h-5 w-5" />
+                                </div>
+                                <span className="text-sm">Custom Type</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="templates">
+                {templates.length === 0 ? (
+                  <div className="text-center py-12">
+                    <p className="text-zinc-400 mb-4">You don't have any templates yet</p>
+                    <Link href="/activity-templates">
+                      <Button>Create Your First Template</Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {mostUsedTemplates.length > 0 && (
+                      <div>
+                        <h2 className="text-lg font-semibold mb-3">Most Used</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {mostUsedTemplates.map((template) => (
+                            <Card
+                              key={template.id}
+                              className="bg-zinc-900 border-zinc-800 cursor-pointer"
+                              onClick={() => handleTemplateSelect(template)}
+                            >
+                              <CardContent className="p-4">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <h3 className="font-medium">{template.name}</h3>
+                                    <p className="text-xs text-zinc-400">
+                                      {getActivityTypeName(template.activityTypeId)}
+                                    </p>
+                                  </div>
+                                  <div className="bg-zinc-800 px-2 py-1 rounded text-xs">
+                                    Used {template.usageCount}x
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <h2 className="text-lg font-semibold mb-3">All Templates</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {templates.map((template) => (
+                          <Card
+                            key={template.id}
+                            className="bg-zinc-900 border-zinc-800 cursor-pointer"
+                            onClick={() => handleTemplateSelect(template)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-medium">{template.name}</h3>
+                                  <p className="text-xs text-zinc-400">
+                                    {getActivityTypeName(template.activityTypeId)}
+                                  </p>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                        <Link href="/activity-templates">
+                          <Card className="bg-zinc-900 border-zinc-800 cursor-pointer h-full">
+                            <CardContent className="p-4 flex items-center justify-center h-full">
+                              <div className="flex flex-col items-center">
+                                <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center mb-2">
+                                  <Plus className="h-5 w-5" />
+                                </div>
+                                <span className="text-sm">New Template</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+
+            {/* Wearable Merchandise Section */}
+            {availableMerchandise.length > 0 && (
+              <div className="mt-8 mb-4">
+                <h2 className="text-lg font-semibold mb-3">Wear Your Gear</h2>
+                <p className="text-sm text-zinc-400 mb-4">Select items to wear during this activity to earn tokens</p>
+
+                <div className="grid grid-cols-1 gap-3">
+                  {availableMerchandise.map((item) => (
+                    <Card
+                      key={item.id}
+                      className={`bg-zinc-900 border-zinc-800 cursor-pointer transition-colors ${
+                        selectedMerchandise.includes(item.id) ? "border-primary" : ""
+                      }`}
+                      onClick={() => toggleMerchandiseSelection(item.id)}
+                    >
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-md bg-zinc-800 overflow-hidden">
+                          {item.image && (
+                            <img
+                              src={item.image || "/placeholder.svg"}
+                              alt={item.productName}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-medium">{item.productName}</h3>
+                          <p className="text-xs text-zinc-400">
+                            {item.isCurrentlyWorn ? "Currently worn" : "Not worn"}
+                          </p>
+                        </div>
+                        <div
+                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                            selectedMerchandise.includes(item.id)
+                              ? "border-primary bg-primary text-black"
+                              : "border-zinc-600"
+                          }`}
+                        >
+                          {selectedMerchandise.includes(item.id) && (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-8">
+              <Button className="w-full py-6 text-lg" onClick={handleStartActivity} disabled={!selectedType}>
+                Start Activity
+              </Button>
             </div>
           </div>
         )}
-
-        <div className="mb-6">
-          <div className="h-60 w-full rounded-lg overflow-hidden map-container relative mb-3">
-            {/* Map placeholder */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              {!isActive ? (
-                <div className="bg-black/50 px-4 py-2 rounded-lg">
-                  <p className="text-sm text-white">Map will display your route here</p>
-                </div>
-              ) : (
-                <>
-                  {/* User location marker */}
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <div className="h-4 w-4 rounded-full bg-burnz-500 animate-pulse"></div>
-                    <div className="h-10 w-10 rounded-full bg-burnz-500/20 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
-                  </div>
-
-                  {/* Mock route path */}
-                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 240">
-                    <path
-                      d="M100,120 C150,80 200,160 300,120"
-                      fill="none"
-                      stroke="#FF8800"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeDasharray="5,5"
-                    />
-                  </svg>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="bg-zinc-900 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-burnz-500" />
-                <div>
-                  <p className="text-xs text-zinc-400">Duration</p>
-                  <p className="text-lg font-semibold">{formatTime(elapsedTime)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-zinc-900 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-blue-500" />
-                <div>
-                  <p className="text-xs text-zinc-400">Distance</p>
-                  <p className="text-lg font-semibold">{formatDistance(distance * 1000)}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-zinc-900 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Heart className="h-5 w-5 text-red-500" />
-                <div>
-                  <p className="text-xs text-zinc-400">Heart Rate</p>
-                  <p className="text-lg font-semibold">{heartRate > 0 ? `${heartRate} bpm` : "--"}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-zinc-900 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Flame className="h-5 w-5 text-orange-500" />
-                <div>
-                  <p className="text-xs text-zinc-400">Calories</p>
-                  <p className="text-lg font-semibold">{formatCalories(calories)}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {!isActive ? (
-            <Button className="w-full py-6 text-lg" onClick={toggleActivity}>
-              <Play className="h-5 w-5 mr-2" /> Start Activity
-            </Button>
-          ) : (
-            <div className="space-y-3">
-              <Button
-                className={`w-full py-6 text-lg ${isPaused ? "bg-burnz-500 hover:bg-burnz-600" : "bg-red-500 hover:bg-red-600"}`}
-                onClick={toggleActivity}
-              >
-                {isPaused ? (
-                  <>
-                    <Play className="h-5 w-5 mr-2" /> Resume Activity
-                  </>
-                ) : (
-                  <>
-                    <Pause className="h-5 w-5 mr-2" /> Pause Activity
-                  </>
-                )}
-              </Button>
-
-              <Button variant="outline" className="w-full py-4 text-lg" onClick={stopActivity}>
-                <StopCircle className="h-5 w-5 mr-2" /> End Activity
-              </Button>
-            </div>
-          )}
-        </div>
       </div>
-    </main>
+    </AppShell>
   )
 }

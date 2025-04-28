@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { PostCard } from "@/components/post-card"
 import Link from "next/link"
 import { Search, Plus, TrendingUp, Filter, Users, Sparkles } from "lucide-react"
+import { AppShell } from "@/components/app-shell"
 
 // Mock data for posts
 const mockPosts = [
@@ -161,7 +162,7 @@ export default function SocialPage() {
   }, [posts, isLoading])
 
   return (
-    <div className="flex min-h-screen flex-col bg-black pb-20">
+    <AppShell>
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold">Social Feed</h1>
@@ -324,6 +325,6 @@ export default function SocialPage() {
       </div>
 
       <TabBar activeTab="social" />
-    </div>
+    </AppShell>
   )
 }

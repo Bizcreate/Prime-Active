@@ -1,324 +1,320 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { TabBar } from "@/components/tab-bar"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import { ArrowLeft, Wallet, Copy, ExternalLink, Plus, Loader2, Check } from "lucide-react"
+import { Copy, ExternalLink, Clock, Smartphone } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { useWeb3 } from "@/components/web3-provider"
-import { NFTCard } from "@/components/nft-card"
-import { NFTMintingService } from "@/services/nft-minting-service"
-import type { NFTMetadata } from "@/types/nft-types"
-import { MerchandiseNFTCard } from "@/components/merchandise-nft-card"
-import { AddTokenModal, type TokenInfo } from "@/components/add-token-modal"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { useSearchParams } from "next/navigation"
+import { nftService, type NFT } from "@/services/nft-service"
+import { useToast } from "@/hooks/use-toast"
+import { merchandiseWearService, type ConnectedMerchandise } from "@/services/merchandise-wear-service"
 
 export default function WalletPage() {
-  const { isConnected, connectWallet, address, balance, ownedNFTs, stakingRewards } = useWeb3()
-  const [isLoading, setIsLoading] = useState(false)
-  const [isCopied, setIsCopied] = useState(false)
-  const [merchandiseNFTs, setMerchandiseNFTs] = useState<NFTMetadata[]>([])
-  const [tokens, setTokens] = useState<TokenInfo[]>([
-    {
-      name: "Shaka Coin",
-      symbol: "SHAKA",
-      balance: balance.toString(),
-      value: (balance * 0.1).toFixed(2), // Assuming 1 SHAKA = $0.1
-      icon: "/shaka-coin.png",
-    },
-    {
-      name: "Prime Active",
-      symbol: "ACTIVE",
-      balance: "500.00",
-      value: "50.00",
-      icon: null,
-    },
-    {
-      name: "Ethereum",
-      symbol: "ETH",
-      balance: "0.05",
-      value: "125.00",
-      icon: null,
-    },
-  ])
-  const [isAddTokenModalOpen, setIsAddTokenModalOpen] = useState(false)
+  const [walletAddress, setWalletAddress] = useState<string>("0x1234...5678")
+  const [balance, setBalance] = useState<number>(250)
+  const [stakingRewards, setStakingRewards] = useState<number>(0)
+  const [nfts, setNfts] = useState<NFT[]>([])
+  const [activeTab, setActiveTab] = useState<string>("nfts")
+  const [isLoading, setIsLoading] = useState(true)
+  const searchParams = useSearchParams()
+  const highlightId = searchParams.get("highlight")
+  const { toast } = useToast()
+  const [connectedItems, setConnectedItems] = useState<ConnectedMerchandise[]>([])
 
-  // Load merchandise NFTs
   useEffect(() => {
-    if (address) {
+    // Load NFT data and update staking rewards
+    const loadData = async () => {
       try {
-        const nfts = NFTMintingService.getMintedNFTsByOwner(address) || []
-        // Ensure each NFT has a rarity property
-        const validatedNfts = nfts.map((nft) => ({
-          ...nft,
-          rarity: nft.rarity || "common",
-        }))
-        setMerchandiseNFTs(validatedNfts)
+        // Simulate loading delay
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        // Update staking rewards
+        nftService.updateStakingRewards()
+
+        // Get all NFTs
+        const allNfts = nftService.getAllNFTs()
+        setNfts(allNfts)
+
+        // Get total staking rewards
+        const rewards = nftService.getTotalStakingRewards()
+        setStakingRewards(rewards)
+
+        // Load merchandise data
+        const merchandise = merchandiseWearService.getConnectedMerchandise()
+        setConnectedItems(merchandise)
       } catch (error) {
-        console.error("Error loading NFTs:", error)
-        setMerchandiseNFTs([])
+        console.error("Error loading wallet data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load wallet data. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
       }
     }
-  }, [address])
 
-  // Update Shaka token balance when balance changes
-  useEffect(() => {
-    setTokens((prev) =>
-      prev.map((token) =>
-        token.symbol === "SHAKA"
-          ? {
-              ...token,
-              balance: balance.toString(),
-              value: (balance * 0.1).toFixed(2),
-            }
-          : token,
-      ),
-    )
-  }, [balance])
+    loadData()
+  }, [highlightId, toast])
 
-  const handleConnectWallet = async () => {
-    setIsLoading(true)
-    try {
-      await connectWallet()
-      // The state will be updated in the provider
-    } catch (error) {
-      console.error("Error connecting wallet:", error)
-    } finally {
-      setIsLoading(false)
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        toast({
+          title: "Copied",
+          description: "Address copied to clipboard!",
+        })
+      })
+      .catch((err) => {
+        console.error("Failed to copy: ", err)
+        toast({
+          title: "Error",
+          description: "Failed to copy address to clipboard.",
+          variant: "destructive",
+        })
+      })
+  }
+
+  const getRarityColor = (rarity: string) => {
+    switch (rarity) {
+      case "common":
+        return "bg-zinc-500"
+      case "uncommon":
+        return "bg-green-500"
+      case "rare":
+        return "bg-blue-500"
+      case "epic":
+        return "bg-purple-500"
+      case "legendary":
+        return "bg-yellow-500"
+      default:
+        return "bg-zinc-500"
     }
   }
 
-  const handleCopyAddress = () => {
-    if (address) {
-      navigator.clipboard.writeText(address)
-      setIsCopied(true)
-      setTimeout(() => setIsCopied(false), 2000)
+  const formatWearTime = (minutes: number): string => {
+    if (minutes < 60) {
+      return `${minutes}m`
     }
-  }
 
-  const formatAddress = (addr: string) => {
-    return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`
-  }
+    const hours = Math.floor(minutes / 60)
+    const remainingMinutes = minutes % 60
 
-  const handleAddToken = (newToken: TokenInfo) => {
-    setTokens((prev) => [...prev, newToken])
+    if (hours < 24) {
+      return `${hours}h ${remainingMinutes}m`
+    }
+
+    const days = Math.floor(hours / 24)
+    const remainingHours = hours % 24
+
+    return `${days}d ${remainingHours}h`
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-black pb-20">
-      <div className="p-6">
-        <div className="flex items-center mb-6">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="icon" className="mr-2">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <h1 className="text-xl font-bold">Wallet</h1>
-        </div>
-
-        {!isConnected ? (
+      <div className="p-4">
+        {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <div className="bg-zinc-900 rounded-full p-6 mb-6">
-              <Wallet className="h-12 w-12 text-zinc-600" />
-            </div>
-            <h2 className="text-xl font-bold mb-2">Connect Your Wallet</h2>
-            <p className="text-zinc-400 text-center mb-6 max-w-xs">
-              Connect your wallet to view your NFTs, tokens, and track your rewards.
-            </p>
-            <Button
-              onClick={handleConnectWallet}
-              disabled={isLoading}
-              className="bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                "Connect Wallet"
-              )}
-            </Button>
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-zinc-400">Loading wallet...</p>
           </div>
         ) : (
-          <>
-            <div className="bg-zinc-900 rounded-lg p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <div className="bg-zinc-800 rounded-full p-2 mr-3">
-                    <Wallet className="h-6 w-6 text-[#ffc72d]" />
-                  </div>
-                  <div>
-                    <h2 className="font-bold">My Wallet</h2>
-                    <div className="flex items-center">
-                      <p className="text-sm text-zinc-400">{formatAddress(address || "")}</p>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 ml-1"
-                        onClick={handleCopyAddress}
-                        title="Copy address"
-                      >
-                        {isCopied ? (
-                          <Check className="h-3 w-3 text-green-500" />
-                        ) : (
-                          <Copy className="h-3 w-3 text-zinc-400" />
-                        )}
-                      </Button>
-                    </div>
+          <div className="space-y-4">
+            {/* Wallet Header */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className="bg-zinc-800 p-3 rounded-full">
+                  <Image src="/shaka-coin.png" alt="Wallet" width={32} height={32} className="h-6 w-6" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold">My Wallet</h1>
+                  <div className="flex items-center text-sm text-zinc-500">
+                    {walletAddress}
+                    <button onClick={() => copyToClipboard(walletAddress)} className="ml-1 text-zinc-400">
+                      <Copy className="h-3 w-3" />
+                    </button>
                   </div>
                 </div>
-                <Button variant="outline" size="icon" title="View on explorer">
+              </div>
+              <Link href="/wallet/transactions">
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full bg-zinc-800">
                   <ExternalLink className="h-4 w-4" />
                 </Button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-zinc-800 rounded-lg p-4">
-                  <p className="text-sm text-zinc-400 mb-1">Balance</p>
-                  <div className="flex items-center">
-                    <Image src="/shaka-coin.png" alt="SHAKA" width={20} height={20} className="mr-2" />
-                    <p className="text-xl font-bold">{balance} SHAKA</p>
-                  </div>
-                </div>
-                <div className="bg-zinc-800 rounded-lg p-4">
-                  <p className="text-sm text-zinc-400 mb-1">Staking Rewards</p>
-                  <div className="flex items-center">
-                    <Image src="/shaka-coin.png" alt="SHAKA" width={20} height={20} className="mr-2" />
-                    <p className="text-xl font-bold">{stakingRewards} / day</p>
-                  </div>
-                </div>
-              </div>
+              </Link>
             </div>
 
-            <Tabs defaultValue="nfts" className="w-full">
-              <TabsList className="grid grid-cols-3 mb-6">
-                <TabsTrigger value="nfts">NFTs</TabsTrigger>
-                <TabsTrigger value="merchandise">Merchandise</TabsTrigger>
-                <TabsTrigger value="tokens">Tokens</TabsTrigger>
+            {/* Balance Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="bg-zinc-800 border-0">
+                <CardContent className="p-4">
+                  <div className="text-sm text-zinc-400 mb-2">Balance</div>
+                  <div className="flex items-center gap-2">
+                    <Image src="/shaka-coin.png" alt="SHAKA" width={24} height={24} className="h-5 w-5" />
+                    <div className="text-2xl font-bold">{balance}</div>
+                  </div>
+                  <div className="text-lg font-bold text-primary">SHAKA</div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-zinc-800 border-0">
+                <CardContent className="p-4">
+                  <div className="text-sm text-zinc-400 mb-2">Staking Rewards</div>
+                  <div className="flex items-center gap-2">
+                    <Image src="/shaka-coin.png" alt="SHAKA" width={24} height={24} className="h-5 w-5" />
+                    <div className="text-2xl font-bold">{stakingRewards} / day</div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Tabs */}
+            <Tabs defaultValue="nfts" onValueChange={setActiveTab} className="mt-4">
+              <TabsList className="grid grid-cols-3 bg-zinc-800">
+                <TabsTrigger value="nfts" className={activeTab === "nfts" ? "data-[state=active]:bg-zinc-900" : ""}>
+                  NFTs
+                </TabsTrigger>
+                <TabsTrigger
+                  value="merchandise"
+                  className={activeTab === "merchandise" ? "data-[state=active]:bg-zinc-900" : ""}
+                >
+                  Merchandise
+                </TabsTrigger>
+                <TabsTrigger value="tokens" className={activeTab === "tokens" ? "data-[state=active]:bg-zinc-900" : ""}>
+                  Tokens
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="nfts" className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  {ownedNFTs.length === 0 ? (
-                    <div className="col-span-2 bg-zinc-900 rounded-lg p-6 text-center">
-                      <div className="bg-zinc-800 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                        <Image
-                          src="/shaka-banana-hand.png"
-                          alt="No NFTs"
-                          width={32}
-                          height={32}
-                          className="opacity-50"
-                        />
-                      </div>
-                      <h3 className="font-bold mb-2">No NFTs Found</h3>
-                      <p className="text-zinc-400 text-sm mb-4">
-                        You don't have any NFTs in your wallet yet. Visit the marketplace to get some!
-                      </p>
-                      <Link href="/marketplace">
-                        <Button className="bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90">Browse Marketplace</Button>
+              <TabsContent value="nfts" className="mt-4">
+                {nfts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-zinc-400">No NFTs found</p>
+                    <Link href="/marketplace">
+                      <Button className="mt-4">Browse Marketplace</Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {nfts.map((nft) => (
+                      <Link href={`/nft/${nft.id}`} key={nft.id}>
+                        <div className="bg-zinc-900 rounded-lg overflow-hidden">
+                          <div className="relative aspect-square">
+                            <Image src={nft.image || "/placeholder.svg"} alt={nft.name} fill className="object-cover" />
+                            <Badge className={`absolute top-2 right-2 ${getRarityColor(nft.rarity)} text-white`}>
+                              {nft.rarity.charAt(0).toUpperCase() + nft.rarity.slice(1)}
+                            </Badge>
+                            {nft.isStaked && (
+                              <Badge className="absolute top-2 left-2 bg-[#ffc72d] text-black">Staked</Badge>
+                            )}
+                          </div>
+                          <div className="p-2">
+                            <h3 className="font-medium text-sm">{nft.name}</h3>
+                          </div>
+                        </div>
                       </Link>
-                    </div>
-                  ) : (
-                    ownedNFTs.map((nft) => <NFTCard key={nft.id} nft={nft} />)
-                  )}
-                </div>
-              </TabsContent>
+                    ))}
+                  </div>
+                )}
 
-              <TabsContent value="merchandise" className="space-y-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-lg font-bold">Merchandise NFTs</h2>
-                  <Link href="/store">
-                    <Button variant="outline" size="sm" className="flex items-center gap-1">
-                      <Plus className="h-4 w-4" />
-                      Shop More
+                <div className="mt-4">
+                  <Link href="/marketplace">
+                    <Button variant="outline" className="w-full">
+                      View NFT Marketplace
                     </Button>
                   </Link>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  {merchandiseNFTs.length === 0 ? (
-                    <div className="col-span-2 bg-zinc-900 rounded-lg p-6 text-center">
-                      <div className="bg-zinc-800 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                        <Image
-                          src="/shaka-banana-hand.png"
-                          alt="No Merchandise NFTs"
-                          width={32}
-                          height={32}
-                          className="opacity-50"
-                        />
-                      </div>
-                      <h3 className="font-bold mb-2">No Merchandise NFTs</h3>
-                      <p className="text-zinc-400 text-sm mb-4">
-                        You haven't minted any merchandise NFTs yet. Purchase NFC+NFT merchandise to get started!
-                      </p>
-                      <Link href="/store">
-                        <Button className="bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90">Shop Merchandise</Button>
-                      </Link>
-                    </div>
-                  ) : (
-                    merchandiseNFTs.map((nft) => (
-                      <div key={nft?.id || Math.random().toString()} className="col-span-1">
-                        <MerchandiseNFTCard
-                          nft={
-                            nft || {
-                              id: Math.random().toString(),
-                              name: "Unknown NFT",
-                              image: "/placeholder.svg",
-                              rarity: "common",
-                              collection: "Unknown Collection",
-                            }
-                          }
-                        />
-                      </div>
-                    ))
-                  )}
-                </div>
               </TabsContent>
 
-              <TabsContent value="tokens" className="space-y-6">
-                <div className="space-y-4">
-                  {tokens.map((token, index) => (
-                    <div key={index} className="bg-zinc-900 rounded-lg p-4 flex items-center">
-                      <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center mr-3">
-                        {token.icon ? (
-                          <Image src={token.icon || "/placeholder.svg"} alt={token.symbol} width={24} height={24} />
-                        ) : (
-                          <div
-                            className={`w-8 h-8 rounded-full ${
-                              token.symbol === "ETH" ? "bg-[#627eea] text-white" : "bg-[#ffc72d] text-black"
-                            } flex items-center justify-center font-bold`}
-                          >
-                            {token.symbol.charAt(0)}
+              <TabsContent value="merchandise" className="mt-4">
+                {connectedItems.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-zinc-400">No connected merchandise found</p>
+                    <Link href="/merch/collection">
+                      <Button className="mt-4">View Collection</Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      {connectedItems.map((item) => (
+                        <Link href={`/merch/${item.id}`} key={item.id}>
+                          <div className="bg-zinc-900 rounded-lg overflow-hidden">
+                            <div className="relative aspect-square">
+                              <Image
+                                src={item.image || "/placeholder.svg?height=200&width=200&query=merchandise"}
+                                alt={item.productName}
+                                fill
+                                className="object-cover"
+                              />
+                              {item.isCurrentlyWorn && (
+                                <Badge className="absolute top-2 right-2 bg-[#ffc72d] text-black">Active</Badge>
+                              )}
+                              {item.hasNFC && (
+                                <Badge className="absolute top-2 left-2 bg-zinc-800 text-[#ffc72d] flex items-center">
+                                  <Smartphone className="h-3 w-3 mr-1" />
+                                  NFC
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="p-2">
+                              <h3 className="font-medium text-sm">{item.productName}</h3>
+                              <div className="text-xs text-zinc-400 flex items-center mt-1">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Worn: {formatWearTime(item.totalWearTime)}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium">{token.name}</h3>
-                        <p className="text-xs text-zinc-500">{token.symbol}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">{token.balance}</p>
-                        <p className="text-xs text-zinc-500">${token.value}</p>
-                      </div>
+                        </Link>
+                      ))}
                     </div>
-                  ))}
 
-                  <Button variant="outline" className="w-full" onClick={() => setIsAddTokenModalOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Token
-                  </Button>
+                    <div className="mt-4">
+                      <Link href="/merch/collection">
+                        <Button variant="outline" className="w-full">
+                          View Full Collection
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="tokens" className="mt-4">
+                <div className="space-y-4">
+                  <Card className="bg-zinc-900 border-0">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Image src="/shaka-coin.png" alt="SHAKA" width={40} height={40} className="h-10 w-10" />
+                        <div>
+                          <h3 className="font-medium">SHAKA</h3>
+                          <p className="text-xs text-zinc-400">Prime Active Token</p>
+                        </div>
+                      </div>
+                      <div className="text-xl font-bold">{balance}</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-zinc-900 border-0">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Image src="/shaka-coin.png" alt="SHAKA" width={40} height={40} className="h-10 w-10" />
+                        <div>
+                          <h3 className="font-medium">SHAKA</h3>
+                          <p className="text-xs text-zinc-400">Shaka Tokens</p>
+                        </div>
+                      </div>
+                      <div className="text-xl font-bold">75</div>
+                    </CardContent>
+                  </Card>
                 </div>
               </TabsContent>
             </Tabs>
-
-            <AddTokenModal
-              open={isAddTokenModalOpen}
-              onOpenChange={setIsAddTokenModalOpen}
-              onAddToken={handleAddToken}
-            />
-          </>
+          </div>
         )}
       </div>
 

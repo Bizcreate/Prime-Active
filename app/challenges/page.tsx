@@ -6,12 +6,13 @@ import { ChallengeCard } from "@/components/challenge-card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { AppShell } from "@/components/app-shell"
 
 export default function ChallengesPage() {
   const [activeTab, setActiveTab] = useState("daily")
 
   return (
-    <main className="flex min-h-screen flex-col bg-black pb-20">
+    <AppShell>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Challenges</h1>
@@ -117,6 +118,6 @@ export default function ChallengesPage() {
       </div>
 
       <TabBar activeTab="challenges" />
-    </main>
+    </AppShell>
   )
 }

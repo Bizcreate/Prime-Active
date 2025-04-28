@@ -42,13 +42,6 @@ class CouponService {
     if (this.coupons.length === 0) {
       this.coupons = [
         {
-          code: "FREE",
-          type: "free",
-          value: 100,
-          description: "Get your order for free!",
-          usageCount: 0,
-        },
-        {
           code: "WELCOME10",
           type: "percentage",
           value: 10,
@@ -71,8 +64,28 @@ class CouponService {
           description: "$15 off orders over $75",
           usageCount: 0,
         },
+        {
+          code: "FREE",
+          type: "free",
+          value: 999, // High value to ensure it covers any purchase
+          description: "100% free purchase - demo only",
+          usageCount: 0,
+        },
       ]
       this.saveCoupons()
+    } else {
+      // Check if FREE coupon exists, add it if not
+      const hasFreeCode = this.coupons.some((coupon) => coupon.code === "FREE")
+      if (!hasFreeCode) {
+        this.coupons.push({
+          code: "FREE",
+          type: "free",
+          value: 999, // High value to ensure it covers any purchase
+          description: "100% free purchase - demo only",
+          usageCount: 0,
+        })
+        this.saveCoupons()
+      }
     }
   }
 

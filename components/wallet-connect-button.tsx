@@ -1,92 +1,85 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { useWeb3 } from "@/components/web3-provider"
-import { Wallet, Loader2, AlertCircle } from "lucide-react"
 import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Loader2, Wallet } from "lucide-react"
+import { useWeb3 } from "./web3-provider"
+import { useToast } from "@/hooks/use-toast"
 
 interface WalletConnectButtonProps {
-  variant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive"
-  size?: "default" | "sm" | "lg" | "icon"
-  className?: string
   showBypass?: boolean
 }
 
-export function WalletConnectButton({
-  variant = "default",
-  size = "default",
-  className,
-  showBypass = false,
-}: WalletConnectButtonProps) {
-  const { isConnected, connectWallet, disconnectWallet, address, isSimulated } = useWeb3()
+export function WalletConnectButton({ showBypass = true }: WalletConnectButtonProps) {
+  const { isConnected, connect, disconnect } = useWeb3()
   const [isConnecting, setIsConnecting] = useState(false)
+  const { toast } = useToast()
 
   const handleConnect = async () => {
-    console.log("Connect button clicked")
-    setIsConnecting(true)
+    if (isConnected) {
+      disconnect()
+      toast({
+        title: "Wallet Disconnected",
+        description: "Your wallet has been disconnected.",
+      })
+      return
+    }
 
     try {
-      await connectWallet()
-      // No need to check success as the state will be updated in the provider
+      setIsConnecting(true)
+      await connect()
+      toast({
+        title: "Wallet Connected",
+        description: "Your wallet has been successfully connected.",
+      })
     } catch (error) {
-      console.error("Error in handleConnect:", error)
+      console.error("Error connecting wallet:", error)
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect wallet. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsConnecting(false)
     }
   }
 
-  const handleDisconnect = () => {
-    console.log("Disconnect button clicked")
-    disconnectWallet()
+  const handleBypass = () => {
+    if (!isConnected) {
+      connect()
+      toast({
+        title: "Demo Mode",
+        description: "Connected to demo wallet for testing.",
+      })
+    }
   }
 
-  // Format address for display
-  const formatAddress = (addr: string) => {
-    if (!addr) return ""
-    return addr.length > 10 ? `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}` : addr
-  }
-
-  console.log("WalletConnectButton render state:", { isConnected, isConnecting, address })
-
-  // Custom UI with the correct color scheme
   return (
-    <div className="flex flex-col">
-      {isConnected ? (
-        <Button
-          variant={variant}
-          size={size}
-          onClick={handleDisconnect}
-          className={`bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90 ${className}`}
-        >
-          <Wallet className="mr-2 h-4 w-4" />
-          {address ? formatAddress(address) : "Disconnect"}
+    <div className="flex flex-col gap-2">
+      <Button
+        onClick={handleConnect}
+        disabled={isConnecting}
+        className={isConnected ? "bg-red-600 hover:bg-red-700" : "bg-[#ffc72d] hover:bg-[#e6b328] text-black"}
+      >
+        {isConnecting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Connecting...
+          </>
+        ) : isConnected ? (
+          "Disconnect Wallet"
+        ) : (
+          <>
+            <Wallet className="mr-2 h-4 w-4" />
+            Connect Wallet
+          </>
+        )}
+      </Button>
+
+      {showBypass && !isConnected && (
+        <Button variant="ghost" size="sm" onClick={handleBypass} className="text-xs text-zinc-500">
+          Continue in Demo Mode
         </Button>
-      ) : (
-        <Button
-          variant={variant}
-          size={size}
-          onClick={handleConnect}
-          disabled={isConnecting}
-          className={`bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90 ${className}`}
-        >
-          {isConnecting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Connecting...
-            </>
-          ) : (
-            <>
-              <Wallet className="mr-2 h-4 w-4" />
-              Connect Wallet
-            </>
-          )}
-        </Button>
-      )}
-      {isSimulated && isConnected && (
-        <div className="flex items-center justify-center mt-2 text-xs text-amber-400">
-          <AlertCircle className="h-3 w-3 mr-1" />
-          Test Mode: Simulated Wallet
-        </div>
       )}
     </div>
   )

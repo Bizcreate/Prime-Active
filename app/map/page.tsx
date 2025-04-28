@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AppShell } from "@/components/app-shell"
 
 // Mock data for active users at locations
 const activeUsers = [
@@ -147,7 +148,7 @@ export default function MapPage() {
         })
 
   return (
-    <div className="flex min-h-screen flex-col bg-black pb-20">
+    <AppShell>
       <div className="relative">
         {/* Header */}
         <div className="p-4 pb-0">
@@ -510,6 +511,6 @@ export default function MapPage() {
       </div>
 
       <TabBar activeTab="map" />
-    </div>
+    </AppShell>
   )
 }

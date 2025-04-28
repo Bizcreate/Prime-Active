@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { TabBar } from "@/components/tab-bar"
+import { AppShell } from "@/components/app-shell"
 import {
   ArrowLeft,
   Calendar,
@@ -17,6 +18,7 @@ import {
   CalendarDays,
   CalendarClock,
   X,
+  Trophy,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -33,6 +35,8 @@ import {
   isSameDay,
   isToday,
 } from "date-fns"
+import { useSearchParams } from "next/navigation"
+import { activityIntegrationService, type IntegratedActivity } from "@/services/activity-integration-service"
 
 export default function EventsCalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -43,6 +47,9 @@ export default function EventsCalendarPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [events, setEvents] = useState<any[]>([])
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
+  const [eventActivities, setEventActivities] = useState<Record<string, IntegratedActivity[]>>({})
+  const searchParams = useSearchParams()
+  const highlightEventId = searchParams.get("highlight")
 
   // Generate calendar days
   const monthStart = startOfMonth(currentDate)
@@ -61,7 +68,7 @@ export default function EventsCalendarPage() {
           endDate: new Date(2023, 9, 15, 16, 0),
           location: "Venice Beach Boardwalk",
           category: "skate",
-          image: "/placeholder.svg?height=200&width=400&query=group+skateboarding+at+beach",
+          image: "/beach-skate-session.png",
           attendees: 24,
           maxAttendees: 30,
           isAttending: true,
@@ -76,7 +83,7 @@ export default function EventsCalendarPage() {
           endDate: new Date(2023, 9, 18, 9, 0),
           location: "Malibu Surfrider Beach",
           category: "surf",
-          image: "/placeholder.svg?height=200&width=400&query=surfers+at+dawn",
+          image: "/dawn-patrol.png",
           attendees: 12,
           maxAttendees: 15,
           isAttending: false,
@@ -92,7 +99,7 @@ export default function EventsCalendarPage() {
           endDate: new Date(2023, 9, 23, 18, 0),
           location: "Big Bear Mountain",
           category: "snow",
-          image: "/placeholder.svg?height=200&width=400&query=snowboarding+in+powder",
+          image: "/powder-day-shred.png",
           attendees: 18,
           maxAttendees: 20,
           isAttending: true,
@@ -107,7 +114,7 @@ export default function EventsCalendarPage() {
           endDate: new Date(2023, 9, 28, 18, 0),
           location: "Downtown Skate Park",
           category: "skate",
-          image: "/placeholder.svg?height=200&width=400&query=skate+competition",
+          image: "/downtown-skate-showdown.png",
           attendees: 45,
           maxAttendees: 50,
           isAttending: false,
@@ -122,7 +129,7 @@ export default function EventsCalendarPage() {
           endDate: new Date(2023, 9, 10, 17, 0),
           location: "Prime Mates HQ",
           category: "workshop",
-          image: "/placeholder.svg?height=200&width=400&query=skateboard+maintenance+workshop",
+          image: "/skateboard-workshop-in-action.png",
           attendees: 15,
           maxAttendees: 20,
           isAttending: true,
@@ -132,9 +139,33 @@ export default function EventsCalendarPage() {
       ]
 
       setEvents(mockEvents)
+
+      // If there's a highlighted event, select it
+      if (highlightEventId) {
+        const highlightedEvent = mockEvents.find((event) => event.id === highlightEventId)
+        if (highlightedEvent) {
+          setSelectedEvent(highlightedEvent)
+          // If in calendar view, select the date of the highlighted event
+          if (viewMode === "calendar") {
+            setSelectedDate(new Date(highlightedEvent.date))
+            setCurrentDate(new Date(highlightedEvent.date))
+          }
+        }
+      }
+
+      // Load activities for each event
+      const activities = activityIntegrationService.getIntegratedActivities()
+      const eventActivitiesMap: Record<string, IntegratedActivity[]> = {}
+
+      mockEvents.forEach((event) => {
+        const eventActivities = activities.filter((activity) => activity.eventId === event.id)
+        eventActivitiesMap[event.id] = eventActivities
+      })
+
+      setEventActivities(eventActivitiesMap)
       setIsLoading(false)
     }, 1000)
-  }, [])
+  }, [highlightEventId])
 
   // Get events for selected date
   const eventsForSelectedDate = events.filter((event) => isSameDay(event.date, selectedDate))
@@ -176,8 +207,16 @@ export default function EventsCalendarPage() {
     },
   }
 
+  // Get total rewards earned from an event
+  const getEventRewards = (eventId: string) => {
+    const activities = eventActivities[eventId] || []
+    return activities.reduce((total, activity) => {
+      return total + (activity.rewardAmount || 0)
+    }, 0)
+  }
+
   return (
-    <main className="flex min-h-screen flex-col bg-black pb-20">
+    <AppShell>
       <div className="p-6">
         <div className="flex items-center mb-6">
           <Link href="/dashboard">
@@ -424,10 +463,21 @@ export default function EventsCalendarPage() {
                             </span>
                           </div>
                           <div className="flex items-center gap-1 bg-primary/20 px-2 py-1 rounded-full">
-                            <Image src="/banana-icon.png" alt="Banana Points" width={12} height={12} />
-                            <span className="text-xs text-primary">{event.bananaPoints} points</span>
+                            <Image src="/shaka-coin.png" alt="Shaka tokens" width={12} height={12} />
+                            <span className="text-xs text-primary">{event.bananaPoints} Shaka tokens</span>
                           </div>
                         </div>
+
+                        {/* Show earned rewards if any */}
+                        {eventActivities[event.id] && eventActivities[event.id].length > 0 && (
+                          <div className="flex items-center gap-2 mb-3 bg-green-900/20 p-2 rounded-md">
+                            <Trophy className="h-4 w-4 text-green-500" />
+                            <span className="text-xs text-green-500">
+                              You've earned {getEventRewards(event.id)} tokens from this event
+                            </span>
+                          </div>
+                        )}
+
                         <Button className="w-full" variant={event.isAttending ? "outline" : "default"}>
                           {event.isAttending ? "I'm Going" : "RSVP"}
                         </Button>
@@ -466,7 +516,9 @@ export default function EventsCalendarPage() {
                 .map((event) => (
                   <motion.div
                     key={event.id}
-                    className="bg-zinc-900 rounded-lg overflow-hidden"
+                    className={`bg-zinc-900 rounded-lg overflow-hidden ${
+                      highlightEventId === event.id ? "ring-2 ring-primary" : ""
+                    }`}
                     variants={itemVariants}
                     onClick={() => setSelectedEvent(event)}
                   >
@@ -514,10 +566,21 @@ export default function EventsCalendarPage() {
                           </span>
                         </div>
                         <div className="flex items-center gap-1 bg-primary/20 px-2 py-1 rounded-full">
-                          <Image src="/banana-icon.png" alt="Banana Points" width={12} height={12} />
-                          <span className="text-xs text-primary">{event.bananaPoints} points</span>
+                          <Image src="/shaka-coin.png" alt="Shaka tokens" width={12} height={12} />
+                          <span className="text-xs text-primary">{event.bananaPoints} Shaka tokens</span>
                         </div>
                       </div>
+
+                      {/* Show earned rewards if any */}
+                      {eventActivities[event.id] && eventActivities[event.id].length > 0 && (
+                        <div className="flex items-center gap-2 mb-3 bg-green-900/20 p-2 rounded-md">
+                          <Trophy className="h-4 w-4 text-green-500" />
+                          <span className="text-xs text-green-500">
+                            You've earned {getEventRewards(event.id)} tokens from this event
+                          </span>
+                        </div>
+                      )}
+
                       <Button className="w-full" variant={event.isAttending ? "outline" : "default"}>
                         {event.isAttending ? "I'm Going" : "RSVP"}
                       </Button>
@@ -534,14 +597,23 @@ export default function EventsCalendarPage() {
             Create Event
           </Button>
         </div>
+
+        <div className="mt-4">
+          <Link href="/activity-rewards">
+            <Button variant="outline" className="w-full flex items-center gap-2">
+              <Trophy className="h-4 w-4" />
+              View Activity Rewards
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Event detail modal */}
       <AnimatePresence>
         {selectedEvent && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-50">
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-50 overflow-y-auto">
             <motion.div
-              className="bg-zinc-900 rounded-lg max-w-md w-full overflow-hidden"
+              className="bg-zinc-900 rounded-lg max-w-md w-full overflow-hidden my-6"
               variants={modalVariants}
               initial="hidden"
               animate="show"
@@ -583,7 +655,7 @@ export default function EventsCalendarPage() {
                 </div>
               </div>
 
-              <div className="p-6">
+              <div className="p-6 overflow-y-auto max-h-[70vh]">
                 <h2 className="text-xl font-bold mb-2">{selectedEvent.title}</h2>
                 <p className="text-zinc-400 mb-4">{selectedEvent.description}</p>
 
@@ -622,10 +694,38 @@ export default function EventsCalendarPage() {
                     <Star className="h-5 w-5 text-primary" />
                     <div>
                       <p className="text-sm font-medium">Rewards</p>
-                      <p className="text-xs text-zinc-400">{selectedEvent.bananaPoints} banana points for attending</p>
+                      <p className="text-xs text-zinc-400">{selectedEvent.bananaPoints} Shaka tokens for attending</p>
                     </div>
                   </div>
                 </div>
+
+                {/* Show activity history for this event if any */}
+                {eventActivities[selectedEvent.id] && eventActivities[selectedEvent.id].length > 0 && (
+                  <div className="mb-4 bg-zinc-800 p-3 rounded-lg">
+                    <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-primary" />
+                      Your Activity History
+                    </h3>
+                    <div className="space-y-2">
+                      {eventActivities[selectedEvent.id].map((activity) => (
+                        <div key={activity.id} className="text-xs border-l-2 border-primary pl-2">
+                          <p className="font-medium">{activity.title}</p>
+                          <p className="text-zinc-400">{activity.description}</p>
+                          <div className="flex justify-between mt-1">
+                            <span className="text-zinc-500">{format(new Date(activity.timestamp), "MMM d, yyyy")}</span>
+                            {activity.rewardAmount && (
+                              <span className="text-primary">+{activity.rewardAmount} tokens</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-zinc-700 flex justify-between items-center">
+                      <span className="text-xs">Total Earned:</span>
+                      <span className="text-sm font-bold text-primary">{getEventRewards(selectedEvent.id)} tokens</span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-3">
                   <Button className="flex-1" variant={selectedEvent.isAttending ? "outline" : "default"}>
@@ -635,6 +735,13 @@ export default function EventsCalendarPage() {
                     Share
                   </Button>
                 </div>
+
+                <Link href="/activity-rewards" className="block mt-4">
+                  <Button variant="ghost" className="w-full text-xs flex items-center justify-center gap-2">
+                    <Trophy className="h-4 w-4" />
+                    View All Activity Rewards
+                  </Button>
+                </Link>
               </div>
             </motion.div>
           </div>
@@ -642,6 +749,6 @@ export default function EventsCalendarPage() {
       </AnimatePresence>
 
       <TabBar activeTab="events" />
-    </main>
+    </AppShell>
   )
 }

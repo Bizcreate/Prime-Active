@@ -151,18 +151,26 @@ export default function MerchandiseDetailPage() {
       setShowAddedToCart(false)
     }, 3000)
 
-    // Navigate to checkout
-    router.push("/merch/checkout")
+    // Navigate to cart page
+    router.push("/merchandise/cart")
   }
 
   // Handle buy now
   const handleBuyNow = async () => {
     await handleAddToCart()
+    // Navigate directly to checkout
+    router.push("/merchandise/checkout")
   }
 
   // Toggle wishlist
   const handleToggleWishlist = () => {
     setIsWishlisted(!isWishlisted)
+  }
+
+  // Handle selecting a variant
+  const handleSelectVariant = (variantName: string) => {
+    console.log("Selecting variant:", variantName)
+    setSelectedVariant(variantName)
   }
 
   if (isLoading) {
@@ -304,7 +312,7 @@ export default function MerchandiseDetailPage() {
                   variant={selectedVariant === variant.name ? "default" : "outline"}
                   size="sm"
                   disabled={!variant.inStock}
-                  onClick={() => setSelectedVariant(variant.name)}
+                  onClick={() => handleSelectVariant(variant.name)}
                   className={`${!variant.inStock ? "opacity-50" : ""} min-w-[3rem]`}
                 >
                   {variant.name} {!variant.inStock && "(Out of Stock)"}

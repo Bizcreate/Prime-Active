@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useActivityTypes } from "@/services/activity-types-service"
 import { useActivityTemplates } from "@/services/activity-templates-service"
-import { ArrowLeft, Plus } from "lucide-react"
+import { ArrowLeft, Plus, Activity, Footprints, Bike, Snowflake, Skull, WavesIcon as Wave } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
@@ -65,11 +65,6 @@ export default function StartActivityPage() {
   }, [searchParams, getTemplateById])
 
   // Use the template when selectedTemplateId changes
-  // useEffect(() => {
-  //   if (selectedTemplateId) {
-  //     useTemplate(selectedTemplateId)
-  //   }
-  // }, [selectedTemplateId, useTemplate])
   useTemplate(selectedTemplateId || undefined)
 
   // Fetch available merchandise
@@ -122,6 +117,27 @@ export default function StartActivityPage() {
     return type ? type.name : "Unknown"
   }
 
+  // Get activity icon based on type
+  const getActivityIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case "running":
+        return <Activity className="h-6 w-6" />
+      case "walking":
+        return <Footprints className="h-6 w-6" />
+      case "cycling":
+      case "biking":
+        return <Bike className="h-6 w-6" />
+      case "snowboarding":
+        return <Snowflake className="h-6 w-6" />
+      case "skateboarding":
+        return <Skull className="h-6 w-6" />
+      case "surfing":
+        return <Wave className="h-6 w-6" />
+      default:
+        return <Activity className="h-6 w-6" />
+    }
+  }
+
   // Group activity types by category
   const groupedTypes = activityTypes.reduce(
     (acc, type) => {
@@ -143,6 +159,16 @@ export default function StartActivityPage() {
     // Don't update mostUsedTemplates here to avoid the infinite loop
   }, [])
 
+  // Get popular activity types
+  const popularActivityTypes = [
+    { id: "running", name: "Running" },
+    { id: "walking", name: "Walking" },
+    { id: "skateboarding", name: "Skateboarding" },
+    { id: "snowboarding", name: "Snowboarding" },
+    { id: "surfing", name: "Surfing" },
+    { id: "cycling", name: "Biking" },
+  ]
+
   return (
     <AppShell>
       <div className="min-h-screen bg-black p-6 pb-20">
@@ -161,11 +187,37 @@ export default function StartActivityPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            <Tabs defaultValue="types">
-              <TabsList className="grid grid-cols-2 mb-6">
-                <TabsTrigger value="types">Activity Types</TabsTrigger>
+            <Tabs defaultValue="popular">
+              <TabsList className="grid grid-cols-3 mb-6">
+                <TabsTrigger value="popular">Popular</TabsTrigger>
+                <TabsTrigger value="types">All Types</TabsTrigger>
                 <TabsTrigger value="templates">Templates</TabsTrigger>
               </TabsList>
+
+              <TabsContent value="popular">
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  {popularActivityTypes.map((type) => (
+                    <Card
+                      key={type.id}
+                      className={`bg-zinc-900 border-zinc-800 cursor-pointer transition-colors ${
+                        selectedType === type.id ? "border-primary" : ""
+                      }`}
+                      onClick={() => setSelectedType(type.id)}
+                    >
+                      <CardContent className="p-4 flex flex-col items-center justify-center h-24">
+                        <div
+                          className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
+                            selectedType === type.id ? "bg-primary text-black" : "bg-zinc-800"
+                          }`}
+                        >
+                          {getActivityIcon(type.id)}
+                        </div>
+                        <span className="text-sm font-medium">{type.name}</span>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
 
               <TabsContent value="types">
                 <div className="space-y-6">
@@ -294,9 +346,9 @@ export default function StartActivityPage() {
               </TabsContent>
             </Tabs>
 
-            {/* Wearable Merchandise Section */}
-            {availableMerchandise.length > 0 && (
-              <div className="mt-8 mb-4">
+            {/* Wearable Merchandise Section - Only show if there's merchandise and an activity is selected */}
+            {availableMerchandise.length > 0 && selectedType && (
+              <div className="mt-4 mb-4">
                 <h2 className="text-lg font-semibold mb-3">Wear Your Gear</h2>
                 <p className="text-sm text-zinc-400 mb-4">Select items to wear during this activity to earn tokens</p>
 
@@ -355,11 +407,14 @@ export default function StartActivityPage() {
               </div>
             )}
 
-            <div className="mt-8">
-              <Button className="w-full py-6 text-lg" onClick={handleStartActivity} disabled={!selectedType}>
-                Start Activity
-              </Button>
-            </div>
+            {/* Only show the start button if an activity type is selected */}
+            {selectedType && (
+              <div className="mt-4 sticky bottom-20 left-0 right-0 z-10">
+                <Button className="w-full py-6 text-lg" onClick={handleStartActivity}>
+                  Start {getActivityTypeName(selectedType)}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

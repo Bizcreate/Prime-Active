@@ -1,177 +1,169 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Slider } from "@/components/ui/slider"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import {
-  Activity,
-  Server,
-  Cpu,
-  HardDrive,
-  Clock,
-  Upload,
-  Download,
-  Coins,
-  Play,
-  Pause,
-  RefreshCw,
-  LinkIcon,
-} from "lucide-react"
 import { dePINManager } from "@/services/depin-manager"
-import type { IoTeXService } from "@/services/iotex-service"
-import type { W3bStreamNodeStatus, W3bStreamReward } from "@/services/w3bstream-service"
 import { useToast } from "@/hooks/use-toast"
+import { Loader2, Power, PowerOff, RefreshCw, Info } from "lucide-react"
 import Image from "next/image"
 
-export function IoTeXNodeManager() {
-  const { toast } = useToast()
-  const [iotexService, setIotexService] = useState<IoTeXService | null>(null)
-  const [isNodeActive, setIsNodeActive] = useState(false)
-  const [nodeStatus, setNodeStatus] = useState<W3bStreamNodeStatus | null>(null)
-  const [rewards, setRewards] = useState<W3bStreamReward[]>([])
-  const [totalMined, setTotalMined] = useState(0)
+interface IoTeXNodeManagerProps {
+  userId?: string
+}
+
+export function IoTeXNodeManager({ userId = "default_user" }: IoTeXNodeManagerProps) {
   const [isLoading, setIsLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("status")
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [projectDetails, setProjectDetails] = useState<{ id: string; version: string } | null>(null)
+  const [service, setService] = useState<any>(null)
+  const [nodeStatus, setNodeStatus] = useState("Inactive")
+  const [isNodeActive, setIsNodeActive] = useState(false)
+  const [passiveRate, setPassiveRate] = useState(0.5)
+  const [isStarting, setIsStarting] = useState(false)
+  const [isStopping, setIsStopping] = useState(false)
+  const [rewards, setRewards] = useState<any[]>([])
+  const [totalMined, setTotalMined] = useState(0)
+  const { toast } = useToast()
 
   useEffect(() => {
-    // Get IoTeX service from DePIN manager
-    const service = dePINManager.getService("iotex") as IoTeXService
-    if (service) {
-      setIotexService(service)
+    loadNodeData()
+  }, [userId])
 
-      // Check if node is active
-      const active = service.isNodeActive()
-      setIsNodeActive(active)
+  const loadNodeData = async () => {
+    setIsLoading(true)
+    try {
+      // Get IoTeX service
+      const iotexService = dePINManager.getServiceByNetworkId("iotex")
+      if (!iotexService) {
+        throw new Error("IoTeX service not found")
+      }
+
+      // Initialize if needed
+      if (!iotexService.isServiceEnabled()) {
+        await iotexService.enableMining(userId)
+      }
 
       // Get node status
-      const status = service.getNodeStatus()
+      const status = iotexService.getNodeStatus()
+      const active = iotexService.isNodeActive()
+      const rate = iotexService.getPassiveRate()
+      const nodeRewards = iotexService.getRewards()
+
+      setService(iotexService)
       setNodeStatus(status)
-
-      // Get rewards
-      const rewardsList = service.getRewards()
-      setRewards(rewardsList)
-
-      // Calculate total mined
-      const total = rewardsList.reduce((sum, reward) => sum + reward.amount, 0)
-      setTotalMined(total)
-
-      // Get project details
-      const details = service.getProjectDetails()
-      setProjectDetails(details)
-
-      // Sync rewards with W3bStream
-      service.syncRewardsWithW3bStream()
-    }
-
-    setIsLoading(false)
-  }, [refreshKey])
-
-  // Refresh data every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshKey((prev) => prev + 1)
-    }, 30000)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  const toggleNode = async () => {
-    if (!iotexService) return
-
-    setIsLoading(true)
-
-    try {
-      let success
-
-      if (isNodeActive) {
-        // Stop node
-        success = await iotexService.stopNode()
-        if (success) {
-          toast({
-            title: "Node stopped",
-            description: "Your IoTeX node has been stopped successfully.",
-          })
-        }
-      } else {
-        // Start node
-        success = await iotexService.startNode()
-        if (success) {
-          toast({
-            title: "Node started",
-            description: "Your IoTeX node is now mining tokens.",
-          })
-        }
-      }
-
-      if (success) {
-        setIsNodeActive(!isNodeActive)
-        // Refresh data
-        setRefreshKey((prev) => prev + 1)
-      }
+      setIsNodeActive(active)
+      setPassiveRate(rate)
+      setRewards(nodeRewards)
+      setTotalMined(nodeRewards.reduce((total, reward) => total + reward.amount, 0))
     } catch (error) {
-      console.error("Error toggling node:", error)
+      console.error("Error loading node data:", error)
       toast({
         title: "Error",
-        description: "Failed to toggle node status. Please try again.",
+        description: "Failed to load node data",
         variant: "destructive",
       })
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
-  const formatUptime = (seconds: number): string => {
-    if (seconds < 60) return `${seconds}s`
+  const handleStartNode = async () => {
+    if (!service) return
 
-    const minutes = Math.floor(seconds / 60)
-    if (minutes < 60) return `${minutes}m ${seconds % 60}s`
-
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ${minutes % 60}m`
-
-    const days = Math.floor(hours / 24)
-    return `${days}d ${hours % 24}h`
+    setIsStarting(true)
+    try {
+      const success = await service.startNode()
+      if (success) {
+        setNodeStatus("Active")
+        setIsNodeActive(true)
+        toast({
+          title: "Node Started",
+          description: "Your IoTeX node is now active and mining",
+        })
+      } else {
+        throw new Error("Failed to start node")
+      }
+    } catch (error) {
+      console.error("Error starting node:", error)
+      toast({
+        title: "Error",
+        description: "Failed to start node",
+        variant: "destructive",
+      })
+    } finally {
+      setIsStarting(false)
+    }
   }
 
-  const formatDate = (timestamp: number): string => {
+  const handleStopNode = async () => {
+    if (!service) return
+
+    setIsStopping(true)
+    try {
+      const success = await service.stopNode()
+      if (success) {
+        setNodeStatus("Inactive")
+        setIsNodeActive(false)
+        toast({
+          title: "Node Stopped",
+          description: "Your IoTeX node has been stopped",
+        })
+      } else {
+        throw new Error("Failed to stop node")
+      }
+    } catch (error) {
+      console.error("Error stopping node:", error)
+      toast({
+        title: "Error",
+        description: "Failed to stop node",
+        variant: "destructive",
+      })
+    } finally {
+      setIsStopping(false)
+    }
+  }
+
+  const handlePassiveRateChange = (value: number[]) => {
+    if (!service) return
+    const newRate = value[0]
+    setPassiveRate(newRate)
+    service.setPassiveRate(newRate)
+  }
+
+  const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString()
   }
 
-  const formatBytes = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+  const formatTxHash = (hash: string) => {
+    if (!hash) return "N/A"
+    return `${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}`
   }
 
   if (isLoading) {
     return (
       <Card className="bg-zinc-900 border-zinc-800">
-        <CardContent className="p-6 flex justify-center items-center">
-          <div className="flex flex-col items-center">
-            <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-zinc-400">Loading node data...</p>
+        <CardHeader>
+          <CardTitle>IoTeX Node Manager</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         </CardContent>
       </Card>
     )
   }
 
-  if (!iotexService) {
+  if (!service) {
     return (
       <Card className="bg-zinc-900 border-zinc-800">
-        <CardContent className="p-6">
-          <div className="text-center">
-            <p className="text-zinc-400 mb-4">IoTeX service not available</p>
-            <Button onClick={() => setRefreshKey((prev) => prev + 1)}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
+        <CardHeader>
+          <CardTitle>IoTeX Node Manager</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-zinc-400">IoTeX service not available</p>
           </div>
         </CardContent>
       </Card>
@@ -180,288 +172,137 @@ export function IoTeXNodeManager() {
 
   return (
     <Card className="bg-zinc-900 border-zinc-800">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <Image src="/iotex-logo.png" alt="IoTeX" width={32} height={32} className="rounded-full" />
-            <div>
-              <CardTitle className="text-lg">IoTeX Node</CardTitle>
-              {projectDetails && (
-                <p className="text-xs text-zinc-400">
-                  W3bStream Project: {projectDetails.id} ({projectDetails.version})
-                </p>
-              )}
-            </div>
-          </div>
-          <Badge variant={isNodeActive ? "default" : "outline"} className={isNodeActive ? "bg-green-600" : ""}>
-            {isNodeActive ? "Active" : "Inactive"}
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Image src="/iotex-logo.png" alt="IoTeX" width={24} height={24} className="h-6 w-6" />
+            IoTeX Node Manager
+          </CardTitle>
+          <Badge variant={isNodeActive ? "default" : "outline"} className="ml-2">
+            {nodeStatus}
           </Badge>
         </div>
       </CardHeader>
-
-      <CardContent className="p-4">
-        <div className="flex justify-between items-center mb-4">
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg">
           <div>
-            <p className="text-sm text-zinc-400">Total Mined</p>
-            <p className="text-2xl font-bold">{totalMined.toFixed(2)} IOTX</p>
+            <h3 className="font-medium">Node Status</h3>
+            <p className="text-sm text-zinc-400">W3bStream Connection</p>
           </div>
-          <Button
-            onClick={toggleNode}
-            variant={isNodeActive ? "destructive" : "default"}
-            disabled={isLoading}
-            className="min-w-[120px]"
-          >
-            {isNodeActive ? (
+          <div className="flex items-center">
+            <div
+              className={`w-3 h-3 rounded-full mr-2 ${isNodeActive ? "bg-green-500 animate-pulse" : "bg-zinc-500"}`}
+            ></div>
+            <span className={isNodeActive ? "text-green-500" : "text-zinc-500"}>
+              {isNodeActive ? "Online" : "Offline"}
+            </span>
+          </div>
+        </div>
+
+        <div className="p-4 bg-zinc-800 rounded-lg">
+          <div className="flex justify-between mb-2">
+            <h3 className="font-medium">Passive Mining Rate</h3>
+            <span className="text-primary font-bold">{passiveRate} IOTX/hr</span>
+          </div>
+          <Slider
+            value={[passiveRate]}
+            min={0.1}
+            max={2}
+            step={0.1}
+            onValueChange={handlePassiveRateChange}
+            disabled={!isNodeActive}
+            className="mb-2"
+          />
+          <div className="flex justify-between text-xs text-zinc-400">
+            <span>0.1 IOTX/hr</span>
+            <span>2.0 IOTX/hr</span>
+          </div>
+        </div>
+
+        <div className="p-4 bg-zinc-800 rounded-lg">
+          <div className="flex justify-between mb-2">
+            <h3 className="font-medium">Mining Summary</h3>
+            <Button variant="ghost" size="sm" className="h-7 px-2" onClick={loadNodeData}>
+              <RefreshCw className="h-3 w-3" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-zinc-900 rounded-lg">
+              <p className="text-xs text-zinc-400 mb-1">Total Mined</p>
+              <div className="flex items-center">
+                <Image src="/iotex-logo.png" alt="IOTX" width={16} height={16} className="mr-1" />
+                <span className="font-bold">{totalMined.toFixed(2)} IOTX</span>
+              </div>
+            </div>
+            <div className="p-3 bg-zinc-900 rounded-lg">
+              <p className="text-xs text-zinc-400 mb-1">Daily Estimate</p>
+              <div className="flex items-center">
+                <Image src="/iotex-logo.png" alt="IOTX" width={16} height={16} className="mr-1" />
+                <span className="font-bold">{isNodeActive ? (passiveRate * 24).toFixed(2) : "0.00"} IOTX</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {rewards.length > 0 && (
+          <div>
+            <h3 className="font-medium mb-2">Recent Rewards</h3>
+            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+              {rewards.slice(0, 5).map((reward) => (
+                <div key={reward.id} className="p-2 bg-zinc-800 rounded-lg text-xs">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-zinc-400">{formatDate(reward.timestamp)}</span>
+                    <span className="font-medium text-primary">+{reward.amount.toFixed(2)} IOTX</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">TX: {formatTxHash(reward.txHash || "")}</span>
+                    <span className="text-zinc-400">{reward.activityId ? "Activity Reward" : "Passive Mining"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="bg-blue-900/20 border border-blue-900 rounded-md p-3 flex items-start gap-2">
+          <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-blue-300">
+            <p className="mb-1">Your node contributes to the IoTeX W3bStream network while earning IOTX tokens.</p>
+            <p>Running the node helps validate activity data and secure the network.</p>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        {isNodeActive ? (
+          <Button onClick={handleStopNode} disabled={isStopping} className="w-full bg-red-600 hover:bg-red-700">
+            {isStopping ? (
               <>
-                <Pause className="h-4 w-4 mr-2" />
-                Stop Node
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Stopping...
               </>
             ) : (
               <>
-                <Play className="h-4 w-4 mr-2" />
+                <PowerOff className="mr-2 h-4 w-4" />
+                Stop Node
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button onClick={handleStartNode} disabled={isStarting} className="w-full bg-green-600 hover:bg-green-700">
+            {isStarting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Starting...
+              </>
+            ) : (
+              <>
+                <Power className="mr-2 h-4 w-4" />
                 Start Node
               </>
             )}
           </Button>
-        </div>
-
-        <Tabs defaultValue="status" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3 mb-4">
-            <TabsTrigger value="status">Status</TabsTrigger>
-            <TabsTrigger value="rewards">Rewards</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="status">
-            {nodeStatus && (
-              <div className="space-y-4">
-                {projectDetails && (
-                  <div className="bg-zinc-800 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <LinkIcon className="h-4 w-4 text-blue-400" />
-                      <p className="text-sm">W3bStream Project</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant="outline" className="bg-zinc-700">
-                        General
-                      </Badge>
-                      <Badge variant="outline" className="bg-zinc-700">
-                        Geo-location
-                      </Badge>
-                      <Badge variant="outline" className="bg-zinc-700">
-                        Energy
-                      </Badge>
-                      <Badge variant="outline" className="bg-zinc-700">
-                        Mobility
-                      </Badge>
-                      <Badge variant="outline" className="bg-zinc-700">
-                        Environmental
-                      </Badge>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-zinc-800 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="h-4 w-4 text-zinc-400" />
-                      <p className="text-sm text-zinc-400">Uptime</p>
-                    </div>
-                    <p className="text-lg font-medium">{formatUptime(nodeStatus.uptime)}</p>
-                  </div>
-
-                  <div className="bg-zinc-800 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Activity className="h-4 w-4 text-zinc-400" />
-                      <p className="text-sm text-zinc-400">Data Points</p>
-                    </div>
-                    <p className="text-lg font-medium">{nodeStatus.dataPoints.toLocaleString()}</p>
-                  </div>
-                </div>
-
-                <div className="bg-zinc-800 rounded-lg p-4">
-                  <p className="text-sm text-zinc-400 mb-3">Resource Usage</p>
-
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <div className="flex items-center gap-2">
-                          <Cpu className="h-4 w-4 text-blue-400" />
-                          <p className="text-sm">CPU</p>
-                        </div>
-                        <p className="text-sm">{nodeStatus.cpu.toFixed(1)}%</p>
-                      </div>
-                      <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${nodeStatus.cpu}%` }}></div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <div className="flex items-center gap-2">
-                          <Server className="h-4 w-4 text-purple-400" />
-                          <p className="text-sm">Memory</p>
-                        </div>
-                        <p className="text-sm">{nodeStatus.memory.toFixed(1)}%</p>
-                      </div>
-                      <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-purple-500 rounded-full"
-                          style={{ width: `${nodeStatus.memory}%` }}
-                        ></div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <div className="flex items-center gap-2">
-                          <HardDrive className="h-4 w-4 text-green-400" />
-                          <p className="text-sm">Storage</p>
-                        </div>
-                        <p className="text-sm">{nodeStatus.storage.toFixed(1)}%</p>
-                      </div>
-                      <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-green-500 rounded-full"
-                          style={{ width: `${nodeStatus.storage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-zinc-800 rounded-lg p-4">
-                  <p className="text-sm text-zinc-400 mb-3">Network</p>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-zinc-700 p-2 rounded-full">
-                        <Upload className="h-4 w-4 text-green-400" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-zinc-400">Upload</p>
-                        <p className="text-sm font-medium">{formatBytes(nodeStatus.bandwidth.up)}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="bg-zinc-700 p-2 rounded-full">
-                        <Download className="h-4 w-4 text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-zinc-400">Download</p>
-                        <p className="text-sm font-medium">{formatBytes(nodeStatus.bandwidth.down)}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-zinc-800 rounded-lg p-4">
-                  <div className="flex justify-between items-center">
-                    <p className="text-sm text-zinc-400">Last Seen</p>
-                    <p className="text-sm">{formatDate(nodeStatus.lastSeen)}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="rewards">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-zinc-400">Recent Rewards</p>
-                <Button variant="ghost" size="sm" onClick={() => setRefreshKey((prev) => prev + 1)}>
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {rewards.length === 0 ? (
-                <div className="bg-zinc-800 rounded-lg p-4 text-center">
-                  <p className="text-zinc-400">No rewards yet</p>
-                  <p className="text-xs text-zinc-500 mt-1">Start your node to begin earning IOTX</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                  {rewards
-                    .slice()
-                    .reverse()
-                    .map((reward) => (
-                      <div key={reward.id} className="bg-zinc-800 rounded-lg p-3">
-                        <div className="flex justify-between items-center mb-1">
-                          <div className="flex items-center gap-2">
-                            <Coins
-                              className={`h-4 w-4 ${reward.type === "activity" ? "text-green-400" : "text-yellow-400"}`}
-                            />
-                            <div>
-                              <p className="text-sm font-medium">{reward.amount.toFixed(4)} IOTX</p>
-                              <p className="text-xs text-zinc-400">
-                                {reward.type === "activity" ? "Activity Reward" : "Passive Mining"}
-                              </p>
-                            </div>
-                          </div>
-                          <p className="text-xs text-zinc-500">{formatDate(reward.timestamp)}</p>
-                        </div>
-                        {reward.activityId && (
-                          <p className="text-xs text-zinc-500 mt-1">
-                            Activity ID: {reward.activityId.substring(0, 8)}...
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                </div>
-              )}
-
-              <div className="bg-zinc-800 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <p className="text-sm">Mining Rate</p>
-                  <p className="text-sm font-medium">{iotexService.getPassiveRate().toFixed(4)} IOTX/min</p>
-                </div>
-                <div className="flex justify-between items-center">
-                  <p className="text-sm">Estimated Daily</p>
-                  <p className="text-sm font-medium">{(iotexService.getPassiveRate() * 60 * 24).toFixed(2)} IOTX/day</p>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <div className="space-y-4">
-              <div className="bg-zinc-800 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <p className="text-sm font-medium">Auto-start Node</p>
-                    <p className="text-xs text-zinc-400">Start node automatically when app opens</p>
-                  </div>
-                  <Switch checked={false} />
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium">Activity Notifications</p>
-                    <p className="text-xs text-zinc-400">Get notified about mining rewards</p>
-                  </div>
-                  <Switch checked={true} />
-                </div>
-              </div>
-
-              <div className="bg-zinc-800 rounded-lg p-4">
-                <p className="text-sm font-medium mb-3">Node Version</p>
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-zinc-400">W3bStream Client</p>
-                  <p className="text-sm">{nodeStatus?.version || "1.0.0"}</p>
-                </div>
-              </div>
-
-              <div className="bg-zinc-800 rounded-lg p-4">
-                <p className="text-sm font-medium mb-2">Advanced</p>
-                <Button variant="outline" size="sm" className="w-full">
-                  Reset Node Data
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
+        )}
+      </CardFooter>
     </Card>
   )
 }

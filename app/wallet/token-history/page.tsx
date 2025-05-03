@@ -1,359 +1,259 @@
 "use client"
 
-import { useState } from "react"
-import { ArrowLeft, ArrowDown, ArrowUp, ArrowLeftRight, Filter } from "lucide-react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-
-// Mock transaction data
-const TRANSACTIONS = [
-  {
-    id: "tx-001",
-    type: "staking",
-    action: "stake",
-    token: "shaka",
-    tokenName: "SHAKA",
-    icon: "/shaka-coin.png",
-    amount: 250,
-    timestamp: new Date("2023-04-28T14:32:00"),
-    status: "completed",
-  },
-  {
-    id: "tx-002",
-    type: "conversion",
-    action: "convert",
-    token: "shaka",
-    tokenName: "SHAKA",
-    toToken: "banana",
-    toTokenName: "BANANA",
-    icon: "/shaka-coin.png",
-    amount: 100,
-    receivedAmount: 500,
-    timestamp: new Date("2023-04-27T09:15:00"),
-    status: "completed",
-  },
-  {
-    id: "tx-003",
-    type: "activity",
-    action: "earn",
-    token: "prime",
-    tokenName: "PRIME",
-    icon: "/activity-token-icon.png",
-    amount: 15,
-    activity: "Mountain Biking Challenge",
-    timestamp: new Date("2023-04-26T16:45:00"),
-    status: "completed",
-  },
-  {
-    id: "tx-004",
-    type: "purchase",
-    action: "spend",
-    token: "banana",
-    tokenName: "BANANA",
-    icon: "/shaka-banana.png",
-    amount: 300,
-    item: "Exclusive Board Club NFT",
-    timestamp: new Date("2023-04-25T11:20:00"),
-    status: "completed",
-  },
-  {
-    id: "tx-005",
-    type: "reward",
-    action: "earn",
-    token: "shaka",
-    tokenName: "SHAKA",
-    icon: "/shaka-coin.png",
-    amount: 50,
-    source: "Daily Check-in",
-    timestamp: new Date("2023-04-24T08:00:00"),
-    status: "completed",
-  },
-  {
-    id: "tx-006",
-    type: "staking",
-    action: "claim",
-    token: "banana",
-    tokenName: "BANANA",
-    icon: "/shaka-banana.png",
-    amount: 45,
-    timestamp: new Date("2023-04-23T19:12:00"),
-    status: "completed",
-  },
-  {
-    id: "tx-007",
-    type: "transfer",
-    action: "send",
-    token: "shaka",
-    tokenName: "SHAKA",
-    icon: "/shaka-coin.png",
-    amount: 75,
-    recipient: "SurfMonkey123",
-    timestamp: new Date("2023-04-22T14:30:00"),
-    status: "completed",
-  },
-  {
-    id: "tx-008",
-    type: "transfer",
-    action: "receive",
-    token: "prime",
-    tokenName: "PRIME",
-    icon: "/activity-token-icon.png",
-    amount: 10,
-    sender: "BananaBoarder42",
-    timestamp: new Date("2023-04-21T10:45:00"),
-    status: "completed",
-  },
-]
+import { TabBar } from "@/components/tab-bar"
+import { ArrowLeft, Filter, Calendar, ArrowUpRight, ArrowDownLeft, Clock } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
+import { format } from "date-fns"
+import { Badge } from "@/components/ui/badge"
 
 export default function TokenHistoryPage() {
-  const [activeTab, setActiveTab] = useState("all")
-  const [filter, setFilter] = useState({
-    types: ["staking", "conversion", "activity", "purchase", "reward", "transfer"],
-    tokens: ["shaka", "banana", "prime"],
-  })
+  const [filter, setFilter] = useState("all")
+  const [isLoading, setIsLoading] = useState(true)
+  const [transactions, setTransactions] = useState<any[]>([])
 
-  const getFilteredTransactions = () => {
-    return TRANSACTIONS.filter((tx) => {
-      // Filter by transaction type
-      if (!filter.types.includes(tx.type)) return false
+  useEffect(() => {
+    // Simulate loading data
+    setTimeout(() => {
+      const mockTransactions = [
+        {
+          id: "tx1",
+          type: "earn",
+          amount: 150,
+          tokenType: "shaka",
+          description: "Earned from wearing Prime Mates T-Shirt",
+          timestamp: new Date(2023, 9, 15, 14, 30),
+          category: "wear",
+        },
+        {
+          id: "tx2",
+          type: "earn",
+          amount: 200,
+          tokenType: "shaka",
+          description: "Completed Dawn Patrol Surf challenge",
+          timestamp: new Date(2023, 9, 14, 8, 45),
+          category: "challenge",
+        },
+        {
+          id: "tx3",
+          type: "spend",
+          amount: 300,
+          tokenType: "shaka",
+          description: "Redeemed for merchandise discount",
+          timestamp: new Date(2023, 9, 12, 16, 20),
+          category: "redeem",
+        },
+        {
+          id: "tx4",
+          type: "earn",
+          amount: 50,
+          tokenType: "shaka",
+          description: "Daily login bonus",
+          timestamp: new Date(2023, 9, 12, 9, 0),
+          category: "bonus",
+        },
+        {
+          id: "tx5",
+          type: "earn",
+          amount: 75,
+          tokenType: "banana",
+          description: "Referred a friend",
+          timestamp: new Date(2023, 9, 10, 13, 15),
+          category: "referral",
+        },
+        {
+          id: "tx6",
+          type: "convert",
+          amount: 100,
+          tokenType: "shaka",
+          description: "Converted from 200 Banana Points",
+          timestamp: new Date(2023, 9, 8, 11, 30),
+          category: "convert",
+        },
+        {
+          id: "tx7",
+          type: "spend",
+          amount: 150,
+          tokenType: "shaka",
+          description: "Purchased exclusive NFT",
+          timestamp: new Date(2023, 9, 5, 19, 45),
+          category: "purchase",
+        },
+      ]
 
-      // Filter by token
-      if (!filter.tokens.includes(tx.token)) return false
+      setTransactions(mockTransactions)
+      setIsLoading(false)
+    }, 1000)
+  }, [])
 
-      // Filter by tab selection
-      if (activeTab === "all") return true
-      if (activeTab === "earned" && (tx.action === "earn" || tx.action === "claim" || tx.action === "receive"))
-        return true
-      if (
-        activeTab === "spent" &&
-        (tx.action === "spend" || tx.action === "stake" || tx.action === "send" || tx.action === "convert")
-      )
-        return true
-
-      return false
-    })
-  }
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date)
-  }
-
-  const toggleTokenFilter = (token: string) => {
-    setFilter((prev) => {
-      if (prev.tokens.includes(token)) {
-        return { ...prev, tokens: prev.tokens.filter((t) => t !== token) }
-      } else {
-        return { ...prev, tokens: [...prev.tokens, token] }
-      }
-    })
-  }
-
-  const toggleTypeFilter = (type: string) => {
-    setFilter((prev) => {
-      if (prev.types.includes(type)) {
-        return { ...prev, types: prev.types.filter((t) => t !== type) }
-      } else {
-        return { ...prev, types: [...prev.types, type] }
-      }
-    })
-  }
-
-  const getActionIcon = (tx: any) => {
-    switch (tx.action) {
-      case "earn":
-      case "claim":
-      case "receive":
-        return <ArrowDown className="h-4 w-4 text-green-500" />
-      case "spend":
-      case "stake":
-      case "send":
-        return <ArrowUp className="h-4 w-4 text-red-500" />
-      case "convert":
-        return <ArrowLeftRight className="h-4 w-4 text-blue-500" />
-      default:
-        return null
-    }
-  }
-
-  const getActionColor = (tx: any) => {
-    switch (tx.action) {
-      case "earn":
-      case "claim":
-      case "receive":
-        return "text-green-600"
-      case "spend":
-      case "stake":
-      case "send":
-        return "text-red-600"
-      case "convert":
-        return "text-blue-600"
-      default:
-        return ""
-    }
-  }
-
-  const getTransactionDescription = (tx: any) => {
-    switch (tx.type) {
-      case "staking":
-        if (tx.action === "stake") {
-          return `Staked ${tx.tokenName}`
-        } else {
-          return `Claimed ${tx.tokenName} rewards`
-        }
-      case "conversion":
-        return `Converted to ${tx.toTokenName}`
-      case "activity":
-        return tx.activity
-      case "purchase":
-        return tx.item
-      case "reward":
-        return tx.source
-      case "transfer":
-        if (tx.action === "send") {
-          return `Sent to ${tx.recipient}`
-        } else {
-          return `Received from ${tx.sender}`
-        }
-      default:
-        return ""
-    }
-  }
+  // Filter transactions based on selected filter
+  const filteredTransactions =
+    filter === "all"
+      ? transactions
+      : filter === "earn"
+        ? transactions.filter((tx) => tx.type === "earn")
+        : filter === "spend"
+          ? transactions.filter((tx) => tx.type === "spend")
+          : transactions.filter((tx) => tx.category === filter)
 
   return (
-    <div className="container max-w-md pb-16">
-      <div className="flex items-center justify-between mb-6 mt-6">
-        <div className="flex items-center">
-          <Button variant="ghost" className="p-0 mr-2" asChild>
-            <a href="/wallet">
-              <ArrowLeft className="h-6 w-6" />
-            </a>
+    <div className="flex min-h-screen flex-col bg-black pb-20">
+      <div className="p-6">
+        <div className="flex items-center mb-6">
+          <Link href="/wallet">
+            <Button variant="ghost" size="icon" className="mr-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <h1 className="text-xl font-bold">Token History</h1>
+          <Button variant="ghost" size="icon" className="ml-auto">
+            <Filter className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold">Token History</h1>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Filter by Token</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={filter.tokens.includes("shaka")}
-              onCheckedChange={() => toggleTokenFilter("shaka")}
-            >
-              SHAKA
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={filter.tokens.includes("banana")}
-              onCheckedChange={() => toggleTokenFilter("banana")}
-            >
-              BANANA
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={filter.tokens.includes("prime")}
-              onCheckedChange={() => toggleTokenFilter("prime")}
-            >
-              PRIME
-            </DropdownMenuCheckboxItem>
+        <div className="flex overflow-x-auto pb-4 gap-2 no-scrollbar">
+          <Button
+            variant={filter === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("all")}
+            className="rounded-full"
+          >
+            All
+          </Button>
+          <Button
+            variant={filter === "earn" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("earn")}
+            className="rounded-full"
+          >
+            Earned
+          </Button>
+          <Button
+            variant={filter === "spend" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("spend")}
+            className="rounded-full"
+          >
+            Spent
+          </Button>
+          <Button
+            variant={filter === "wear" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("wear")}
+            className="rounded-full"
+          >
+            Wear
+          </Button>
+          <Button
+            variant={filter === "challenge" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("challenge")}
+            className="rounded-full"
+          >
+            Challenges
+          </Button>
+        </div>
 
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>Filter by Type</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={filter.types.includes("staking")}
-              onCheckedChange={() => toggleTypeFilter("staking")}
-            >
-              Staking
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={filter.types.includes("conversion")}
-              onCheckedChange={() => toggleTypeFilter("conversion")}
-            >
-              Conversions
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={filter.types.includes("activity")}
-              onCheckedChange={() => toggleTypeFilter("activity")}
-            >
-              Activities
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={filter.types.includes("purchase")}
-              onCheckedChange={() => toggleTypeFilter("purchase")}
-            >
-              Purchases
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={filter.types.includes("reward")}
-              onCheckedChange={() => toggleTypeFilter("reward")}
-            >
-              Rewards
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={filter.types.includes("transfer")}
-              onCheckedChange={() => toggleTypeFilter("transfer")}
-            >
-              Transfers
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="earned">Earned</TabsTrigger>
-          <TabsTrigger value="spent">Spent</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div className="space-y-3">
-        {getFilteredTransactions().length > 0 ? (
-          getFilteredTransactions().map((tx) => (
-            <Card key={tx.id} className="p-4">
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mr-3">
-                  <img src={tx.icon || "/placeholder.svg"} alt={tx.tokenName} className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium">{tx.type.charAt(0).toUpperCase() + tx.type.slice(1)}</div>
-                      <div className="text-xs text-muted-foreground">{getTransactionDescription(tx)}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`font-bold flex items-center ${getActionColor(tx)}`}>
-                        {getActionIcon(tx)}
-                        {tx.action === "convert" ? `${tx.amount} → ${tx.receivedAmount}` : tx.amount.toFixed(2)}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-zinc-400">Loading transaction history...</p>
+          </div>
+        ) : filteredTransactions.length === 0 ? (
+          <div className="bg-zinc-900 rounded-lg p-6 text-center">
+            <Calendar className="h-12 w-12 mx-auto mb-3 text-zinc-700" />
+            <h3 className="text-lg font-bold mb-2">No Transactions</h3>
+            <p className="text-zinc-400 text-sm mb-4">There are no transactions matching your filters</p>
+            <Button onClick={() => setFilter("all")}>Show All Transactions</Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredTransactions.map((tx) => (
+              <div key={tx.id} className="bg-zinc-900 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`p-2 rounded-full ${
+                      tx.type === "earn"
+                        ? "bg-green-900/30 text-green-500"
+                        : tx.type === "spend"
+                          ? "bg-red-900/30 text-red-500"
+                          : "bg-blue-900/30 text-blue-500"
+                    }`}
+                  >
+                    {tx.type === "earn" ? (
+                      <ArrowDownLeft className="h-5 w-5" />
+                    ) : tx.type === "spend" ? (
+                      <ArrowUpRight className="h-5 w-5" />
+                    ) : (
+                      <ArrowUpRight className="h-5 w-5" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium">{tx.description}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Clock className="h-3 w-3 text-zinc-500" />
+                          <span className="text-xs text-zinc-500">{format(tx.timestamp, "MMM d, yyyy • h:mm a")}</span>
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">{formatDate(tx.timestamp)}</div>
+                      <div className="flex flex-col items-end">
+                        <span
+                          className={`font-bold ${
+                            tx.type === "earn"
+                              ? "text-green-500"
+                              : tx.type === "spend"
+                                ? "text-red-500"
+                                : "text-blue-500"
+                          }`}
+                        >
+                          {tx.type === "earn" ? "+" : "-"}
+                          {tx.amount}
+                        </span>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Image
+                            src={tx.tokenType === "shaka" ? "/shaka-coin.png" : "/banana-icon.png"}
+                            alt={tx.tokenType}
+                            width={12}
+                            height={12}
+                          />
+                          <span className="text-xs text-zinc-500">
+                            {tx.tokenType === "shaka" ? "SHAKA" : "Banana Points"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          tx.category === "wear"
+                            ? "border-blue-500 text-blue-500"
+                            : tx.category === "challenge"
+                              ? "border-purple-500 text-purple-500"
+                              : tx.category === "redeem"
+                                ? "border-amber-500 text-amber-500"
+                                : tx.category === "bonus"
+                                  ? "border-green-500 text-green-500"
+                                  : tx.category === "referral"
+                                    ? "border-pink-500 text-pink-500"
+                                    : "border-blue-500 text-blue-500"
+                        }`}
+                      >
+                        {tx.category.charAt(0).toUpperCase() + tx.category.slice(1)}
+                      </Badge>
                     </div>
                   </div>
                 </div>
               </div>
-            </Card>
-          ))
-        ) : (
-          <div className="text-center py-10 text-muted-foreground">No transactions match your filters</div>
+            ))}
+          </div>
         )}
       </div>
+
+      <TabBar activeTab="wallet" />
     </div>
   )
 }

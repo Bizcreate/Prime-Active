@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { submitActivityToDePINNetworks } from "./depin-integration"
+import { useToast } from "@/hooks/use-toast"
 
 // Activity tracking types
 export type ActivityType = "walking" | "running" | "cycling" | "skateboarding" | "surfing" | "snowboarding"
@@ -10,6 +12,8 @@ export interface Location {
   longitude: number
   accuracy?: number
   timestamp: number
+  altitude?: number
+  speed?: number
 }
 
 export interface ActivitySession {
@@ -33,6 +37,7 @@ export interface ActivityStats {
 
 // Hook for activity tracking
 export function useActivityTracking() {
+  const { toast } = useToast()
   const [isTracking, setIsTracking] = useState(false)
   const [currentActivity, setCurrentActivity] = useState<ActivitySession | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -46,6 +51,8 @@ export function useActivityTracking() {
   })
   const [watchId, setWatchId] = useState<number | null>(null)
   const [debug, setDebug] = useState<string[]>([])
+  const [userId, setUserId] = useState<string | null>("anonymous") // Example: Initialize userId state
+  const [depinSubmissionEnabled, setDepinSubmissionEnabled] = useState(true)
 
   // Add debug logging
   const addDebugLog = (message: string) => {
@@ -309,6 +316,27 @@ export function useActivityTracking() {
         })}`,
       )
 
+      // After activity is completed:
+      if (completedActivity && depinSubmissionEnabled) {
+        // Submit to DePIN networks if enabled
+        submitActivityToDePINNetworks(completedActivity, userId || "anonymous")
+          .then((results) => {
+            console.log("DePIN submission results:", results)
+
+            // Show notification if any submissions were successful
+            const successCount = Array.from(results.values()).filter(Boolean).length
+            if (successCount > 0) {
+              toast({
+                title: "DePIN Rewards",
+                description: `Activity data submitted to ${successCount} DePIN networks. Check your wallet for rewards.`,
+              })
+            }
+          })
+          .catch((error) => {
+            console.error("Error submitting to DePIN networks:", error)
+          })
+      }
+
       // Reset state
       setIsTracking(false)
       setCurrentActivity(null)
@@ -329,6 +357,8 @@ export function useActivityTracking() {
       longitude: position.coords.longitude,
       accuracy: position.coords.accuracy,
       timestamp: position.timestamp,
+      altitude: position.coords.altitude || undefined,
+      speed: position.coords.speed || undefined,
     }
 
     addDebugLog(`Position update: ${newLocation.latitude}, ${newLocation.longitude}`)
@@ -435,6 +465,8 @@ export function useActivityTracking() {
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
             timestamp: position.timestamp,
+            altitude: position.coords.altitude || undefined,
+            speed: position.coords.speed || undefined,
           })
         },
         (error) => {
@@ -641,6 +673,12 @@ export function useActivityTracking() {
     }
   }
 
+  // Toggle DePIN submission
+  const toggleDepinSubmission = (enabled: boolean): void => {
+    setDepinSubmissionEnabled(enabled)
+    addDebugLog(`DePIN submission ${enabled ? "enabled" : "disabled"}`)
+  }
+
   // Helper functions
   const generateId = (): string => {
     return Date.now().toString(36) + Math.random().toString(36).substring(2)
@@ -698,6 +736,8 @@ export function useActivityTracking() {
     startActivity,
     stopActivity,
     requestLocationPermission,
+    toggleDepinSubmission,
+    depinSubmissionEnabled,
     debug, // Expose debug logs
   }
 }

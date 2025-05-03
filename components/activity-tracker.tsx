@@ -5,8 +5,23 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { CircularProgress } from "@/components/circular-progress"
 import { useActivityTracking, type ActivityType } from "@/services/activity-tracking"
-import { MapPin, Clock, Flame, Activity, Play, Pause, AlertTriangle, Bug } from "lucide-react"
+import {
+  MapPin,
+  Clock,
+  Flame,
+  Activity,
+  Play,
+  Pause,
+  AlertTriangle,
+  Bug,
+  Coins,
+  ToggleLeft,
+  ToggleRight,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
+import { dePINManager } from "@/services/depin-manager"
+import { Badge } from "@/components/ui/badge"
+import Image from "next/image"
 
 interface ActivityTrackerProps {
   defaultActivityType?: ActivityType
@@ -18,6 +33,8 @@ export function ActivityTracker({ defaultActivityType = "walking" }: ActivityTra
   const [elapsedTime, setElapsedTime] = useState(0)
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timeout | null>(null)
   const [showDebug, setShowDebug] = useState(false)
+  const [showDePIN, setShowDePIN] = useState(false)
+  const [depinNetworks, setDepinNetworks] = useState<any[]>([])
 
   const {
     isTracking,
@@ -28,8 +45,17 @@ export function ActivityTracker({ defaultActivityType = "walking" }: ActivityTra
     startActivity,
     stopActivity,
     requestLocationPermission,
+    toggleDepinSubmission,
+    depinSubmissionEnabled,
     debug,
   } = useActivityTracking()
+
+  // Load DePIN networks
+  useEffect(() => {
+    const networks = dePINManager.getAllServices()
+    const enabledNetworks = networks.filter((network) => network.isNetworkEnabled())
+    setDepinNetworks(enabledNetworks)
+  }, [])
 
   // Format time as MM:SS
   const formatTime = (seconds: number): string => {
@@ -119,11 +145,66 @@ export function ActivityTracker({ defaultActivityType = "walking" }: ActivityTra
               strokeWidth={5}
               className={isTracking ? "animate-pulse-slow" : ""}
             />
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowDebug(!showDebug)}>
-              <Bug className="h-4 w-4" />
-            </Button>
+            <div className="flex flex-col gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowDebug(!showDebug)}>
+                <Bug className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowDePIN(!showDePIN)}>
+                <Coins className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
+
+        {showDePIN && (
+          <div className="mb-4 bg-zinc-800 rounded-lg p-3">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-sm font-medium">DePIN Mining</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2"
+                onClick={() => toggleDepinSubmission(!depinSubmissionEnabled)}
+              >
+                {depinSubmissionEnabled ? (
+                  <ToggleRight className="h-4 w-4 text-green-500" />
+                ) : (
+                  <ToggleLeft className="h-4 w-4 text-zinc-500" />
+                )}
+              </Button>
+            </div>
+
+            {depinNetworks.length === 0 ? (
+              <p className="text-xs text-zinc-400">No active DePIN networks</p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-zinc-400 mb-1">
+                  {depinSubmissionEnabled
+                    ? "Activity data will be submitted to these networks:"
+                    : "Activity data will NOT be submitted to DePIN networks"}
+                </p>
+
+                {depinSubmissionEnabled && (
+                  <div className="flex flex-wrap gap-2">
+                    {depinNetworks.map((network) => (
+                      <Badge key={network.getNetwork().id} variant="outline" className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded-full overflow-hidden">
+                          <Image
+                            src={network.getNetwork().logoUrl || "/placeholder.svg"}
+                            alt={network.getNetwork().name}
+                            width={12}
+                            height={12}
+                          />
+                        </div>
+                        <span className="text-xs">{network.getNetwork().name}</span>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="flex items-center gap-3">
@@ -166,6 +247,7 @@ export function ActivityTracker({ defaultActivityType = "walking" }: ActivityTra
               <p>Permission: {permissionStatus || "unknown"}</p>
               <p>Tracking: {isTracking ? "yes" : "no"}</p>
               <p>Activity: {currentActivity?.type || "none"}</p>
+              <p>DePIN Mining: {depinSubmissionEnabled ? "enabled" : "disabled"}</p>
               <div className="mt-1 border-t border-zinc-800 pt-1">
                 {debug.map((log, i) => (
                   <p key={i} className="text-[10px] text-zinc-400">

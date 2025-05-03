@@ -58,15 +58,16 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
     "zod": "^3.24.1",
-    "ethers": "latest",
-    "@thirdweb-dev/sdk": "latest",
     "@emotion/is-prop-valid": "latest",
     "@tanstack/react-query": "latest",
     "viem": "latest",
-    "@thirdweb-dev/react": "latest",
+    "ethers": "latest",
+    "@thirdweb-dev/sdk": "latest",
     "framer-motion": "latest",
     "canvas-confetti": "latest",
-    "wagmi": "latest"
+    "wagmi": "latest",
+    "@thirdweb-dev/react": "latest",
+    "web3": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

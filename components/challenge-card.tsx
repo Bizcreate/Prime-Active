@@ -1,6 +1,10 @@
+"use client"
+
+import { useState } from "react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Trophy } from "lucide-react"
+import { Trophy, Check } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 interface ChallengeCardProps {
   title: string
@@ -11,6 +15,18 @@ interface ChallengeCardProps {
 }
 
 export function ChallengeCard({ title, description, reward, timeLeft, sponsored }: ChallengeCardProps) {
+  const { toast } = useToast()
+  const [joined, setJoined] = useState(false)
+
+  const handleJoinChallenge = () => {
+    setJoined(true)
+    toast({
+      title: "Challenge Joined!",
+      description: `You've successfully joined the ${title} challenge.`,
+      duration: 3000,
+    })
+  }
+
   return (
     <Card className="bg-zinc-900 border-zinc-800">
       <CardContent className="p-4 pt-5">
@@ -28,7 +44,16 @@ export function ChallengeCard({ title, description, reward, timeLeft, sponsored 
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full">Join Challenge</Button>
+        <Button className="w-full" onClick={handleJoinChallenge} disabled={joined}>
+          {joined ? (
+            <span className="flex items-center gap-1">
+              <Check className="h-4 w-4" />
+              Joined
+            </span>
+          ) : (
+            "Join Challenge"
+          )}
+        </Button>
       </CardFooter>
     </Card>
   )

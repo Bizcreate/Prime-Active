@@ -1,16 +1,13 @@
 "use client"
 
-import { useAddress, useDisconnect, useConnectionStatus, useWallet } from "@thirdweb-dev/react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Wallet, ExternalLink, Copy, LogOut } from "lucide-react"
-import { useState } from "react"
 
 export function ThirdwebWallet() {
-  const address = useAddress()
-  const connectionStatus = useConnectionStatus()
-  const disconnect = useDisconnect()
-  const wallet = useWallet()
+  const [address, setAddress] = useState<string | null>("0x1234...5678") // Simulated address
+  const [connectionStatus, setConnectionStatus] = useState<string>("connected")
   const [copied, setCopied] = useState(false)
 
   const copyAddress = () => {
@@ -32,6 +29,11 @@ export function ThirdwebWallet() {
     }
   }
 
+  const disconnect = () => {
+    setAddress(null)
+    setConnectionStatus("disconnected")
+  }
+
   if (connectionStatus !== "connected" || !address) {
     return null
   }
@@ -49,7 +51,7 @@ export function ThirdwebWallet() {
           <div className="bg-zinc-800 p-3 rounded-full mb-3">
             <Wallet className="h-8 w-8 text-primary" />
           </div>
-          <p className="font-medium">{wallet?.getMeta().name || "Web3 Wallet"}</p>
+          <p className="font-medium">Web3 Wallet</p>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-sm text-zinc-400">{formatAddress(address)}</p>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={copyAddress}>

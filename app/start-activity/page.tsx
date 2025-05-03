@@ -5,10 +5,26 @@ import { AppShell } from "@/components/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { useActivityTypes } from "@/services/activity-types-service"
 import { useActivityTemplates } from "@/services/activity-templates-service"
-import { ArrowLeft, Plus, Activity, Footprints, Bike, Snowflake, Skull, WavesIcon as Wave } from "lucide-react"
+import {
+  ArrowLeft,
+  Plus,
+  Activity,
+  Footprints,
+  Bike,
+  Snowflake,
+  Skull,
+  WavesIcon as Wave,
+  Coins,
+  Info,
+} from "lucide-react"
+import { ActivityTracker } from "@/components/activity-tracker"
+import { dePINManager } from "@/services/depin-manager"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { merchandiseWearService, type ConnectedMerchandise } from "@/services/merchandise-wear-service"
@@ -32,6 +48,8 @@ export default function StartActivityPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null)
   const [availableMerchandise, setAvailableMerchandise] = useState<ConnectedMerchandise[]>([])
   const [selectedMerchandise, setSelectedMerchandise] = useState<string[]>([])
+  const [depinNetworks, setDepinNetworks] = useState<any[]>([])
+  const [depinEnabled, setDepinEnabled] = useState(true)
 
   // Memoize the function to get most used templates to prevent recreation on each render
   const fetchMostUsedTemplates = useCallback(() => {
@@ -169,6 +187,17 @@ export default function StartActivityPage() {
     { id: "cycling", name: "Biking" },
   ]
 
+  useEffect(() => {
+    // Get all enabled DePIN networks
+    const networks = dePINManager.getAllServices()
+    const enabledNetworks = networks.filter((network) => network.isNetworkEnabled())
+    setDepinNetworks(enabledNetworks)
+  }, [])
+
+  const toggleDePIN = (enabled: boolean) => {
+    setDepinEnabled(enabled)
+  }
+
   return (
     <AppShell>
       <div className="min-h-screen bg-black p-6 pb-20">
@@ -179,6 +208,70 @@ export default function StartActivityPage() {
             </Button>
           </Link>
           <h1 className="text-xl font-bold">Start Activity</h1>
+        </div>
+
+        <div className="space-y-4">
+          <ActivityTracker />
+
+          {depinNetworks.length > 0 && (
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardContent className="p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-2">
+                    <Coins className="h-5 w-5 text-yellow-500" />
+                    <h3 className="font-medium">DePIN Mining</h3>
+                  </div>
+                  <Switch checked={depinEnabled} onCheckedChange={toggleDePIN} />
+                </div>
+
+                <p className="text-sm text-zinc-400 mb-3">
+                  {depinEnabled
+                    ? "Your activity data will be submitted to these networks to earn tokens:"
+                    : "Token mining is disabled for this activity"}
+                </p>
+
+                {depinEnabled && (
+                  <div className="flex flex-wrap gap-2">
+                    {depinNetworks.map((service) => {
+                      const network = service.getNetwork()
+                      return (
+                        <Badge key={network.id} variant="outline" className="flex items-center gap-1 py-1 px-2">
+                          <div className="w-4 h-4 rounded-full overflow-hidden">
+                            <Image
+                              src={network.logoUrl || "/placeholder.svg"}
+                              alt={network.name}
+                              width={16}
+                              height={16}
+                            />
+                          </div>
+                          <span>{network.name}</span>
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {depinNetworks.length === 0 && (
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="h-5 w-5 text-blue-500" />
+                  <h3 className="font-medium">Earn While You Move</h3>
+                </div>
+                <p className="text-sm text-zinc-400 mb-3">
+                  Set up DePIN mining to earn cryptocurrency tokens for your activities.
+                </p>
+                <Link href="/setup/depin-setup">
+                  <Button variant="outline" className="w-full">
+                    Set Up Mining
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {loadingTypes || loadingTemplates ? (

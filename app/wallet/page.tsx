@@ -1,19 +1,23 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Copy, ExternalLink, Clock, Smartphone } from "lucide-react"
+import { useEffect } from "react"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { TabBar } from "@/components/tab-bar"
+import { ArrowLeft, History, ArrowUpDown } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { Card, CardContent } from "@/components/ui/card"
+import { Copy, ExternalLink, Clock, Smartphone } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { useSearchParams } from "next/navigation"
 import { nftService, type NFT } from "@/services/nft-service"
 import { useToast } from "@/hooks/use-toast"
 import { merchandiseWearService, type ConnectedMerchandise } from "@/services/merchandise-wear-service"
-import { TokenFeaturesGrid } from "./wallet-content"
-// import { WalletContent } from './wallet-content' // Assuming this is your existing component
+// Import the IoTeXMiningRewards component
+// Note: We're not importing from ThirdWeb directly in this file
 
 export function WalletContent() {
   const [walletAddress, setWalletAddress] = useState<string>("0x1234...5678")
@@ -175,7 +179,7 @@ export function WalletContent() {
 
           {/* Tabs */}
           <Tabs defaultValue="nfts" onValueChange={setActiveTab} className="mt-4">
-            <TabsList className="grid grid-cols-3 bg-zinc-800">
+            <TabsList className="grid grid-cols-4 bg-zinc-800">
               <TabsTrigger value="nfts" className={activeTab === "nfts" ? "data-[state=active]:bg-zinc-900" : ""}>
                 NFTs
               </TabsTrigger>
@@ -183,10 +187,13 @@ export function WalletContent() {
                 value="merchandise"
                 className={activeTab === "merchandise" ? "data-[state=active]:bg-zinc-900" : ""}
               >
-                Merchandise
+                Merch
               </TabsTrigger>
               <TabsTrigger value="tokens" className={activeTab === "tokens" ? "data-[state=active]:bg-zinc-900" : ""}>
                 Tokens
+              </TabsTrigger>
+              <TabsTrigger value="depin" className={activeTab === "depin" ? "data-[state=active]:bg-zinc-900" : ""}>
+                DePIN
               </TabsTrigger>
             </TabsList>
 
@@ -313,6 +320,88 @@ export function WalletContent() {
                 </Card>
               </div>
             </TabsContent>
+
+            <TabsContent value="depin" className="mt-4">
+              <div className="space-y-4">
+                <Card className="bg-zinc-900 border-0">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Image src="/iotex-logo.png" alt="IoTeX" width={24} height={24} className="h-6 w-6" />
+                        <h3 className="font-medium">IoTeX Mining</h3>
+                      </div>
+                      <Badge variant="outline" className="bg-green-900/20 text-green-400 border-green-800">
+                        Active
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-zinc-400">Balance:</span>
+                        <span className="font-medium">128.45 IOTX</span>
+                      </div>
+
+                      <div className="flex justify-between text-sm">
+                        <span className="text-zinc-400">Daily Rewards:</span>
+                        <span className="font-medium">2.5 IOTX</span>
+                      </div>
+
+                      <div className="flex justify-between text-sm">
+                        <span className="text-zinc-400">Merch Bonus:</span>
+                        <span className="text-green-400">+1.2 IOTX</span>
+                      </div>
+
+                      <div className="flex justify-between text-sm">
+                        <span className="text-zinc-400">Activity Bonus:</span>
+                        <span className="text-green-400">+0.8 IOTX</span>
+                      </div>
+
+                      <div className="h-px bg-zinc-800 my-2"></div>
+
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Total Daily:</span>
+                        <span className="font-bold text-primary">4.5 IOTX</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <Link href="/wallet/depin-info">
+                        <Button variant="outline" size="sm" className="w-full">
+                          View Details
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-zinc-900 border-0">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Image
+                          src="/helium-mobile-logo.png"
+                          alt="Helium Mobile"
+                          width={24}
+                          height={24}
+                          className="h-6 w-6"
+                        />
+                        <h3 className="font-medium">Helium Mobile</h3>
+                      </div>
+                      <Badge variant="outline" className="bg-zinc-800 text-zinc-400 border-zinc-700">
+                        Inactive
+                      </Badge>
+                    </div>
+
+                    <div className="text-center py-4">
+                      <p className="text-zinc-400 text-sm">Connect your Helium Mobile account to earn MOBILE tokens</p>
+                      <Button className="mt-3" size="sm">
+                        Connect
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
           </Tabs>
         </div>
       )}
@@ -321,17 +410,39 @@ export function WalletContent() {
 }
 
 export default function WalletPage() {
+  const [activeTab, setActiveTab] = useState("tokens")
+
   return (
-    <div className="container max-w-md pb-16">
-      <h1 className="text-2xl font-bold my-6">Wallet</h1>
+    <div className="flex min-h-screen flex-col bg-black pb-20">
+      <div className="p-6">
+        <div className="flex items-center mb-6">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="icon" className="mr-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <h1 className="text-xl font-bold">Wallet</h1>
+        </div>
 
-      {/* Your existing wallet content */}
-      <WalletContent />
+        <WalletContent />
 
-      {/* Add the token features grid */}
-      <TokenFeaturesGrid />
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <Link href="/wallet/token-history">
+            <Button variant="outline" className="w-full flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Token History
+            </Button>
+          </Link>
+          <Link href="/wallet/token-conversion">
+            <Button variant="outline" className="w-full flex items-center gap-2">
+              <ArrowUpDown className="h-4 w-4" />
+              Convert Tokens
+            </Button>
+          </Link>
+        </div>
+      </div>
 
-      {/* Rest of your wallet content */}
+      <TabBar activeTab="wallet" />
     </div>
   )
 }

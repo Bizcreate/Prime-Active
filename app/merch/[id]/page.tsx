@@ -156,6 +156,23 @@ export default function MerchandiseDetailPage() {
     return total + (activity.rewardAmount || 0)
   }, 0)
 
+  // Safe format distance function to handle invalid dates
+  const safeFormatDistanceToNow = (dateString: string | null | undefined): string => {
+    if (!dateString) return "Never"
+
+    try {
+      const date = new Date(dateString)
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return "Invalid date"
+      }
+      return formatDistanceToNow(date, { addSuffix: true })
+    } catch (error) {
+      console.error("Error formatting date:", error)
+      return "Invalid date"
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-black pb-20">
       <div className="p-6">
@@ -227,9 +244,7 @@ export default function MerchandiseDetailPage() {
                 {/* Merchandise Details */}
                 <div>
                   <h2 className="text-2xl font-bold mb-2">{merchandise.productName}</h2>
-                  <p className="text-zinc-400 mb-4">
-                    Connected {formatDistanceToNow(new Date(merchandise.dateConnected), { addSuffix: true })}
-                  </p>
+                  <p className="text-zinc-400 mb-4">Connected {safeFormatDistanceToNow(merchandise.dateConnected)}</p>
 
                   <Card className="bg-zinc-900 border-none mb-6">
                     <CardContent className="p-4">
@@ -261,11 +276,7 @@ export default function MerchandiseDetailPage() {
                           <div className="text-sm text-zinc-500 mb-1">Last Worn</div>
                           <div className="flex items-center gap-2">
                             <Timer className="h-5 w-5 text-[#ffc72d]" />
-                            <span className="text-lg font-medium">
-                              {merchandise.lastWorn
-                                ? formatDistanceToNow(new Date(merchandise.lastWorn), { addSuffix: true })
-                                : "Never"}
-                            </span>
+                            <span className="text-lg font-medium">{safeFormatDistanceToNow(merchandise.lastWorn)}</span>
                           </div>
                         </div>
                       </div>
@@ -280,8 +291,7 @@ export default function MerchandiseDetailPage() {
                         <span className="font-medium">Currently Wearing</span>
                       </div>
                       <p className="text-sm text-zinc-300">
-                        You've been wearing this item since{" "}
-                        {formatDistanceToNow(new Date(merchandise.wearingSince), { addSuffix: true })}
+                        You've been wearing this item since {safeFormatDistanceToNow(merchandise.wearingSince)}
                       </p>
                     </div>
                   )}
@@ -351,7 +361,13 @@ export default function MerchandiseDetailPage() {
                   ) : (
                     <div className="space-y-3">
                       {activities
-                        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                        .sort((a, b) => {
+                          try {
+                            return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+                          } catch (error) {
+                            return 0
+                          }
+                        })
                         .map((activity) => (
                           <Card key={activity.id} className="bg-zinc-900 border-none">
                             <CardContent className="p-3">
@@ -369,7 +385,7 @@ export default function MerchandiseDetailPage() {
 
                                   <div className="flex justify-between items-center mt-2">
                                     <div className="text-xs text-zinc-500">
-                                      {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                                      {safeFormatDistanceToNow(activity.timestamp)}
                                     </div>
                                     {activity.rewardAmount && (
                                       <div className="flex items-center gap-1 text-primary text-sm">

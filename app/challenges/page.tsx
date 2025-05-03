@@ -1,12 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { TabBar } from "@/components/tab-bar"
 import { ChallengeCard } from "@/components/challenge-card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { AppShell } from "@/components/app-shell"
+import { TabBar } from "@/components/tab-bar"
+import { Toaster } from "@/components/ui/toaster"
 
 export default function ChallengesPage() {
   const [activeTab, setActiveTab] = useState("daily")
@@ -118,6 +119,7 @@ export default function ChallengesPage() {
       </div>
 
       <TabBar activeTab="challenges" />
+      <Toaster />
     </AppShell>
   )
 }

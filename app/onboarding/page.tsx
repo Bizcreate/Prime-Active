@@ -173,7 +173,7 @@ export default function OnboardingPage() {
               <h2 className="text-2xl font-bold mb-2">Choose Your Favorite Activities</h2>
               <p className="text-zinc-400 mb-6">Pick your favorite activities, and we'll help you track them</p>
 
-              <div className="grid grid-cols-2 gap-3 mb-8">
+              <div className="grid grid-cols-2 gap-3 mb-auto">
                 <Button
                   variant={selectedActivities.includes("running") ? "default" : "outline"}
                   className="h-auto py-4 flex flex-col items-center gap-2"
@@ -229,7 +229,7 @@ export default function OnboardingPage() {
                 </Button>
               </div>
 
-              <Button onClick={nextStep} className="mt-auto">
+              <Button onClick={nextStep} className="mt-6">
                 Continue <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -276,9 +276,11 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              <p className="text-sm text-zinc-500 mb-8">Your data is encrypted and never shared without permission</p>
+              <p className="text-sm text-zinc-500 mb-auto">
+                Your data is encrypted and never shared without permission
+              </p>
 
-              <Button onClick={nextStep} className="mt-auto">
+              <Button onClick={nextStep} className="mt-6">
                 Continue <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -308,7 +310,7 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
-              <div className="bg-zinc-900 rounded-lg p-4 mb-8">
+              <div className="bg-zinc-900 rounded-lg p-4 mb-auto">
                 <h3 className="font-medium mb-2">How It Works</h3>
                 <ul className="space-y-2 text-sm text-zinc-400">
                   <li className="flex items-start gap-2">
@@ -338,7 +340,7 @@ export default function OnboardingPage() {
                 </ul>
               </div>
 
-              <Button onClick={nextStep} className="mt-auto">
+              <Button onClick={nextStep} className="mt-6">
                 Get Started <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>

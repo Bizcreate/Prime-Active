@@ -61,12 +61,9 @@
     "@emotion/is-prop-valid": "latest",
     "@tanstack/react-query": "latest",
     "viem": "latest",
-    "ethers": "latest",
-    "@thirdweb-dev/sdk": "latest",
     "framer-motion": "latest",
     "canvas-confetti": "latest",
-    "wagmi": "latest",
-    "@thirdweb-dev/react": "latest"
+    "wagmi": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

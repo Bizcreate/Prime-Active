@@ -4,10 +4,10 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Slider } from "@/components/ui/slider"
-import { utils } from "ethers"
 import { dePINManager } from "@/services/depin-manager"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, Lock, ArrowRight, Check } from "lucide-react"
+import { generateMockTxHash } from "@/lib/crypto-utils"
 import Image from "next/image"
 
 interface DePINNetworkTokenStakerProps {
@@ -77,7 +77,7 @@ export function DePINNetworkTokenStaker({ networkId }: DePINNetworkTokenStakerPr
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
       // Generate a mock transaction hash
-      const txHash = utils.hexlify(utils.randomBytes(32))
+      const txHash = generateMockTxHash()
 
       // Show success message
       setIsSuccess(true)

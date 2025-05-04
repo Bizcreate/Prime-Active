@@ -1,4 +1,19 @@
-import { utils } from "ethers"
+// Mock implementation of the W3bStream service
+import { generateMockTxHash, generateUniqueId } from "@/lib/crypto-utils"
+
+export interface W3bStreamNodeStatus {
+  uptime: number
+  dataPoints: number
+  cpu: number
+  memory: number
+  storage: number
+  bandwidth: {
+    up: number
+    down: number
+  }
+  version: string
+  lastSeen: number
+}
 
 export interface W3bStreamReward {
   id: string
@@ -6,160 +21,193 @@ export interface W3bStreamReward {
   timestamp: number
   txHash?: string
   activityId?: string
+  type: "passive" | "activity"
 }
 
 class W3bStreamServiceClass {
-  private isInitialized = false
   private userId: string | null = null
-  private nodeActive = false
+  private isActive = false
   private rewards: W3bStreamReward[] = []
-  private passiveRate = 0.5 // Tokens per hour when node is active
+  private passiveRate = 0.01 // IOTX per minute
+  private startTime = 0
+  private nodeStatus: W3bStreamNodeStatus = {
+    uptime: 0,
+    dataPoints: 0,
+    cpu: 5.2,
+    memory: 12.4,
+    storage: 7.8,
+    bandwidth: {
+      up: 1024 * 1024 * 5, // 5 MB
+      down: 1024 * 1024 * 12, // 12 MB
+    },
+    version: "1.0.3",
+    lastSeen: Date.now(),
+  }
 
-  // Initialize the service for a user
-  async initialize(userId: string): Promise<boolean> {
+  private nodeInterval: NodeJS.Timeout | null = null
+
+  public async initialize(userId: string): Promise<boolean> {
     try {
       this.userId = userId
-      this.isInitialized = true
-      console.log(`W3bStream initialized for user ${userId}`)
+      console.log(`Initialized W3bStream for user ${userId}`)
+
+      // Clear existing rewards
+      this.rewards = []
+
       return true
     } catch (error) {
-      console.error("Failed to initialize W3bStream:", error)
+      console.error("Error initializing W3bStream:", error)
       return false
     }
   }
 
-  // Start the W3bStream node
-  async startNode(): Promise<boolean> {
-    if (!this.isInitialized) {
-      console.error("W3bStream not initialized")
-      return false
-    }
-
+  public async startNode(): Promise<boolean> {
     try {
-      // Simulate node startup
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      this.nodeActive = true
+      if (this.isActive) {
+        return true // Already active
+      }
+
+      this.isActive = true
+      this.startTime = Date.now()
+
+      // Start passive mining by adding rewards periodically
+      this.nodeInterval = setInterval(() => {
+        // Add passive reward every minute
+        this.addPassiveReward()
+
+        // Update node status
+        this.updateNodeStatus()
+      }, 60000) // Every minute
+
       console.log("W3bStream node started")
       return true
     } catch (error) {
-      console.error("Failed to start W3bStream node:", error)
+      console.error("Error starting W3bStream node:", error)
       return false
     }
   }
 
-  // Stop the W3bStream node
-  async stopNode(): Promise<boolean> {
-    if (!this.isInitialized) {
-      console.error("W3bStream not initialized")
-      return false
-    }
-
+  public async stopNode(): Promise<boolean> {
     try {
-      // Simulate node shutdown
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      this.nodeActive = false
+      if (!this.isActive) {
+        return true // Already inactive
+      }
+
+      this.isActive = false
+
+      // Stop passive mining
+      if (this.nodeInterval) {
+        clearInterval(this.nodeInterval)
+        this.nodeInterval = null
+      }
+
+      // Reset node status
+      this.nodeStatus.uptime = 0
+
       console.log("W3bStream node stopped")
       return true
     } catch (error) {
-      console.error("Failed to stop W3bStream node:", error)
+      console.error("Error stopping W3bStream node:", error)
       return false
     }
   }
 
-  // Check if the node is active
-  isNodeActive(): boolean {
-    return this.nodeActive
+  public isNodeActive(): boolean {
+    return this.isActive
   }
 
-  // Get node status
-  getNodeStatus(): string {
-    if (!this.isInitialized) return "Not Initialized"
-    return this.nodeActive ? "Active" : "Inactive"
-  }
-
-  // Submit activity data and get rewards
-  async submitActivity(activity: any): Promise<W3bStreamReward | null> {
-    if (!this.isInitialized) {
-      console.error("W3bStream not initialized")
-      return null
-    }
-
+  public async submitActivity(activity: any): Promise<W3bStreamReward | null> {
     try {
-      // Calculate reward based on activity
-      const reward = this.calculateReward(activity)
-
-      // Generate a mock transaction hash
-      const txHash = utils.hexlify(utils.randomBytes(32))
-
-      // Create reward record
-      const rewardRecord: W3bStreamReward = {
-        id: `reward-${Date.now()}`,
-        amount: reward,
-        timestamp: Date.now(),
-        txHash,
-        activityId: activity.id,
+      if (!this.isActive || !this.userId) {
+        return null
       }
 
-      // Add to rewards list
-      this.rewards.push(rewardRecord)
+      // Simulate reward calculation based on activity
+      const activityDuration = (activity.endTime - activity.startTime) / 1000 / 60 // in minutes
+      const activityDistance = activity.distance || 0 // in km
 
-      return rewardRecord
+      // Base formula: 0.05 IOTX per minute + 0.1 IOTX per km
+      const rewardAmount = 0.05 * activityDuration + 0.1 * activityDistance
+
+      const reward: W3bStreamReward = {
+        id: generateUniqueId("reward_"),
+        amount: rewardAmount,
+        timestamp: Date.now(),
+        activityId: activity.id,
+        txHash: generateMockTxHash(),
+        type: "activity",
+      }
+
+      // Add to rewards
+      this.rewards.push(reward)
+
+      // Update data points
+      this.nodeStatus.dataPoints += activity.locations?.length || 10
+
+      return reward
     } catch (error) {
-      console.error("Failed to submit activity to W3bStream:", error)
+      console.error("Error submitting activity to W3bStream:", error)
       return null
     }
   }
 
-  // Calculate reward based on activity
-  private calculateReward(activity: any): number {
-    // Base reward
-    let reward = 5
-
-    // Adjust based on duration (if available)
-    if (activity.duration) {
-      // Convert duration to hours and add 2 tokens per hour
-      const durationHours = activity.duration / 3600
-      reward += durationHours * 2
+  public getNodeStatus(): W3bStreamNodeStatus {
+    // Return a copy of the status with updated values
+    return {
+      ...this.nodeStatus,
+      lastSeen: Date.now(),
     }
-
-    // Adjust based on distance (if available)
-    if (activity.distance) {
-      // Add 1 token per km
-      reward += activity.distance
-    }
-
-    // Cap reward at 50 tokens
-    return Math.min(50, reward)
   }
 
-  // Get all rewards
-  getRewards(): W3bStreamReward[] {
+  public getRewards(): W3bStreamReward[] {
     return [...this.rewards]
   }
 
-  // Get total mined tokens
-  getTotalMined(): number {
-    return this.rewards.reduce((total, reward) => total + reward.amount, 0)
+  public getTotalMined(): number {
+    return this.rewards.reduce((sum, reward) => sum + reward.amount, 0)
   }
 
-  // Get passive mining rate (tokens per hour)
-  getPassiveRate(): number {
+  public getPassiveRate(): number {
     return this.passiveRate
   }
 
-  // Set passive mining rate
-  setPassiveRate(rate: number): void {
-    this.passiveRate = rate
+  public setPassiveRate(rate: number): void {
+    // Rate is expected to be between 0-100, convert to a reasonable token rate
+    this.passiveRate = (rate / 100) * 0.02 // Max 0.02 tokens per minute at 100%
   }
 
-  // Reset all data (for testing)
-  reset(): void {
-    this.isInitialized = false
-    this.userId = null
-    this.nodeActive = false
-    this.rewards = []
+  private addPassiveReward(): void {
+    if (!this.isActive || !this.userId) return
+
+    const reward: W3bStreamReward = {
+      id: generateUniqueId("passive_"),
+      amount: this.passiveRate,
+      timestamp: Date.now(),
+      txHash: generateMockTxHash(),
+      type: "passive",
+    }
+
+    // Add to rewards
+    this.rewards.push(reward)
+
+    console.log(`Added passive reward of ${this.passiveRate} IOTX`)
+  }
+
+  private updateNodeStatus(): void {
+    if (!this.isActive) return
+
+    // Update uptime
+    this.nodeStatus.uptime = Math.floor((Date.now() - this.startTime) / 1000)
+
+    // Randomly fluctuate resource usage
+    this.nodeStatus.cpu = 5 + Math.random() * 10
+    this.nodeStatus.memory = 10 + Math.random() * 15
+    this.nodeStatus.storage = 7 + Math.random() * 5
+
+    // Increase bandwidth
+    this.nodeStatus.bandwidth.up += 1024 * 10 // 10 KB
+    this.nodeStatus.bandwidth.down += 1024 * 25 // 25 KB
   }
 }
 
-// Create and export a singleton instance
 export const w3bStreamService = new W3bStreamServiceClass()

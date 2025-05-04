@@ -1,96 +1,81 @@
-import type { DePINNetwork, DePINServiceConfig } from "./depin-types"
-import { utils } from "ethers"
+import type { DePINNetwork, DePINReward, ActivityData, DePINServiceConfig } from "./depin-types"
+import { generateMockTxHash } from "@/lib/crypto-utils"
 
 export abstract class BaseDePINService {
-  protected network: DePINNetwork
-  protected userId: string | null = null
   protected isEnabled = false
-  protected balance = 0
-  protected rewards: { id: string; amount: number; timestamp: number; activityId?: string; txHash?: string }[] = []
+  protected userId: string | null = null
+  protected config: DePINServiceConfig
+  protected rewards: DePINReward[] = []
+  protected network: DePINNetwork
 
   constructor(network: DePINNetwork, config: DePINServiceConfig) {
     this.network = network
+    this.config = config
+    this.loadState()
   }
 
-  // Get the network information
+  public abstract enableMining(userId: string): Promise<boolean>
+  public abstract disableMining(): Promise<boolean>
+  public abstract submitActivityData(activity: ActivityData): Promise<boolean>
+
   public getNetwork(): DePINNetwork {
     return this.network
   }
 
-  // Get the current balance
-  public getBalance(): number {
-    return this.balance
-  }
-
-  // Get all rewards
-  public getRewards(): { id: string; amount: number; timestamp: number; activityId?: string; txHash?: string }[] {
-    return [...this.rewards]
-  }
-
-  // Check if mining is enabled
-  public isServiceEnabled(): boolean {
+  public isNetworkEnabled(): boolean {
     return this.isEnabled
   }
 
-  // Enable mining for a user
-  public abstract enableMining(userId: string): Promise<boolean>
+  public getRewards(): DePINReward[] {
+    return this.rewards
+  }
 
-  // Disable mining
-  public abstract disableMining(): Promise<boolean>
+  public getBalance(): number {
+    return this.rewards
+      .filter((reward) => reward.status === "confirmed")
+      .reduce((total, reward) => total + reward.amount, 0)
+  }
 
-  // Submit activity data
-  public abstract submitActivityData(activity: any): Promise<boolean>
-
-  // Add a reward
   protected addReward(amount: number, activityId?: string, txHash?: string): void {
-    const reward = {
-      id: `reward-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    this.rewards.push({
+      networkId: this.network.id,
       amount,
       timestamp: Date.now(),
+      txHash: txHash || generateMockTxHash(),
       activityId,
-      txHash,
-    }
+      status: txHash ? "confirmed" : "pending",
+    })
 
-    this.rewards.push(reward)
-    this.balance += amount
     this.saveState()
   }
 
-  // Save state to localStorage
   protected saveState(): void {
-    if (typeof window !== "undefined" && this.userId) {
-      const key = `depin_${this.network.id}_${this.userId}`
-      const state = {
-        isEnabled: this.isEnabled,
-        balance: this.balance,
-        rewards: this.rewards,
-      }
-      localStorage.setItem(key, JSON.stringify(state))
+    try {
+      localStorage.setItem(
+        `depin_${this.network.id}`,
+        JSON.stringify({
+          isEnabled: this.isEnabled,
+          userId: this.userId,
+          rewards: this.rewards,
+        }),
+      )
+    } catch (error) {
+      console.error(`Failed to save state for ${this.network.name}:`, error)
     }
   }
 
-  // Load state from localStorage
   protected loadState(): void {
-    if (typeof window !== "undefined" && this.userId) {
-      const key = `depin_${this.network.id}_${this.userId}`
-      const stateStr = localStorage.getItem(key)
-
-      if (stateStr) {
-        try {
-          const state = JSON.parse(stateStr)
-          this.isEnabled = state.isEnabled || false
-          this.balance = state.balance || 0
-          this.rewards = state.rewards || []
-        } catch (error) {
-          console.error(`Error loading state for ${this.network.id}:`, error)
-        }
+    try {
+      const state = localStorage.getItem(`depin_${this.network.id}`)
+      if (state) {
+        const parsed = JSON.parse(state)
+        this.isEnabled = parsed.isEnabled || false
+        this.userId = parsed.userId || null
+        this.rewards = parsed.rewards || []
       }
+    } catch (error) {
+      console.error(`Failed to load state for ${this.network.name}:`, error)
     }
-  }
-
-  // Generate a mock transaction hash
-  protected generateTxHash(): string {
-    return utils.hexlify(utils.randomBytes(32))
   }
 
   protected calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

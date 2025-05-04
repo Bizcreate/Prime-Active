@@ -66,8 +66,7 @@
     "framer-motion": "latest",
     "canvas-confetti": "latest",
     "wagmi": "latest",
-    "@thirdweb-dev/react": "latest",
-    "web3": "latest"
+    "@thirdweb-dev/react": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

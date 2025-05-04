@@ -1,79 +1,70 @@
 import { dePINManager } from "./depin-manager"
 import type { ActivityData } from "./depin-types"
-import type { ActivitySession } from "./activity-tracking"
 
-// Import our enhanced services
-import { HeliumMobileService } from "./helium-mobile-service"
-import { IoTeXService } from "./iotex-service"
-import { FOAMService } from "./foam-service"
-
-export function initializeDePINServices(useTestnet = true) {
-  // Clear any existing services
-  dePINManager.clearServices()
-
-  // Register all services with the manager
-  dePINManager.registerService(
-    new HeliumMobileService({
-      apiKey: "demo_key",
-      deviceId: `mobile_${Date.now().toString(36)}`,
-      isTestnet: useTestnet,
-    }),
-  )
-
-  dePINManager.registerService(
-    new IoTeXService({
-      apiKey: "demo_key",
-      nodeUrl: useTestnet ? "https://babel-api.testnet.iotex.io" : "https://babel-api.mainnet.iotex.io",
-      isTestnet: useTestnet,
-    }),
-  )
-
-  dePINManager.registerService(
-    new FOAMService({
-      apiKey: "demo_key",
-      isTestnet: useTestnet,
-    }),
-  )
-
-  console.log(`DePIN services initialized in ${useTestnet ? "TESTNET" : "MAINNET"} mode`)
+export async function submitActivityToDePINNetworks(activity: ActivityData): Promise<{
+  success: boolean
+  results: Record<string, boolean>
+  rewards: Record<string, number>
+}> {
+  // This is essentially an alias for trackActivityForDePIN for backward compatibility
+  return trackActivityForDePIN(activity)
 }
 
-// Convert ActivitySession to DePIN ActivityData
-export function convertToDePINActivityData(activity: ActivitySession, userId: string): ActivityData {
-  return {
-    id: activity.id,
-    type: activity.type,
-    startTime: activity.startTime,
-    endTime: activity.endTime || Date.now(),
-    locations: activity.locations.map((loc) => ({
-      latitude: loc.latitude,
-      longitude: loc.longitude,
-      timestamp: loc.timestamp,
-      accuracy: loc.accuracy,
-      altitude: loc.altitude,
-      speed: loc.speed,
-    })),
-    distance: activity.distance,
-    duration: (activity.endTime || Date.now()) - activity.startTime,
-    userId,
-  }
-}
-
-// Submit activity data to all enabled DePIN networks
-export async function submitActivityToDePINNetworks(
-  activity: ActivitySession,
-  userId: string,
-): Promise<Map<string, boolean>> {
+export async function trackActivityForDePIN(activity: ActivityData): Promise<{
+  success: boolean
+  results: Record<string, boolean>
+  rewards: Record<string, number>
+}> {
   try {
-    const depinActivity = convertToDePINActivityData(activity, userId)
-    return await dePINManager.submitActivityData(depinActivity)
+    // Submit activity to all active DePIN services
+    const results = await dePINManager.submitActivityToAll(activity)
+
+    // Calculate rewards by network
+    const rewards: Record<string, number> = {}
+
+    for (const service of dePINManager.getActiveServices()) {
+      const networkId = service.getNetwork().id
+      const networkRewards = service.getRewards()
+
+      // Find rewards for this activity
+      const activityRewards = networkRewards
+        .filter((reward) => reward.activityId === activity.id)
+        .reduce((total, reward) => total + reward.amount, 0)
+
+      if (activityRewards > 0) {
+        rewards[networkId] = activityRewards
+      }
+    }
+
+    return {
+      success: Object.values(results).some(Boolean),
+      results,
+      rewards,
+    }
   } catch (error) {
-    console.error("Error submitting activity to DePIN networks:", error)
-    return new Map()
+    console.error("Error tracking activity for DePIN:", error)
+    return {
+      success: false,
+      results: {},
+      rewards: {},
+    }
   }
 }
 
-// Toggle between testnet and mainnet
-export function toggleDePINNetworkMode(useTestnet: boolean): void {
-  initializeDePINServices(useTestnet)
+export function getDePINBalances(): Record<string, { amount: number; symbol: string }> {
+  const balances: Record<string, { amount: number; symbol: string }> = {}
+
+  for (const service of dePINManager.getAllServices()) {
+    const network = service.getNetwork()
+    const balance = service.getBalance()
+
+    if (balance > 0) {
+      balances[network.id] = {
+        amount: balance,
+        symbol: network.tokenSymbol,
+      }
+    }
+  }
+
+  return balances
 }

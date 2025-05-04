@@ -243,3 +243,10 @@ export class FitmintService extends BaseDePINService {
     return baseRewardPerMinute * durationMinutes * activityMultiplier + distanceBonus
   }
 }
+
+// Create and export a default instance of the service
+export const fitmintService = new FitmintService({
+  storageKey: "fitmint_service_state",
+  apiEndpoint: "https://api.fitmint.io/v1",
+  appId: "primeactive",
+})

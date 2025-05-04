@@ -1,72 +1,63 @@
-import type { BaseDePINService } from "./base-depin-service"
+import { iotexService } from "./iotex-service"
 import type { ActivityData } from "./depin-types"
 
-class DePINManager {
-  private services: Map<string, BaseDePINService> = new Map()
-  private isTestnetMode = true
+class DePINManagerClass {
+  private services = [iotexService]
 
-  public registerService(service: BaseDePINService): void {
-    this.services.set(service.getNetwork().id, service)
+  // Get all available services
+  public getAllServices() {
+    return this.services
   }
 
-  public clearServices(): void {
-    this.services.clear()
+  // Get a service by network ID
+  public getServiceByNetworkId(networkId: string) {
+    return this.services.find((service) => service.getNetwork().id === networkId)
   }
 
-  public getService(networkId: string): BaseDePINService | undefined {
-    return this.services.get(networkId)
+  // For backward compatibility
+  public getService(networkId: string) {
+    return this.getServiceByNetworkId(networkId)
   }
 
-  public getAllServices(): BaseDePINService[] {
-    return Array.from(this.services.values())
+  // Get all active services
+  public getActiveServices() {
+    return this.services.filter((service) => service.isNetworkEnabled())
   }
 
-  public async enableNetwork(networkId: string, userId: string): Promise<boolean> {
-    const service = this.services.get(networkId)
-    if (!service) {
-      console.error(`Network ${networkId} not found`)
-      return false
-    }
+  // Submit activity data to all active services
+  public async submitActivityToAll(activity: ActivityData): Promise<Record<string, boolean>> {
+    const results: Record<string, boolean> = {}
 
-    return await service.enableMining(userId)
-  }
-
-  public async disableNetwork(networkId: string): Promise<boolean> {
-    const service = this.services.get(networkId)
-    if (!service) {
-      console.error(`Network ${networkId} not found`)
-      return false
-    }
-
-    return await service.disableMining()
-  }
-
-  public async submitActivityData(activity: ActivityData): Promise<Map<string, boolean>> {
-    const results = new Map<string, boolean>()
-
-    for (const [networkId, service] of this.services.entries()) {
-      if (service.isNetworkEnabled()) {
-        try {
-          const success = await service.submitActivityData(activity)
-          results.set(networkId, success)
-        } catch (error) {
-          console.error(`Error submitting activity to ${networkId}:`, error)
-          results.set(networkId, false)
-        }
+    for (const service of this.getActiveServices()) {
+      const networkId = service.getNetwork().id
+      try {
+        const success = await service.submitActivityData(activity)
+        results[networkId] = success
+      } catch (error) {
+        console.error(`Error submitting to ${networkId}:`, error)
+        results[networkId] = false
       }
     }
 
     return results
   }
 
-  public setTestnetMode(isTestnet: boolean): void {
-    this.isTestnetMode = isTestnet
-  }
+  // Get total balance across all services
+  public getTotalBalance(): Record<string, number> {
+    const balances: Record<string, number> = {}
 
-  public isInTestnetMode(): boolean {
-    return this.isTestnetMode
+    for (const service of this.services) {
+      const network = service.getNetwork()
+      const balance = service.getBalance()
+
+      if (balance > 0) {
+        balances[network.tokenSymbol] = (balances[network.tokenSymbol] || 0) + balance
+      }
+    }
+
+    return balances
   }
 }
 
-// Create a singleton instance
-export const dePINManager = new DePINManager()
+// Create and export a singleton instance
+export const dePINManager = new DePINManagerClass()

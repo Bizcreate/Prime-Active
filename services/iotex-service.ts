@@ -1,7 +1,6 @@
 import { BaseDePINService } from "./base-depin-service"
-import type { ActivityData, DePINNetwork, DePINServiceConfig } from "./depin-types"
-import { w3bStreamService, type W3bStreamReward } from "./w3bstream-service"
-import { Web3 } from "web3"
+import type { DePINNetwork, DePINServiceConfig, ActivityData } from "./depin-types"
+import { w3bStreamService } from "./w3bstream-service"
 
 interface IoTeXConfig extends DePINServiceConfig {
   nodeUrl: string
@@ -21,50 +20,23 @@ const MAX_WEAR_MULTIPLIER = 2.0
 const MAX_ACTIVITY_MULTIPLIER = 2.0
 
 export class IoTeXService extends BaseDePINService {
-  private web3: Web3
-  private nodeUrl: string
-  private contractAddress?: string
-  private isTestnet: boolean
-  private lastSyncTimestamp = 0
+  private nodeActive = false
+  private passiveRate = 0.5 // Tokens per hour
 
-  constructor(config: IoTeXConfig) {
-    const network: DePINNetwork = {
-      id: "iotex",
-      name: config.isTestnet ? "IoTeX Testnet" : "IoTeX",
-      tokenSymbol: "IOTX",
-      tokenName: "IoTeX Token",
-      logoUrl: "/iotex-logo.png",
-      description: "Blockchain for Internet of Things with W3bStream",
-      enabled: false,
-    }
-
+  constructor(network: DePINNetwork, config: DePINServiceConfig) {
     super(network, config)
-
-    this.nodeUrl =
-      config.nodeUrl || (config.isTestnet ? "https://babel-api.testnet.iotex.io" : "https://babel-api.mainnet.iotex.io")
-    this.contractAddress = config.contractAddress
-    this.isTestnet = config.isTestnet || false
-    this.web3 = new Web3(this.nodeUrl)
   }
 
   public async enableMining(userId: string): Promise<boolean> {
     try {
       this.userId = userId
-
-      // Initialize W3bStream for this user
-      const success = await w3bStreamService.initialize(userId)
-      if (!success) {
-        console.error("Failed to initialize W3bStream")
-        return false
-      }
-
-      // Register user with IoTeX DApp (in a real implementation)
-      console.log(`Registering user ${userId} with IoTeX ${this.isTestnet ? "Testnet" : "Mainnet"}`)
-
-      // For testnet, we can simulate successful registration
       this.isEnabled = true
-      this.saveState()
 
+      // Initialize W3bStream service
+      await w3bStreamService.initialize(userId)
+
+      console.log(`IoTeX mining enabled for user ${userId}`)
+      this.saveState()
       return true
     } catch (error) {
       console.error("Failed to enable IoTeX mining:", error)
@@ -74,8 +46,10 @@ export class IoTeXService extends BaseDePINService {
 
   public async disableMining(): Promise<boolean> {
     try {
-      // Stop W3bStream node
-      await w3bStreamService.stopNode()
+      // Stop node if active
+      if (this.nodeActive) {
+        await this.stopNode()
+      }
 
       this.isEnabled = false
       this.saveState()
@@ -86,21 +60,60 @@ export class IoTeXService extends BaseDePINService {
     }
   }
 
-  public async submitActivityData(activity: ActivityData): Promise<boolean> {
-    if (!this.isEnabled || !this.userId) return false
-
+  public async startNode(): Promise<boolean> {
     try {
+      if (!this.isEnabled) {
+        console.error("IoTeX service not enabled")
+        return false
+      }
+
+      const success = await w3bStreamService.startNode()
+      if (success) {
+        this.nodeActive = true
+        this.saveState()
+      }
+      return success
+    } catch (error) {
+      console.error("Failed to start IoTeX node:", error)
+      return false
+    }
+  }
+
+  public async stopNode(): Promise<boolean> {
+    try {
+      const success = await w3bStreamService.stopNode()
+      if (success) {
+        this.nodeActive = false
+        this.saveState()
+      }
+      return success
+    } catch (error) {
+      console.error("Failed to stop IoTeX node:", error)
+      return false
+    }
+  }
+
+  public isNodeActive(): boolean {
+    return this.nodeActive
+  }
+
+  public getNodeStatus(): string {
+    return this.nodeActive ? "Active" : "Inactive"
+  }
+
+  public async submitActivityData(activity: ActivityData): Promise<boolean> {
+    try {
+      if (!this.isEnabled) {
+        console.error("IoTeX service not enabled")
+        return false
+      }
+
       // Submit to W3bStream
       const reward = await w3bStreamService.submitActivity(activity)
 
       if (reward) {
-        // Calculate adjusted reward based on wear-to-earn and activity level
-        const adjustedReward = await this.calculateAdjustedReward(reward.amount, activity)
-
-        // Add adjusted reward to our balance
-        this.addReward(adjustedReward, activity.id, reward.txHash)
-
-        console.log(`IoTeX activity submitted via W3bStream, earned ${adjustedReward.toFixed(4)} IOTX`)
+        // Add reward to our records
+        this.addReward(reward.amount, activity.id, reward.txHash)
         return true
       }
 
@@ -109,6 +122,23 @@ export class IoTeXService extends BaseDePINService {
       console.error("Failed to submit activity data to IoTeX:", error)
       return false
     }
+  }
+
+  public getPassiveRate(): number {
+    return this.passiveRate
+  }
+
+  public setPassiveRate(rate: number): void {
+    this.passiveRate = rate
+    w3bStreamService.setPassiveRate(rate)
+  }
+
+  public getRewards(): any[] {
+    return w3bStreamService.getRewards()
+  }
+
+  public getTotalMined(): number {
+    return w3bStreamService.getTotalMined()
   }
 
   /**
@@ -242,50 +272,6 @@ export class IoTeXService extends BaseDePINService {
     }
   }
 
-  public getNodeStatus() {
-    return w3bStreamService.getNodeStatus()
-  }
-
-  public isNodeActive() {
-    return w3bStreamService.isNodeActive()
-  }
-
-  public async startNode() {
-    console.log("Starting IoTeX node...")
-    const result = await w3bStreamService.startNode()
-    console.log("IoTeX node start result:", result)
-    return result
-  }
-
-  public async stopNode() {
-    console.log("Stopping IoTeX node...")
-    const result = await w3bStreamService.stopNode()
-    console.log("IoTeX node stop result:", result)
-    return result
-  }
-
-  public getRewards(): W3bStreamReward[] {
-    return w3bStreamService.getRewards()
-  }
-
-  public getPassiveRate(): number {
-    return w3bStreamService.getPassiveRate()
-  }
-
-  public setPassiveRate(rate: number): void {
-    w3bStreamService.setPassiveRate(rate)
-  }
-
-  public syncRewardsWithW3bStream(): void {
-    // Get all rewards from W3bStream
-    const totalMined = w3bStreamService.getTotalMined()
-
-    // Update our balance
-    this.balance = totalMined
-    this.lastSyncTimestamp = Date.now()
-    this.saveState()
-  }
-
   private formatActivityData(activity: ActivityData): any {
     // Format the activity data according to IoTeX requirements
     return {
@@ -309,7 +295,18 @@ export class IoTeXService extends BaseDePINService {
       .map((loc) => `${loc.latitude.toFixed(6)},${loc.longitude.toFixed(6)},${loc.timestamp}`)
       .join("|")
 
-    return this.web3.utils.sha3(locationString) || ""
+    // Use a simple hash function instead of web3.utils.sha3
+    return this.simpleHash(locationString)
+  }
+
+  private simpleHash(str: string): string {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i)
+      hash = (hash << 5) - hash + char
+      hash = hash & hash // Convert to 32bit integer
+    }
+    return hash.toString(16)
   }
 
   // This method is to support IoTeXNodeManager component
@@ -321,7 +318,30 @@ export class IoTeXService extends BaseDePINService {
   }
 }
 
-// Export a function to create an instance of IoTeXService
-export function createIoTeXService(config: IoTeXConfig): IoTeXService {
-  return new IoTeXService(config)
+// First, define the IoTeXServiceClass before using it
+class IoTeXServiceClass extends IoTeXService {
+  constructor(network: DePINNetwork, config: DePINServiceConfig) {
+    super(network, config)
+  }
 }
+
+// Then create and export the singleton instance
+export const iotexService = new IoTeXServiceClass(
+  {
+    id: "iotex",
+    name: "IoTeX",
+    description: "IoTeX is a blockchain platform for the Internet of Things (IoT).",
+    tokenSymbol: "IOTX",
+    tokenName: "IoTeX",
+    logoUrl: "/iotex-logo.png",
+    website: "https://iotex.io",
+    category: "compute",
+    status: "active",
+  },
+  {
+    apiUrl: "https://api.iotex.io",
+    options: {
+      chainId: 4689,
+    },
+  },
+)

@@ -12,7 +12,6 @@ import Link from "next/link"
 export default function DePINSetupPage() {
   const [enabledNetworks, setEnabledNetworks] = useState<Record<string, boolean>>({
     iotex: true,
-    fitmint: true,
   })
   const [walletConnected, setWalletConnected] = useState(false)
   const [setupComplete, setSetupComplete] = useState(false)
@@ -85,7 +84,7 @@ export default function DePINSetupPage() {
               <CardDescription>Choose which networks you want to mine tokens from</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {EVMDePINNetworks.filter((network) => ["iotex", "fitmint"].includes(network.id)).map((network) => (
+              {EVMDePINNetworks.filter((network) => ["iotex"].includes(network.id)).map((network) => (
                 <div key={network.id} className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <img
@@ -126,17 +125,6 @@ export default function DePINSetupPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div>
-              <h3 className="font-medium">Fitmint</h3>
-              <p className="text-sm text-muted-foreground">
-                Create a free account at{" "}
-                <a href="https://fitmint.io" target="_blank" rel="noopener noreferrer" className="text-blue-500">
-                  fitmint.io
-                </a>{" "}
-                and connect it to your wallet.
-              </p>
-            </div>
-
             <div>
               <h3 className="font-medium">IoTeX</h3>
               <p className="text-sm text-muted-foreground">

@@ -23,7 +23,6 @@ import Image from "next/image"
 import { motion } from "framer-motion"
 import { AppShell } from "@/components/app-shell"
 import { dePINManager } from "@/services/depin-manager"
-import type { IoTeXService } from "@/services/iotex-service"
 
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
@@ -39,7 +38,7 @@ export default function DashboardPage() {
       setIsLoading(false)
 
       // Check if IoTeX is enabled
-      const iotexService = dePINManager.getService("iotex") as IoTeXService
+      const iotexService = dePINManager.getService("iotex")
       if (iotexService && iotexService.isNetworkEnabled()) {
         setIotexEnabled(true)
 
@@ -71,7 +70,7 @@ export default function DashboardPage() {
   }, [])
 
   const toggleNode = async () => {
-    const iotexService = dePINManager.getService("iotex") as IoTeXService
+    const iotexService = dePINManager.getService("iotex")
     if (!iotexService) return
 
     if (nodeActive) {

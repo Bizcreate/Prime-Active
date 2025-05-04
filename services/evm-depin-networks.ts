@@ -1,86 +1,42 @@
 import type { DePINNetwork } from "./depin-types"
 
-// List of EVM-compatible DePIN networks that can be mined through physical activities
-export const EVMDePINNetworks: DePINNetwork[] = [
-  {
-    id: "sweatcoin",
-    name: "Sweatcoin",
-    tokenSymbol: "SWEAT",
-    tokenName: "Sweat Economy",
-    logoUrl: "/sweatcoin-inspired-logo.png",
-    description: "Move-to-earn token rewarding physical activity",
-    enabled: false,
-  },
-  {
-    id: "stepn",
-    name: "STEPN",
-    tokenSymbol: "GMT",
-    tokenName: "Green Metaverse Token",
-    logoUrl: "/stepn-logo-generic.png",
-    description: "Move-to-earn NFT game with EVM compatibility",
-    enabled: false,
-  },
-  {
-    id: "walken",
-    name: "Walken",
-    tokenSymbol: "WLKN",
-    tokenName: "Walken Token",
-    logoUrl: "/walken-logo.png",
-    description: "Move-to-earn game with step tracking",
-    enabled: false,
-  },
-  {
-    id: "genopets",
-    name: "Genopets",
-    tokenSymbol: "GENE",
-    tokenName: "Genopets Token",
-    logoUrl: "/genopets-inspired-logo.png",
-    description: "Move-to-earn game with genetic evolution mechanics",
-    enabled: false,
-  },
-  {
-    id: "dotmoovs",
-    name: "dotmoovs",
-    tokenSymbol: "MOOV",
-    tokenName: "dotmoovs Token",
-    logoUrl: "/dotmoovs-logo.png",
-    description: "AI-powered sports challenges with blockchain rewards",
-    enabled: false,
-  },
-  {
-    id: "fitmint",
-    name: "Fitmint",
-    tokenSymbol: "FITT",
-    tokenName: "Fitmint Token",
-    logoUrl: "/placeholder.svg?height=200&width=200&query=fitmint logo",
-    description: "Move-to-earn fitness app with EVM compatibility",
-    enabled: false,
-  },
+// Define EVM-based DePIN networks
+export const evmDePINNetworks: DePINNetwork[] = [
   {
     id: "iotex",
     name: "IoTeX",
+    description: "IoTeX is a blockchain platform for the Internet of Things (IoT).",
     tokenSymbol: "IOTX",
-    tokenName: "IoTeX Token",
-    logoUrl: "/placeholder.svg?height=200&width=200&query=iotex logo",
-    description: "EVM-compatible blockchain for IoT devices",
-    enabled: false,
+    tokenName: "IoTeX",
+    logoUrl: "/iotex-logo.png",
+    website: "https://iotex.io",
+    category: "compute",
+    status: "active",
   },
   {
-    id: "metaverse",
-    name: "Metaverse",
-    tokenSymbol: "MV",
-    tokenName: "Metaverse Token",
-    logoUrl: "/placeholder.svg?height=200&width=200&query=metaverse logo",
-    description: "Blockchain for digital identity and assets",
-    enabled: false,
-  },
-  {
-    id: "playtoearn",
-    name: "PlayToEarn",
-    tokenSymbol: "P2E",
-    tokenName: "PlayToEarn Token",
-    logoUrl: "/placeholder.svg?height=200&width=200&query=playtoearn logo",
-    description: "Gaming rewards on EVM chains",
-    enabled: false,
+    id: "helium-mobile",
+    name: "Helium Mobile",
+    description: "Helium Mobile is a decentralized wireless network for mobile devices.",
+    tokenSymbol: "MOBILE",
+    tokenName: "Helium Mobile Token",
+    logoUrl: "/helium-mobile-logo.png",
+    website: "https://helium.com",
+    category: "other",
+    status: "active",
   },
 ]
+
+// Add the EVMDePINNetworks named export
+// This should be added near the top of the file, after the imports but before other code
+
+export const EVMDePINNetworks = evmDePINNetworks
+
+// Get a network by ID
+export function getEVMNetworkById(id: string): DePINNetwork | undefined {
+  return evmDePINNetworks.find((network) => network.id === id)
+}
+
+// Get all active networks
+export function getActiveEVMNetworks(): DePINNetwork[] {
+  return evmDePINNetworks.filter((network) => network.status === "active")
+}

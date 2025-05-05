@@ -1,15 +1,17 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { TabBar } from "@/components/tab-bar"
-import { MapPin, Plus, ArrowLeft, Compass, AlertTriangle } from "lucide-react"
+import { Star, MapPin, Plus, Search, Filter, Users, CheckIcon as CheckIn, Trophy, Play } from "lucide-react"
 import Link from "next/link"
+import { useState, useEffect, useRef } from "react"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { AppShell } from "@/components/app-shell"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useMapToken } from "@/components/map-token-provider"
 import { MapTokenProvider } from "@/components/map-token-provider"
-import { FallbackPage } from "@/components/fallback-page"
 
 // Mock data for active users at locations
 const activeUsers = [
@@ -56,9 +58,6 @@ function MapPageContent() {
   const [mapboxLoaded, setMapboxLoaded] = useState(false)
   const router = useRouter()
   const [isPreviewEnvironment, setIsPreviewEnvironment] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [mapError, setMapError] = useState<string | null>(null)
-  const [isPreviewMode, setIsPreviewMode] = useState(false)
 
   // Get map token from context
   const { token, isLoading: isLoadingToken, error: tokenError } = useMapToken()
@@ -146,24 +145,20 @@ function MapPageContent() {
 
   // Check if we're in a preview environment
   useEffect(() => {
-    // Check if we're in a preview environment
-    const checkPreviewMode = () => {
-      // Check if we're in an iframe (common for previews)
-      const inIframe = window !== window.parent
-      // Check if we're in a Vercel preview environment
-      const inVercelPreview = window.location.hostname.includes("vercel.app")
+    const checkPreviewEnvironment = () => {
+      // Check if we're in an iframe or a Vercel preview environment
+      const isInIframe = window !== window.parent
+      const isVercelPreview = window.location.hostname.includes("vercel.app")
+      const isPreview = isInIframe || isVercelPreview
 
-      return inIframe || inVercelPreview
+      setIsPreviewEnvironment(isPreview)
+
+      if (isPreview) {
+        console.log("Running in preview environment - using mock location data")
+      }
     }
 
-    setIsPreviewMode(checkPreviewMode())
-
-    // Simulate loading the map
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1500)
-
-    return () => clearTimeout(timer)
+    checkPreviewEnvironment()
   }, [])
 
   // Add this function before the useEffect hooks
@@ -533,87 +528,381 @@ function MapPageContent() {
     return <div className="flex items-center justify-center h-64">Error loading map</div>
   }
 
-  if (isLoading) {
-    return <FallbackPage />
-  }
-
   return (
-    <div className="flex min-h-screen flex-col bg-black pb-20">
-      <div className="p-6">
-        <div className="flex items-center mb-6">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="icon" className="mr-2">
-              <ArrowLeft className="h-5 w-5" />
+    <AppShell>
+      <div className="relative">
+        {/* Header */}
+        <div className="p-4 pb-0">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold">Explore</h1>
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <Filter className="h-5 w-5" />
             </Button>
-          </Link>
-          <h1 className="text-xl font-bold">Spot Map</h1>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-zinc-400" />
+            <input
+              type="text"
+              placeholder="Search locations..."
+              className="w-full bg-zinc-800 rounded-full py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-600"
+            />
+          </div>
+
+          {/* Category Filters */}
+          <div className="flex overflow-x-auto pb-4 gap-2 no-scrollbar">
+            {categories.map((category) => (
+              <Button
+                key={category.id}
+                variant={activeCategory === category.id ? "default" : "outline"}
+                className={`rounded-full px-6 ${
+                  activeCategory === category.id ? "bg-white text-black" : "bg-zinc-800 text-white border-zinc-700"
+                }`}
+                onClick={() => setActiveCategory(category.id)}
+              >
+                {category.label}
+              </Button>
+            ))}
+          </div>
         </div>
 
-        {isPreviewMode && (
-          <div className="bg-amber-900/20 border border-amber-900/30 rounded-lg p-4 mb-4 flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <h3 className="font-medium text-amber-500 mb-1">Preview Mode</h3>
-              <p className="text-sm text-zinc-300">
-                Map functionality is limited in preview mode. Geolocation and interactive maps are fully enabled in the
-                deployed application.
+        {/* Map Container */}
+        <div className="relative w-full h-[40vh] bg-zinc-900 overflow-hidden">
+          {/* Mapbox container */}
+          <div ref={mapContainerRef} className="absolute inset-0" style={{ width: "100%", height: "100%" }} />
+
+          {(!mapLoaded || !token) && (
+            <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 bg-opacity-80 z-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#ffc72d]"></div>
+            </div>
+          )}
+
+          {isPreviewEnvironment && (
+            <div className="absolute top-4 left-4 right-4 bg-black/70 rounded-lg p-3 z-10">
+              <p className="text-sm text-center text-amber-400">
+                ⚠️ Preview Mode: Using mock location data. Geolocation is disabled in preview environments.
               </p>
             </div>
-          </div>
-        )}
+          )}
 
-        {mapError ? (
-          <div className="bg-red-900/20 border border-red-900/30 rounded-lg p-6 text-center">
-            <div className="bg-red-900/30 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <AlertTriangle className="h-8 w-8 text-red-500" />
-            </div>
-            <h3 className="text-lg font-bold mb-2">Map Error</h3>
-            <p className="text-zinc-300 mb-4">{mapError}</p>
-            <Button onClick={() => window.location.reload()}>Reload Map</Button>
-          </div>
-        ) : (
-          <div className="relative h-[calc(100vh-200px)] bg-zinc-900 rounded-lg overflow-hidden">
-            {/* Placeholder for map */}
-            <div className="absolute inset-0 flex items-center justify-center bg-zinc-800">
-              <div className="text-center">
-                <Compass className="h-16 w-16 text-zinc-600 mx-auto mb-4" />
-                <h3 className="text-lg font-bold mb-2">Map Placeholder</h3>
-                <p className="text-zinc-400 max-w-xs mx-auto mb-4">
-                  {isPreviewMode
-                    ? "Interactive map is disabled in preview mode."
-                    : "Map will be displayed here in the deployed application."}
-                </p>
+          {/* Map Legend */}
+          <div className="absolute bottom-4 left-4 bg-black/80 p-3 rounded-lg z-20">
+            <h3 className="text-white text-sm font-bold mb-2">Map Legend</h3>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-[#ffc72d]"></div>
+                <span className="text-xs text-white">Skateparks</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                <span className="text-xs text-white">Trails</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-blue-400"></div>
+                <span className="text-xs text-white">Surf Spots</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                <span className="text-xs text-white">Your Location</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                <div className="h-3 w-3 flex items-center justify-center text-[8px]">1</div>
+                <span className="text-xs text-white">Active Users</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-3 w-3 rounded-full bg-[#ffc72d]"></div>
+                <div className="h-3 w-3 flex items-center justify-center text-[8px]">1</div>
+                <span className="text-xs text-white">Active Challenges</span>
               </div>
             </div>
+          </div>
 
-            {/* Add spot button */}
-            <div className="absolute bottom-6 right-6">
-              <Link href="/map/add-spot">
-                <Button size="lg" className="rounded-full h-14 w-14 bg-primary hover:bg-primary/90">
-                  <Plus className="h-6 w-6" />
+          {/* Action Buttons */}
+          <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
+            <Link href="/map/add-spot">
+              <Button className="bg-[#ffc72d] hover:bg-[#ffc72d]/90 text-black font-medium px-4 py-2">
+                <Plus className="h-5 w-5 mr-2" />
+                Add Location
+              </Button>
+            </Link>
+            <Button
+              className="bg-[#ffc72d] hover:bg-[#ffc72d]/90 text-black font-medium px-4 py-2"
+              onClick={() => router.push("/activity-tracking")}
+            >
+              <Play className="h-5 w-5 mr-2" />
+              Start Activity
+            </Button>
+            <Button
+              size="icon"
+              className="h-12 w-12 rounded-full bg-zinc-800 hover:bg-zinc-700"
+              onClick={() => {
+                if (mapInstanceRef.current) {
+                  if (userLocation) {
+                    mapInstanceRef.current.flyTo({
+                      center: [userLocation.lng, userLocation.lat],
+                      zoom: 14,
+                      essential: true,
+                    })
+                  } else if (isGeolocationAvailable()) {
+                    // Try to get location again
+                    navigator.geolocation.getCurrentPosition(
+                      (position) => {
+                        const { latitude, longitude } = position.coords
+                        setUserLocation({ lat: latitude, lng: longitude })
+                        mapInstanceRef.current.flyTo({
+                          center: [longitude, latitude],
+                          zoom: 14,
+                          essential: true,
+                        })
+                      },
+                      (error) => {
+                        console.error("Error getting location:", error)
+                        toast({
+                          title: "Location access denied",
+                          description: "Enable location permissions in your browser settings.",
+                          variant: "default",
+                        })
+                      },
+                    )
+                  } else {
+                    toast({
+                      title: "Location not available",
+                      description: "Your browser doesn't support geolocation.",
+                      variant: "default",
+                    })
+                  }
+                }
+              }}
+            >
+              <MapPin className="h-6 w-6" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Spot Details Modal */}
+        {selectedSpot && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-zinc-900 rounded-xl w-full max-w-md overflow-hidden">
+              <div className="relative h-40 bg-gradient-to-r from-zinc-800 to-zinc-700">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 rounded-full"
+                  onClick={handleCloseSpotDetails}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-x"
+                  >
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
                 </Button>
-              </Link>
+                <div className="absolute bottom-4 left-4">
+                  <h2 className="text-xl font-bold">{selectedSpot.name}</h2>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center">
+                      <Star className="h-4 w-4 text-[#ffc72d] fill-[#ffc72d]" />
+                      <span className="text-sm ml-1">
+                        {selectedSpot.rating} ({selectedSpot.reviews})
+                      </span>
+                    </div>
+                    <span className="text-sm">•</span>
+                    <span className="text-sm">{selectedSpot.distance}</span>
+                  </div>
+                </div>
+              </div>
+
+              {!showCheckIn ? (
+                <div className="p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-semibold">Active Users</h3>
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {selectedSpot.riders} active
+                    </Badge>
+                  </div>
+
+                  {selectedSpot.activeUsers.length > 0 ? (
+                    <div className="space-y-3 mb-4">
+                      {selectedSpot.activeUsers.map((user: any) => (
+                        <div key={user.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+                              <AvatarFallback>{user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{user.name}</p>
+                              <p className="text-xs text-zinc-400 capitalize">{user.activity}</p>
+                            </div>
+                          </div>
+                          <Badge className="bg-[#ffc72d] text-black">Lvl {user.level}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-400 mb-4">No users currently active at this location.</p>
+                  )}
+
+                  <div className="mb-4">
+                    <h3 className="font-semibold mb-2">Active Challenges</h3>
+                    {selectedSpot.challenges > 0 ? (
+                      <div className="space-y-2">
+                        {Array.from({ length: selectedSpot.challenges }).map((_, i) => (
+                          <div key={i} className="bg-zinc-800 rounded-lg p-3 flex justify-between items-center">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <Trophy className="h-4 w-4 text-[#ffc72d]" />
+                                <p className="font-medium text-sm">
+                                  {["Trick Challenge", "Speed Run", "Style Contest"][i % 3]}
+                                </p>
+                              </div>
+                              <p className="text-xs text-zinc-400">
+                                {["2 participants", "4 participants", "1 participant"][i % 3]}
+                              </p>
+                            </div>
+                            <Button size="sm" className="bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90">
+                              Join
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-zinc-400">No active challenges at this location.</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1" onClick={handleGetDirections}>
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Directions
+                    </Button>
+                    <Button variant="outline" className="flex-1">
+                      <Trophy className="h-4 w-4 mr-2" />
+                      Create Challenge
+                    </Button>
+                    <Button className="flex-1 bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90" onClick={handleCheckIn}>
+                      <CheckIn className="h-4 w-4 mr-2" />
+                      Check In
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4">
+                  <h3 className="font-semibold mb-4">Check In at {selectedSpot.name}</h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm text-zinc-400 mb-1 block">Activity Type</label>
+                      <select className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-sm">
+                        <option value="skateboarding">Skateboarding</option>
+                        <option value="surfing">Surfing</option>
+                        <option value="snowboarding">Snowboarding</option>
+                        <option value="biking">Biking</option>
+                        <option value="running">Running</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-sm text-zinc-400 mb-1 block">Status Update (Optional)</label>
+                      <textarea
+                        className="w-full bg-zinc-800 border border-zinc-700 rounded-md p-2 text-sm resize-none h-20"
+                        placeholder="Share what you're up to..."
+                      ></textarea>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="startActivity" className="rounded bg-zinc-800 border-zinc-700" />
+                      <label htmlFor="startActivity" className="text-sm">
+                        Start activity tracking
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="shareLocation" className="rounded bg-zinc-800 border-zinc-700" />
+                      <label htmlFor="shareLocation" className="text-sm">
+                        Share my location with other users
+                      </label>
+                    </div>
+
+                    <div className="bg-zinc-800 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium">Check-in Rewards</p>
+                        <Badge className="bg-[#ffc72d] text-black">+25 XP</Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-zinc-400">First check-in of the day</p>
+                        <p className="text-xs text-[#ffc72d]">+10 $PRIME</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1" onClick={() => setShowCheckIn(false)}>
+                        Cancel
+                      </Button>
+                      <Button className="flex-1 bg-[#ffc72d] text-black hover:bg-[#ffc72d]/90">Check In</Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        <div className="mt-6">
-          <h2 className="text-lg font-bold mb-3">Popular Spots</h2>
+        {/* Nearby Spots */}
+        <div className="p-4">
+          <h2 className="text-xl font-bold mb-4">Nearby Spots</h2>
           <div className="space-y-3">
-            {/* Spot items */}
-            {[1, 2, 3].map((spot) => (
-              <div key={spot} className="bg-zinc-900 rounded-lg p-4 flex items-center gap-3">
-                <div className="bg-zinc-800 p-2 rounded-full">
-                  <MapPin className="h-5 w-5 text-primary" />
+            {filteredSpots.map((spot) => (
+              <div
+                key={spot.id}
+                className="bg-zinc-900 rounded-xl p-4 flex items-center justify-between cursor-pointer"
+                onClick={() => handleSpotClick(spot)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center text-xl">
+                    {spot.icon}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">{spot.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-zinc-400">{spot.distance}</p>
+                      <span className="text-xs text-zinc-500">•</span>
+                      <div className="flex items-center">
+                        <Users className="h-3 w-3 text-zinc-400 mr-1" />
+                        <span className="text-xs text-zinc-400">{spot.riders}</span>
+                      </div>
+                      {spot.challenges > 0 && (
+                        <>
+                          <span className="text-xs text-zinc-500">•</span>
+                          <div className="flex items-center">
+                            <Trophy className="h-3 w-3 text-[#ffc72d] mr-1" />
+                            <span className="text-xs text-[#ffc72d]">{spot.challenges}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-medium">
-                    {spot === 1 ? "Downtown Skatepark" : spot === 2 ? "Malibu Surfrider Beach" : "Mountain High Resort"}
-                  </h3>
-                  <p className="text-xs text-zinc-500">
-                    {spot === 1 ? "Skateboarding" : spot === 2 ? "Surfing" : "Snowboarding"} •
-                    {spot === 1 ? "2.5 miles away" : spot === 2 ? "12 miles away" : "45 miles away"}
-                  </p>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center">
+                    <Star className="h-4 w-4 text-[#ffc72d] fill-[#ffc72d]" />
+                    <span className="text-sm ml-1">{spot.rating}</span>
+                  </div>
+                  <Button variant="ghost" className="h-8">
+                    Details
+                  </Button>
                 </div>
               </div>
             ))}
@@ -622,7 +911,7 @@ function MapPageContent() {
       </div>
 
       <TabBar activeTab="map" />
-    </div>
+    </AppShell>
   )
 }
 

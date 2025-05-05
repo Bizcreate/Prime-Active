@@ -3,7 +3,12 @@
 import type React from "react"
 
 import { CartProvider } from "@/contexts/cart-context"
+import { WishlistProvider } from "@/hooks/use-wishlist"
 
 export default function MerchLayout({ children }: { children: React.ReactNode }) {
-  return <CartProvider>{children}</CartProvider>
+  return (
+    <WishlistProvider>
+      <CartProvider>{children}</CartProvider>
+    </WishlistProvider>
+  )
 }

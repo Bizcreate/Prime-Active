@@ -1,247 +1,191 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { AppShell } from "@/components/app-shell"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Clock, MapPin, Heart, Flame, Play, Pause, StopCircle } from "lucide-react"
+import { TabBar } from "@/components/tab-bar"
+import { ArrowLeft, Play, Pause, StopCircle, Timer, MapPin, AlertTriangle } from "lucide-react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { formatTime, formatDistance, formatCalories } from "@/lib/utils"
-import { useToast } from "@/hooks/use-toast"
-import { merchandiseWearService, type ConnectedMerchandise } from "@/services/merchandise-wear-service"
+import { CircularProgress } from "@/components/circular-progress"
+import { FallbackPage } from "@/components/fallback-page"
 
 export default function ActivityTrackingPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { toast } = useToast()
-
-  // Use refs to store initial values from URL parameters
-  const initialParamsProcessed = useRef(false)
-
-  const [isActive, setIsActive] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
   const [isPaused, setIsPaused] = useState(false)
-  const [activityType, setActivityType] = useState("")
-  const [activityName, setActivityName] = useState("")
-  const [location, setLocation] = useState("")
-  const [elapsedTime, setElapsedTime] = useState(0)
+  const [duration, setDuration] = useState(0)
   const [distance, setDistance] = useState(0)
   const [calories, setCalories] = useState(0)
-  const [heartRate, setHeartRate] = useState(0)
-  const [wornMerchandise, setWornMerchandise] = useState<ConnectedMerchandise[]>([])
+  const [isPreviewMode, setIsPreviewMode] = useState(false)
 
-  // Process URL parameters only once on initial render
   useEffect(() => {
-    if (initialParamsProcessed.current) return
+    // Check if we're in a preview environment
+    const checkPreviewMode = () => {
+      // Check if we're in an iframe (common for previews)
+      const inIframe = window !== window.parent
+      // Check if we're in a Vercel preview environment
+      const inVercelPreview = window.location.hostname.includes("vercel.app")
 
-    // Get activity details from URL parameters
-    const type = searchParams.get("type") || ""
-    const name = searchParams.get("name") || ""
-    const loc = searchParams.get("location") || ""
-    const merchParam = searchParams.get("merchandise") || ""
-
-    // Set activity details
-    setActivityType(type)
-    if (name) setActivityName(decodeURIComponent(name))
-    if (loc) setLocation(decodeURIComponent(loc))
-
-    // Process merchandise
-    if (merchParam) {
-      try {
-        const merchIds = JSON.parse(decodeURIComponent(merchParam)) as string[]
-        // Get merchandise items outside of render cycle
-        const merchandise: ConnectedMerchandise[] = []
-
-        merchIds.forEach((id) => {
-          const item = merchandiseWearService.getMerchandiseById(id)
-          if (item) merchandise.push(item)
-        })
-
-        if (merchandise.length > 0) {
-          setWornMerchandise(merchandise)
-        }
-      } catch (error) {
-        console.error("Error parsing merchandise data:", error)
-      }
+      return inIframe || inVercelPreview
     }
 
-    initialParamsProcessed.current = true
-  }, []) // Empty dependency array - run once on mount
+    setIsPreviewMode(checkPreviewMode())
 
-  // Separate effect for the interval
+    // Simulate loading
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Simulate activity tracking
   useEffect(() => {
-    // Start tracking
+    if (isLoading || isPaused) return
+
     const interval = setInterval(() => {
-      if (isActive && !isPaused) {
-        setElapsedTime((prev) => prev + 1)
-        setDistance((prev) => prev + 0.001)
-        setCalories((prev) => prev + 0.1)
-        setHeartRate(120 + Math.floor(Math.random() * 20))
-      }
+      setDuration((prev) => prev + 1)
+      setDistance((prev) => prev + 0.001)
+      setCalories((prev) => prev + 0.1)
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [isActive, isPaused]) // Only depend on activity state
+  }, [isLoading, isPaused])
 
-  const toggleActivity = () => {
-    if (isPaused) {
-      // Resume activity
-      setIsPaused(false)
-    } else {
-      // Pause activity
-      setIsPaused(true)
-    }
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }
 
-  const stopActivity = () => {
-    setIsActive(false)
-    setIsPaused(false)
-
-    // Stop wearing all merchandise
-    wornMerchandise.forEach((item) => {
-      merchandiseWearService.stopWearing(item.id)
-    })
-
-    // In a real app, we would stop tracking and save the activity
-    toast({
-      title: "Activity completed",
-      description: "Your activity has been saved",
-    })
-    router.push("/activity-summary")
+  if (isLoading) {
+    return <FallbackPage />
   }
 
   return (
-    <AppShell>
-      <div className="min-h-screen bg-black p-6 pb-20">
+    <div className="flex min-h-screen flex-col bg-black pb-20">
+      <div className="p-6">
         <div className="flex items-center mb-6">
           <Link href="/start-activity">
             <Button variant="ghost" size="icon" className="mr-2">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <h1 className="text-xl font-bold">Activity in Progress</h1>
+          <h1 className="text-xl font-bold">Tracking Activity</h1>
         </div>
 
-        <div className="mb-6">
-          <div className="bg-zinc-900 rounded-lg p-4 mb-4">
-            <h2 className="text-lg font-semibold">{activityName || "Activity"}</h2>
-            {location && <p className="text-sm text-zinc-400">{location}</p>}
-          </div>
-
-          <div className="h-60 w-full rounded-lg overflow-hidden map-container relative mb-3">
-            {/* Map placeholder */}
-            <div className="absolute inset-0 flex items-center justify-center bg-zinc-800">
-              <>
-                {/* User location marker */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                  <div className="h-4 w-4 rounded-full bg-burnz-500 animate-pulse"></div>
-                  <div className="h-10 w-10 rounded-full bg-burnz-500/20 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
-                </div>
-
-                {/* Mock route path */}
-                <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 240">
-                  <path
-                    d="M100,120 C150,80 200,160 300,120"
-                    fill="none"
-                    stroke="#FF8800"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeDasharray="5,5"
-                  />
-                </svg>
-              </>
+        {isPreviewMode && (
+          <div className="bg-amber-900/20 border border-amber-900/30 rounded-lg p-4 mb-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="font-medium text-amber-500 mb-1">Preview Mode</h3>
+              <p className="text-sm text-zinc-300">
+                Activity tracking is simulated in preview mode. Full tracking functionality is available in the deployed
+                application.
+              </p>
             </div>
           </div>
+        )}
 
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="bg-zinc-900 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-burnz-500" />
-                <div>
-                  <p className="text-xs text-zinc-400">Duration</p>
-                  <p className="text-lg font-semibold">{formatTime(elapsedTime)}</p>
-                </div>
-              </div>
+        <div className="bg-zinc-900 rounded-lg p-6 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-lg font-bold">Skateboarding</h2>
+              <p className="text-sm text-zinc-500">In Progress</p>
             </div>
+            <CircularProgress value={Math.min((duration / 3600) * 100, 100)} size={60} strokeWidth={6} />
+          </div>
 
-            <div className="bg-zinc-900 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-blue-500" />
-                <div>
-                  <p className="text-xs text-zinc-400">Distance</p>
-                  <p className="text-lg font-semibold">{formatDistance(distance * 1000)}</p>
-                </div>
-              </div>
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="text-center">
+              <p className="text-xs text-zinc-500 mb-1">Duration</p>
+              <p className="text-lg font-bold">{formatDuration(duration)}</p>
             </div>
-
-            <div className="bg-zinc-900 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Heart className="h-5 w-5 text-red-500" />
-                <div>
-                  <p className="text-xs text-zinc-400">Heart Rate</p>
-                  <p className="text-lg font-semibold">{heartRate > 0 ? `${heartRate} bpm` : "--"}</p>
-                </div>
-              </div>
+            <div className="text-center">
+              <p className="text-xs text-zinc-500 mb-1">Distance</p>
+              <p className="text-lg font-bold">{distance.toFixed(2)} km</p>
             </div>
+            <div className="text-center">
+              <p className="text-xs text-zinc-500 mb-1">Calories</p>
+              <p className="text-lg font-bold">{Math.round(calories)}</p>
+            </div>
+          </div>
 
-            <div className="bg-zinc-900 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <Flame className="h-5 w-5 text-orange-500" />
-                <div>
-                  <p className="text-xs text-zinc-400">Calories</p>
-                  <p className="text-lg font-semibold">{formatCalories(calories)}</p>
-                </div>
-              </div>
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => setIsPaused(!isPaused)}>
+              {isPaused ? (
+                <>
+                  <Play className="h-4 w-4 mr-2" /> Resume
+                </>
+              ) : (
+                <>
+                  <Pause className="h-4 w-4 mr-2" /> Pause
+                </>
+              )}
+            </Button>
+            <Link href="/activity-summary" className="flex-1">
+              <Button className="w-full bg-red-600 hover:bg-red-700">
+                <StopCircle className="h-4 w-4 mr-2" /> End
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="bg-zinc-800 p-2 rounded-full">
+              <Timer className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-medium">Activity Stats</h3>
+              <p className="text-xs text-zinc-500">Real-time tracking</p>
             </div>
           </div>
 
           <div className="space-y-3">
-            <Button
-              className={`w-full py-6 text-lg ${isPaused ? "bg-burnz-500 hover:bg-burnz-600" : "bg-red-500 hover:bg-red-600"}`}
-              onClick={toggleActivity}
-            >
-              {isPaused ? (
-                <>
-                  <Play className="h-5 w-5 mr-2" /> Resume Activity
-                </>
-              ) : (
-                <>
-                  <Pause className="h-5 w-5 mr-2" /> Pause Activity
-                </>
-              )}
-            </Button>
-
-            <Button variant="outline" className="w-full py-4 text-lg" onClick={stopActivity}>
-              <StopCircle className="h-5 w-5 mr-2" /> End Activity
-            </Button>
-          </div>
-        </div>
-        {/* Worn Merchandise Section */}
-        {wornMerchandise.length > 0 && (
-          <div className="mt-6 mb-4">
-            <h3 className="text-md font-semibold mb-3">Wearing</h3>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {wornMerchandise.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex-shrink-0 bg-zinc-900 rounded-lg p-2 flex flex-col items-center"
-                  style={{ width: "80px" }}
-                >
-                  <div className="w-12 h-12 rounded-md bg-zinc-800 overflow-hidden mb-1">
-                    {item.image && (
-                      <img
-                        src={item.image || "/placeholder.svg"}
-                        alt={item.productName}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </div>
-                  <p className="text-xs text-center truncate w-full">{item.productName.split(" ")[0]}</p>
-                </div>
-              ))}
+            <div className="bg-zinc-800 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <p className="text-sm">Average Speed</p>
+                <p className="text-sm font-bold">{(distance / (duration / 3600)).toFixed(1)} km/h</p>
+              </div>
+            </div>
+            <div className="bg-zinc-800 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <p className="text-sm">Elevation Gain</p>
+                <p className="text-sm font-bold">{Math.round(duration * 0.2)} m</p>
+              </div>
+            </div>
+            <div className="bg-zinc-800 rounded-lg p-3">
+              <div className="flex justify-between items-center">
+                <p className="text-sm">Steps</p>
+                <p className="text-sm font-bold">{Math.round(duration * 20)}</p>
+              </div>
             </div>
           </div>
-        )}
+        </div>
+
+        <div className="bg-zinc-900 rounded-lg p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="bg-zinc-800 p-2 rounded-full">
+              <MapPin className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-medium">Current Location</h3>
+              <p className="text-xs text-zinc-500">
+                {isPreviewMode ? "Location tracking simulated in preview" : "GPS tracking active"}
+              </p>
+            </div>
+          </div>
+
+          <div className="h-40 bg-zinc-800 rounded-lg flex items-center justify-center">
+            <p className="text-zinc-500">
+              {isPreviewMode ? "Map preview disabled in preview mode" : "Map will display your current location"}
+            </p>
+          </div>
+        </div>
       </div>
-    </AppShell>
+
+      <TabBar activeTab="none" />
+    </div>
   )
 }

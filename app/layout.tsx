@@ -1,11 +1,13 @@
 import type React from "react"
-import type { Metadata } from "next"
+import { ErrorBoundary } from "@/components/error-boundary"
+import { Web3Provider } from "@/components/web3-provider"
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
-import ClientLayout from "./ClientLayout"
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Prime Active",
-  description: "Prime Active - Action Sports Social App",
+  description: "Prime Active - Action Sports Community",
     generator: 'v0.dev'
 }
 
@@ -17,7 +19,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ClientLayout>{children}</ClientLayout>
+        <ErrorBoundary>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+            <Web3Provider>
+              {children}
+              <Toaster />
+            </Web3Provider>
+          </ThemeProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Smartphone, Check, ArrowRight, Loader2, Sparkles } from "lucide-react"
@@ -18,17 +18,32 @@ export function NFCPatchActivation({ onComplete, onCancel, hasNFT = false }: NFC
   const [isScanning, setIsScanning] = useState(false)
   const [hasNFTState, setHasNFTState] = useState(hasNFT) // State to simulate NFT availability
 
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Clean up timers when component unmounts
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+      }
+    }
+  }, [])
+
   const handleStartScan = () => {
     setStep("scanning")
     setIsScanning(true)
 
-    // Simulate NFC scanning
-    setTimeout(() => {
+    // Simulate NFC scanning with proper cleanup on unmount
+    const timer = setTimeout(() => {
+      // Only proceed if component is still mounted
       setIsScanning(false)
       setStep("success")
       // Simulate NFT being available sometimes
       setHasNFTState(Math.random() < 0.5)
     }, 3000)
+
+    // Store timer reference for cleanup
+    timerRef.current = timer
   }
 
   const handleComplete = () => {

@@ -1,4 +1,4 @@
-"\"use client"
+"use client"
 
 import { useState, useEffect, useCallback } from "react"
 
@@ -245,15 +245,26 @@ export function useActivityTracking() {
 
 // Calculate distance between two points using Haversine formula
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371 // Radius of the earth in km
-  const dLat = deg2rad(lat2 - lat1)
-  const dLon = deg2rad(lon2 - lon1)
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  const d = R * c // Distance in km
-  return d
+  try {
+    // Handle invalid inputs
+    if (!isFinite(lat1) || !isFinite(lon1) || !isFinite(lat2) || !isFinite(lon2)) {
+      console.warn("Invalid coordinates in calculateDistance", { lat1, lon1, lat2, lon2 })
+      return 0
+    }
+
+    const R = 6371 // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1)
+    const dLon = deg2rad(lon2 - lon1)
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    const d = R * c // Distance in km
+    return d
+  } catch (error) {
+    console.error("Error calculating distance:", error)
+    return 0
+  }
 }
 
 function deg2rad(deg: number): number {

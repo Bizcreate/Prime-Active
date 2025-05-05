@@ -26,6 +26,9 @@ class DePINManagerClass {
 
   // Submit activity data to all active services
   public async submitActivityToAll(activity: ActivityData): Promise<Record<string, boolean>> {
+    // Skip on server
+    if (typeof window === "undefined") return {}
+
     const results: Record<string, boolean> = {}
 
     for (const service of this.getActiveServices()) {
@@ -44,11 +47,14 @@ class DePINManagerClass {
 
   // Get total balance across all services
   public getTotalBalance(): Record<string, number> {
+    // Skip on server
+    if (typeof window === "undefined") return {}
+
     const balances: Record<string, number> = {}
 
     for (const service of this.services) {
       const network = service.getNetwork()
-      const balance = service.getBalance()
+      const balance = service.getBalance ? service.getBalance() : 0
 
       if (balance > 0) {
         balances[network.tokenSymbol] = (balances[network.tokenSymbol] || 0) + balance

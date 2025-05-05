@@ -19,7 +19,7 @@ export interface DePINServiceConfig {
   options?: Record<string, any>
 }
 
-export interface Reward {
+export interface DePINReward {
   amount: number
   timestamp: number
   txHash?: string

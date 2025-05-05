@@ -21,7 +21,13 @@ export abstract class BaseDePINService {
     return this.config
   }
 
+  // Keep both methods for backward compatibility
   public isServiceEnabled(): boolean {
+    return this.isEnabled
+  }
+
+  // This was the original method name used in dashboard.tsx
+  public isNetworkEnabled(): boolean {
     return this.isEnabled
   }
 

@@ -1,12 +1,11 @@
-import type { DePINNetwork, DePINReward, ActivityData, DePINServiceConfig } from "./depin-types"
-import { generateMockTxHash } from "@/lib/crypto-utils"
+import type { DePINNetwork, DePINServiceConfig, Reward } from "./depin-types"
 
 export abstract class BaseDePINService {
+  protected network: DePINNetwork
+  protected config: DePINServiceConfig
   protected isEnabled = false
   protected userId: string | null = null
-  protected config: DePINServiceConfig
-  protected rewards: DePINReward[] = []
-  protected network: DePINNetwork
+  protected rewards: Reward[] = []
 
   constructor(network: DePINNetwork, config: DePINServiceConfig) {
     this.network = network
@@ -14,83 +13,62 @@ export abstract class BaseDePINService {
     this.loadState()
   }
 
-  public abstract enableMining(userId: string): Promise<boolean>
-  public abstract disableMining(): Promise<boolean>
-  public abstract submitActivityData(activity: ActivityData): Promise<boolean>
-
   public getNetwork(): DePINNetwork {
     return this.network
   }
 
-  public isNetworkEnabled(): boolean {
+  public getConfig(): DePINServiceConfig {
+    return this.config
+  }
+
+  public isServiceEnabled(): boolean {
     return this.isEnabled
   }
 
-  public getRewards(): DePINReward[] {
-    return this.rewards
+  public getUserId(): string | null {
+    return this.userId
   }
 
-  public getBalance(): number {
-    return this.rewards
-      .filter((reward) => reward.status === "confirmed")
-      .reduce((total, reward) => total + reward.amount, 0)
-  }
-
-  protected addReward(amount: number, activityId?: string, txHash?: string): void {
+  protected addReward(amount: number, activityId: string, txHash?: string): void {
     this.rewards.push({
-      networkId: this.network.id,
       amount,
       timestamp: Date.now(),
-      txHash: txHash || generateMockTxHash(),
       activityId,
-      status: txHash ? "confirmed" : "pending",
+      txHash,
     })
-
     this.saveState()
   }
 
   protected saveState(): void {
+    // Skip saving state on the server
+    if (typeof window === "undefined") return
+
     try {
-      localStorage.setItem(
-        `depin_${this.network.id}`,
-        JSON.stringify({
-          isEnabled: this.isEnabled,
-          userId: this.userId,
-          rewards: this.rewards,
-        }),
-      )
+      const state = {
+        isEnabled: this.isEnabled,
+        userId: this.userId,
+        rewards: this.rewards,
+      }
+      localStorage.setItem(`depin_${this.network.id}`, JSON.stringify(state))
     } catch (error) {
       console.error(`Failed to save state for ${this.network.name}:`, error)
     }
   }
 
   protected loadState(): void {
+    // Skip loading state on the server
+    if (typeof window === "undefined") return
+
     try {
-      const state = localStorage.getItem(`depin_${this.network.id}`)
-      if (state) {
-        const parsed = JSON.parse(state)
-        this.isEnabled = parsed.isEnabled || false
-        this.userId = parsed.userId || null
-        this.rewards = parsed.rewards || []
+      const stateJson = localStorage.getItem(`depin_${this.network.id}`)
+      if (stateJson) {
+        const state = JSON.parse(stateJson)
+        this.isEnabled = state.isEnabled || false
+        this.userId = state.userId || null
+        this.rewards = state.rewards || []
       }
     } catch (error) {
       console.error(`Failed to load state for ${this.network.name}:`, error)
     }
-  }
-
-  protected calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371 // Radius of the earth in km
-    const dLat = this.deg2rad(lat2 - lat1)
-    const dLon = this.deg2rad(lon2 - lon1)
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-    const distance = R * c // Distance in km
-    return distance
-  }
-
-  protected deg2rad(deg: number): number {
-    return deg * (Math.PI / 180)
   }
 }

@@ -5,9 +5,11 @@ export interface DePINNetwork {
   tokenSymbol: string
   tokenName: string
   logoUrl: string
-  website: string
+  website?: string
   category: "move-to-earn" | "location" | "compute" | "storage" | "other"
   status: "active" | "inactive" | "coming-soon"
+  chainId?: number
+  enabled?: boolean
 }
 
 export interface DePINServiceConfig {
@@ -17,13 +19,11 @@ export interface DePINServiceConfig {
   options?: Record<string, any>
 }
 
-export interface DePINReward {
-  networkId: string
+export interface Reward {
   amount: number
   timestamp: number
   txHash?: string
   activityId?: string
-  status: "pending" | "confirmed" | "failed"
 }
 
 export interface ActivityData {
@@ -31,12 +31,11 @@ export interface ActivityData {
   type: string
   startTime: number
   endTime: number
-  distance?: number
-  duration?: number
-  calories?: number
-  steps?: number
-  locations?: LocationPoint[]
-  metadata?: Record<string, any>
+  distance: number
+  duration: number
+  calories: number
+  steps: number
+  locations: LocationPoint[]
 }
 
 export interface LocationPoint {
@@ -46,29 +45,4 @@ export interface LocationPoint {
   accuracy?: number
   altitude?: number
   speed?: number
-}
-
-export interface DePINServiceStatus {
-  isActive: boolean
-  lastSync?: number
-  error?: string
-  nodeId?: string
-  version?: string
-}
-
-export interface DePINTokenBalance {
-  networkId: string
-  balance: number
-  symbol: string
-  name: string
-  lastUpdated: number
-}
-
-export interface DePINStakingInfo {
-  networkId: string
-  stakedAmount: number
-  rewards: number
-  apy: number
-  lockPeriod: number
-  unlockDate?: number
 }

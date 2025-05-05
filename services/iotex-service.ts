@@ -33,7 +33,9 @@ export class IoTeXService extends BaseDePINService {
       this.isEnabled = true
 
       // Initialize W3bStream service
-      await w3bStreamService.initialize(userId)
+      if (typeof window !== "undefined") {
+        await w3bStreamService.initialize(userId)
+      }
 
       console.log(`IoTeX mining enabled for user ${userId}`)
       this.saveState()
@@ -61,6 +63,9 @@ export class IoTeXService extends BaseDePINService {
   }
 
   public async startNode(): Promise<boolean> {
+    // Skip on server
+    if (typeof window === "undefined") return false
+
     try {
       if (!this.isEnabled) {
         console.error("IoTeX service not enabled")
@@ -80,6 +85,9 @@ export class IoTeXService extends BaseDePINService {
   }
 
   public async stopNode(): Promise<boolean> {
+    // Skip on server
+    if (typeof window === "undefined") return false
+
     try {
       const success = await w3bStreamService.stopNode()
       if (success) {
@@ -102,6 +110,9 @@ export class IoTeXService extends BaseDePINService {
   }
 
   public async submitActivityData(activity: ActivityData): Promise<boolean> {
+    // Skip on server
+    if (typeof window === "undefined") return false
+
     try {
       if (!this.isEnabled) {
         console.error("IoTeX service not enabled")
@@ -130,14 +141,18 @@ export class IoTeXService extends BaseDePINService {
 
   public setPassiveRate(rate: number): void {
     this.passiveRate = rate
-    w3bStreamService.setPassiveRate(rate)
+    if (typeof window !== "undefined") {
+      w3bStreamService.setPassiveRate(rate)
+    }
   }
 
   public getRewards(): any[] {
+    if (typeof window === "undefined") return []
     return w3bStreamService.getRewards()
   }
 
   public getTotalMined(): number {
+    if (typeof window === "undefined") return 0
     return w3bStreamService.getTotalMined()
   }
 

@@ -19,6 +19,7 @@ interface WishlistContextType {
   addToWishlist: (item: WishlistItem) => Promise<void>
   removeFromWishlist: (id: string) => Promise<void>
   isInWishlist: (id: string) => boolean
+  toggleWishlist: (id: string) => boolean
   clearWishlist: () => Promise<void>
 }
 
@@ -50,6 +51,8 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
     if (typeof window !== "undefined") {
       loadWishlist()
+    } else {
+      setIsInitialized(true) // Mark as initialized even on server
     }
   }, [])
 
@@ -82,6 +85,26 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  // Toggle item in wishlist (add if not present, remove if present)
+  const toggleWishlist = (id: string): boolean => {
+    let isAdded = false
+
+    setWishlist((prev) => {
+      const exists = prev.some((item) => item.id === id)
+
+      if (exists) {
+        return prev.filter((item) => item.id !== id)
+      } else {
+        // For simplicity, we'll just add the ID since we don't have the full item
+        // In a real app, you'd want to fetch the full item data
+        isAdded = true
+        return [...prev, { id, name: id, description: "", price: 0, image: "" }]
+      }
+    })
+
+    return isAdded
+  }
+
   // Check if item is in wishlist
   const isInWishlist = (id: string): boolean => {
     return wishlist.some((item) => item.id === id)
@@ -102,6 +125,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         addToWishlist,
         removeFromWishlist,
         isInWishlist,
+        toggleWishlist,
         clearWishlist,
       }}
     >

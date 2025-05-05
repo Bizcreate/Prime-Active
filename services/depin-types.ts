@@ -20,10 +20,12 @@ export interface DePINServiceConfig {
 }
 
 export interface DePINReward {
+  networkId: string
   amount: number
   timestamp: number
   txHash?: string
   activityId?: string
+  status: "pending" | "confirmed" | "failed"
 }
 
 export interface ActivityData {

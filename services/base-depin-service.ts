@@ -1,11 +1,11 @@
-import type { DePINNetwork, DePINServiceConfig, Reward } from "./depin-types"
+import type { DePINNetwork, DePINServiceConfig, DePINReward } from "./depin-types"
 
 export abstract class BaseDePINService {
   protected network: DePINNetwork
   protected config: DePINServiceConfig
   protected isEnabled = false
   protected userId: string | null = null
-  protected rewards: Reward[] = []
+  protected rewards: DePINReward[] = []
 
   constructor(network: DePINNetwork, config: DePINServiceConfig) {
     this.network = network
@@ -35,12 +35,29 @@ export abstract class BaseDePINService {
     return this.userId
   }
 
+  // Add the getBalance method
+  public getBalance(): number {
+    // Skip on server
+    if (typeof window === "undefined") return 0
+
+    return this.rewards
+      .filter((reward) => reward.status === "confirmed")
+      .reduce((total, reward) => total + reward.amount, 0)
+  }
+
+  // Add getRewards method for backward compatibility
+  public getRewards(): DePINReward[] {
+    return this.rewards
+  }
+
   protected addReward(amount: number, activityId: string, txHash?: string): void {
     this.rewards.push({
+      networkId: this.network.id,
       amount,
       timestamp: Date.now(),
       activityId,
       txHash,
+      status: "confirmed",
     })
     this.saveState()
   }

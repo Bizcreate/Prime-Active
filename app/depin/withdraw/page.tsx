@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,20 +23,22 @@ export default function WithdrawPage() {
   const [maxAmount, setMaxAmount] = useState<number>(0)
   const { toast } = useToast()
 
-  useState(() => {
+  useEffect(() => {
     // Load networks and balances
-    const services = dePINManager.getAllServices()
-    const networkData = services.map((service) => {
-      const network = service.getNetwork()
-      return {
-        id: network.id,
-        name: network.name,
-        symbol: network.tokenSymbol,
-        balance: service.getBalance(),
-        logoUrl: network.logoUrl,
-      }
-    })
-    setNetworks(networkData)
+    if (typeof window !== "undefined") {
+      const services = dePINManager.getAllServices()
+      const networkData = services.map((service) => {
+        const network = service.getNetwork()
+        return {
+          id: network.id,
+          name: network.name,
+          symbol: network.tokenSymbol,
+          balance: service.getBalance(),
+          logoUrl: network.logoUrl,
+        }
+      })
+      setNetworks(networkData)
+    }
   }, [])
 
   const handleNetworkChange = (networkId: string) => {

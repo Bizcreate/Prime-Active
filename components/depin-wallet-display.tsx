@@ -21,6 +21,11 @@ export function DePINWalletDisplay({ networkId }: DepiNWalletDisplayProps) {
   const loadNetworks = async () => {
     setIsLoading(true)
     try {
+      if (typeof window === "undefined") {
+        setNetworks([])
+        return
+      }
+
       // Get all services or filter by networkId
       const services = networkId
         ? [dePINManager.getServiceByNetworkId(networkId)].filter(Boolean)

@@ -126,7 +126,7 @@ export function PDFDownloadButton({
       })
 
       // PDF Document Component
-      const ProposalPDF = () =>
+      const PrimeXWatchRoadmapPDF = () =>
         Document.createElement(
           Document,
           null,
@@ -137,8 +137,8 @@ export function PDFDownloadButton({
             Document.createElement(
               View,
               { style: styles.header },
-              Document.createElement(Text, { style: styles.title }, "PrimeX Watch Partnership Proposal"),
-              Document.createElement(Text, { style: styles.subtitle }, "Strategic Partnership Proposal"),
+              Document.createElement(Text, { style: styles.title }, "PrimeX Watch Roadmap"),
+              Document.createElement(Text, { style: styles.subtitle }, "Partnership Development Plan"),
               Document.createElement(Text, { style: styles.subtitle }, "Revolutionizing Action Sports Tracking"),
             ),
 
@@ -149,7 +149,7 @@ export function PDFDownloadButton({
               Document.createElement(
                 Text,
                 { style: styles.paragraph },
-                "This proposal outlines a strategic partnership opportunity between Prime Mates Board Club (PMBC) and WatchX to create the first specialized wearable technology platform for action sports enthusiasts, integrating a Web3 move-to-earn concept.",
+                "This roadmap outlines the development plan for PrimeX Watch, a strategic partnership between Prime Mates Board Club (PMBC) and WatchX to create the first specialized wearable technology platform for action sports enthusiasts, integrating a Web3 move-to-earn concept.",
               ),
 
               Document.createElement(
@@ -184,32 +184,37 @@ export function PDFDownloadButton({
             Document.createElement(
               View,
               { style: styles.section },
-              Document.createElement(Text, { style: styles.sectionTitle }, "Partnership Vision"),
+              Document.createElement(Text, { style: styles.sectionTitle }, "Development Timeline"),
               Document.createElement(
                 Text,
                 { style: styles.paragraph },
-                "The partnership between PMBC and WatchX represents a unique opportunity to capture an underserved market segment while leveraging both companies' core strengths, integrating Web3 elements for enhanced user engagement and rewards.",
+                "The PrimeX Watch development follows an accelerated roadmap from June to October 2025, with Genesis Edition launch in September.",
               ),
 
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Untapped Market: Action sports enthusiasts lack specialized wearable solutions with Web3 integration",
+                "• June 2025: Partnership finalization and technical specifications",
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Technology Synergy: WatchX hardware + PMBC software + Blockchain APIs = Complete solution",
+                "• July 2025: MVP development and API integration",
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Brand Expansion: Mutual market expansion and brand strengthening within the Web3 community",
+                "• August 2025: Closed beta with Prime Mates NFT holders",
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Revenue Growth: New revenue streams through co-branded products and NFT minting",
+                "• September 2025: Genesis Edition launch and public rollout",
+              ),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• October 2025: Scaling, events, and community features",
               ),
             ),
 
@@ -219,14 +224,14 @@ export function PDFDownloadButton({
             }),
           ),
 
-          // Page 2: Market Opportunity & Benefits
+          // Page 2: Community & Tokenomics
           Document.createElement(
             Page,
             { size: "A4", style: styles.page },
             Document.createElement(
               View,
               { style: styles.section },
-              Document.createElement(Text, { style: styles.sectionTitle }, "Market Opportunity"),
+              Document.createElement(Text, { style: styles.sectionTitle }, "Prime Mates Community Metrics"),
 
               Document.createElement(
                 View,
@@ -236,97 +241,80 @@ export function PDFDownloadButton({
                   { style: styles.tableRow },
                   Document.createElement(Text, { style: styles.tableHeader }, "Metric"),
                   Document.createElement(Text, { style: styles.tableHeader }, "Value"),
-                  Document.createElement(Text, { style: styles.tableHeader }, "Growth Potential"),
+                  Document.createElement(Text, { style: styles.tableHeader }, "Engagement"),
                 ),
                 Document.createElement(
                   View,
                   { style: styles.tableRow },
-                  Document.createElement(Text, { style: styles.tableCell }, "Market Size"),
-                  Document.createElement(Text, { style: styles.tableCell }, "$2.8B"),
-                  Document.createElement(Text, { style: styles.tableCell }, "15% annually"),
+                  Document.createElement(Text, { style: styles.tableCell }, "NFT Holders"),
+                  Document.createElement(Text, { style: styles.tableCell }, "8,888"),
+                  Document.createElement(Text, { style: styles.tableCell }, "87% retention"),
                 ),
                 Document.createElement(
                   View,
                   { style: styles.tableRow },
-                  Document.createElement(Text, { style: styles.tableCell }, "Active Participants"),
-                  Document.createElement(Text, { style: styles.tableCell }, "45M+"),
-                  Document.createElement(Text, { style: styles.tableCell }, "Growing demographic"),
-                ),
-                Document.createElement(
-                  View,
-                  { style: styles.tableRow },
-                  Document.createElement(Text, { style: styles.tableCell }, "Tech Adoption"),
-                  Document.createElement(Text, { style: styles.tableCell }, "85%"),
+                  Document.createElement(Text, { style: styles.tableCell }, "Daily Active Users"),
+                  Document.createElement(Text, { style: styles.tableCell }, "92%"),
                   Document.createElement(Text, { style: styles.tableCell }, "High engagement"),
                 ),
-              ),
-
-              Document.createElement(
-                Text,
-                { style: styles.paragraph },
-                "The action sports market represents a significant untapped opportunity for wearable technology. Current solutions focus on traditional fitness tracking, leaving action sports enthusiasts without specialized tools for their unique needs.",
-              ),
-            ),
-
-            Document.createElement(
-              View,
-              { style: styles.section },
-              Document.createElement(Text, { style: styles.sectionTitle }, "Benefits for WatchX"),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Market Expansion: Access to action sports community and enthusiasts",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Specialized Use Cases: Unique applications beyond traditional fitness tracking",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Brand Association: Partnership with innovative action sports technology and PMBC",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Revenue Growth: New revenue streams through co-branded products and NFT sales",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Technology Validation: Real-world testing in extreme conditions",
+                Document.createElement(
+                  View,
+                  { style: styles.tableRow },
+                  Document.createElement(Text, { style: styles.tableCell }, "Discord Members"),
+                  Document.createElement(Text, { style: styles.tableCell }, "45K"),
+                  Document.createElement(Text, { style: styles.tableCell }, "Active community"),
+                ),
+                Document.createElement(
+                  View,
+                  { style: styles.tableRow },
+                  Document.createElement(Text, { style: styles.tableCell }, "Trading Volume"),
+                  Document.createElement(Text, { style: styles.tableCell }, "$2.3M"),
+                  Document.createElement(Text, { style: styles.tableCell }, "Strong market"),
+                ),
               ),
             ),
 
             Document.createElement(
               View,
               { style: styles.section },
-              Document.createElement(Text, { style: styles.sectionTitle }, "Benefits for PMBC"),
+              Document.createElement(Text, { style: styles.sectionTitle }, "Tokenomics Breakdown"),
+
               Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Hardware Integration: Access to advanced wearable technology and sensors",
+                View,
+                { style: styles.highlight },
+                Document.createElement(Text, null, "Daily Activity Rewards"),
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Enhanced User Experience: Seamless integration between watch and mobile app",
+                "• Kaspa (KAS): 0.5-2.0 KAS/day based on step thresholds",
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Market Credibility: Partnership with established wearable technology leader",
+                "• IoTeX (IOTX): 10-50 IOTX/km with distance tracking",
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Competitive Advantage: First-mover advantage in action sports wearables with Web3 integration",
+                "• Dogecoin (DOGE): 0.1-1.0 DOGE/day with streak bonuses",
+              ),
+
+              Document.createElement(
+                View,
+                { style: styles.highlight },
+                Document.createElement(Text, null, "Premium & Mining Rewards"),
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Accelerated Development: Faster time-to-market with proven hardware",
+                "• Bitcoin (BTC): 0.00001-0.0001 BTC via virtual mining",
+              ),
+              Document.createElement(Text, { style: styles.bulletPoint }, "• TON: 0.1-5.0 TON for premium challenges"),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• Prime Token: 100-1000 PRIME for referrals and governance",
               ),
             ),
 
@@ -336,119 +324,113 @@ export function PDFDownloadButton({
             }),
           ),
 
-          // Page 3: Technical Integration & Custom Design
+          // Page 3: Technical Architecture & Revenue Model
           Document.createElement(
             Page,
             { size: "A4", style: styles.page },
             Document.createElement(
               View,
               { style: styles.section },
-              Document.createElement(Text, { style: styles.sectionTitle }, "Technical Integration"),
+              Document.createElement(Text, { style: styles.sectionTitle }, "Technical Architecture"),
 
               Document.createElement(
                 Text,
                 { style: styles.paragraph },
-                "The integration between WatchX hardware and PMBC software will create a seamless user experience specifically designed for action sports tracking and analysis, enhanced by blockchain APIs and NFT minting capabilities.",
+                "The PrimeX Watch integrates WatchX hardware with PMBC software through a multi-chain blockchain architecture, supporting offline functionality and real-time reward distribution.",
               ),
 
               Document.createElement(
                 View,
                 { style: styles.highlight },
-                Document.createElement(Text, null, "Real-time Data Processing"),
+                Document.createElement(Text, null, "Data Flow: Watch → App → Blockchain APIs"),
               ),
-              Document.createElement(Text, { style: styles.bulletPoint }, "• Live performance metrics during sessions"),
+
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Instant feedback and coaching suggestions",
+                "• Sensor data collection from PrimeX Watch hardware",
               ),
-              Document.createElement(Text, { style: styles.bulletPoint }, "• Real-time safety monitoring and alerts"),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Live session sharing with friends and coaches",
+                "• Prime Active app processes and validates activity data",
+              ),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• Multi-chain APIs distribute rewards across 6 blockchains",
+              ),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• NFT minting for session achievements and milestones",
               ),
 
               Document.createElement(
                 View,
                 { style: styles.highlight },
-                Document.createElement(Text, null, "Advanced Analytics"),
+                Document.createElement(Text, null, "Offline Adventure Mode"),
               ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Motion pattern recognition for trick detection",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Performance trend analysis and progression tracking",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Injury prevention insights based on movement patterns",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Skill progression tracking and goal setting",
-              ),
-
-              Document.createElement(
-                View,
-                { style: styles.highlight },
-                Document.createElement(Text, null, "Web3 Integration"),
-              ),
-              Document.createElement(Text, { style: styles.bulletPoint }, "• Blockchain APIs for move-to-earn rewards"),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• NFT minting for achievements and milestones",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Multi-chain support for various crypto communities",
-              ),
-              Document.createElement(Text, { style: styles.bulletPoint }, "• Integration with PMBC's Web3 ecosystem"),
+              Document.createElement(Text, { style: styles.bulletPoint }, "• GPS tracking without internet connection"),
+              Document.createElement(Text, { style: styles.bulletPoint }, "• Local data storage up to 30 days"),
+              Document.createElement(Text, { style: styles.bulletPoint }, "• Background sync when connection restored"),
             ),
 
             Document.createElement(
               View,
               { style: styles.section },
-              Document.createElement(Text, { style: styles.sectionTitle }, "Custom PMBC × WatchX Edition"),
+              Document.createElement(Text, { style: styles.sectionTitle }, "Revenue Sharing Model"),
 
               Document.createElement(
                 Text,
                 { style: styles.paragraph },
-                "A co-branded wearable device designed specifically for action sports, featuring enhanced durability and specialized sensors for extreme sports environments.",
+                "Partnership revenue distribution ensures mutual benefit and sustainable growth for both WatchX and Prime Mates Board Club.",
+              ),
+
+              Document.createElement(
+                View,
+                { style: styles.table },
+                Document.createElement(
+                  View,
+                  { style: styles.tableRow },
+                  Document.createElement(Text, { style: styles.tableHeader }, "Revenue Stream"),
+                  Document.createElement(Text, { style: styles.tableHeader }, "WatchX"),
+                  Document.createElement(Text, { style: styles.tableHeader }, "Prime Mates"),
+                ),
+                Document.createElement(
+                  View,
+                  { style: styles.tableRow },
+                  Document.createElement(Text, { style: styles.tableCell }, "Hardware Sales"),
+                  Document.createElement(Text, { style: styles.tableCell }, "60%"),
+                  Document.createElement(Text, { style: styles.tableCell }, "40%"),
+                ),
+                Document.createElement(
+                  View,
+                  { style: styles.tableRow },
+                  Document.createElement(Text, { style: styles.tableCell }, "NFT Sales"),
+                  Document.createElement(Text, { style: styles.tableCell }, "50%"),
+                  Document.createElement(Text, { style: styles.tableCell }, "50%"),
+                ),
+                Document.createElement(
+                  View,
+                  { style: styles.tableRow },
+                  Document.createElement(Text, { style: styles.tableCell }, "Subscriptions"),
+                  Document.createElement(Text, { style: styles.tableCell }, "30%"),
+                  Document.createElement(Text, { style: styles.tableCell }, "70%"),
+                ),
+                Document.createElement(
+                  View,
+                  { style: styles.tableRow },
+                  Document.createElement(Text, { style: styles.tableCell }, "Sponsorships"),
+                  Document.createElement(Text, { style: styles.tableCell }, "40%"),
+                  Document.createElement(Text, { style: styles.tableCell }, "60%"),
+                ),
               ),
 
               Document.createElement(
                 Text,
-                { style: styles.bulletPoint },
-                "• Rugged Construction: Enhanced durability with reinforced casing and impact resistance",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Action Sports Sensors: Specialized sensors for jumps, rotations, speed, and G-forces",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• PMBC Branding: Custom watch faces, branded straps, and exclusive app integration",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Extended Battery: Optimized for long action sports sessions",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Weather Resistance: Enhanced protection for extreme weather conditions",
+                { style: styles.paragraph },
+                "Genesis Edition Projections: 5,000 units at $299 = $1,495,000 total revenue. Year 1 ecosystem revenue projected at $1M+.",
               ),
             ),
 
@@ -458,130 +440,136 @@ export function PDFDownloadButton({
             }),
           ),
 
-          // Page 4: Implementation & Next Steps
+          // Page 4: Roadmap & Next Steps
           Document.createElement(
             Page,
             { size: "A4", style: styles.page },
             Document.createElement(
               View,
               { style: styles.section },
-              Document.createElement(Text, { style: styles.sectionTitle }, "Implementation Roadmap"),
+              Document.createElement(Text, { style: styles.sectionTitle }, "Development Roadmap"),
 
               Document.createElement(
                 View,
                 { style: styles.highlight },
-                Document.createElement(Text, null, "Phase 1: Technical Discussion (June - July 2025)"),
+                Document.createElement(Text, null, "June 2025 - Partnership Finalization"),
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Deep dive into integration possibilities and technical requirements",
+                "• Confirm WatchX co-branded hardware & UI/UX design",
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• API specification and data exchange protocols",
+                "• Define data points mapped to token rewards",
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Hardware capability assessment for action sports use cases",
-              ),
-              Document.createElement(Text, { style: styles.bulletPoint }, "• Proof of concept development"),
-
-              Document.createElement(
-                View,
-                { style: styles.highlight },
-                Document.createElement(Text, null, "Phase 2: Partnership Agreement (July - August 2025)"),
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Formalize partnership terms and revenue sharing model",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Establish collaboration framework and governance",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Define intellectual property and licensing agreements",
-              ),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Set performance metrics and success criteria",
+                "• Finalize token reward tiers per activity level per chain",
               ),
 
               Document.createElement(
                 View,
                 { style: styles.highlight },
-                Document.createElement(Text, null, "Phase 3: Product Development (August - October 2025)"),
+                Document.createElement(Text, null, "July 2025 - MVP Development"),
               ),
-              Document.createElement(Text, { style: styles.bulletPoint }, "• Begin development of integrated solution"),
-              Document.createElement(Text, { style: styles.bulletPoint }, "• Custom watch design and prototyping"),
-              Document.createElement(Text, { style: styles.bulletPoint }, "• Beta testing with action sports athletes"),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Market launch preparation and marketing strategy",
+                "• Integrate WatchX wearable API into Prime Active app",
+              ),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• Implement reward distribution smart contracts",
+              ),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• Build NFT minting logic: sessions → digital collectibles",
+              ),
+
+              Document.createElement(
+                View,
+                { style: styles.highlight },
+                Document.createElement(Text, null, "August 2025 - Closed Beta"),
+              ),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• Release to Prime Mates NFT holders and key testers",
+              ),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• Onboard crypto wallets (TON, Kaspa, Doge, IoTeX)",
+              ),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• Launch referral challenge for early users",
+              ),
+
+              Document.createElement(
+                View,
+                { style: styles.highlight },
+                Document.createElement(Text, null, "September 2025 - Public Launch"),
+              ),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• Limited run of Genesis Edition PrimeX Watches",
+              ),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• Full app rollout with multi-chain reward engine",
+              ),
+              Document.createElement(
+                Text,
+                { style: styles.bulletPoint },
+                "• Enable daily mining with in-app fitness activity",
               ),
             ),
 
             Document.createElement(
               View,
               { style: styles.section },
-              Document.createElement(Text, { style: styles.sectionTitle }, "Revenue Model"),
+              Document.createElement(Text, { style: styles.sectionTitle }, "Next Steps"),
 
               Document.createElement(
                 Text,
                 { style: styles.paragraph },
-                "The partnership will generate revenue through multiple streams, ensuring mutual benefit and sustainable growth for both organizations.",
+                "To move forward with the PrimeX Watch partnership, we recommend the following immediate actions:",
               ),
 
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Hardware Sales: Revenue sharing on custom PMBC × WatchX devices",
+                "• Schedule technical discussion meeting with WatchX team",
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Software Licensing: PMBC app integration licensing fees",
+                "• Review hardware specifications and customization options",
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Subscription Services: Premium features and analytics",
+                "• Finalize partnership terms and revenue sharing agreement",
               ),
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Brand Partnerships: Sponsored content and athlete endorsements",
+                "• Begin proof of concept development and API integration",
               ),
-              Document.createElement(Text, { style: styles.bulletPoint }, "• NFT Sales: Revenue from minted NFTs"),
-            ),
-
-            Document.createElement(
-              View,
-              { style: styles.section },
-              Document.createElement(Text, { style: styles.sectionTitle }, "Contact Information"),
-
-              Document.createElement(Text, { style: styles.paragraph }, "Prime Mates Board Club Partnership Team"),
-              Document.createElement(
-                Text,
-                { style: styles.bulletPoint },
-                "• Email: partnerships@primematesboardclub.com",
-              ),
-              Document.createElement(Text, { style: styles.bulletPoint }, "• Phone: +1 (555) 123-4567"),
-              Document.createElement(Text, { style: styles.bulletPoint }, "• Website: www.primematesboardclub.com"),
 
               Document.createElement(
                 Text,
                 { style: styles.paragraph },
-                "We look forward to discussing this exciting partnership opportunity and creating the future of action sports tracking together.",
+                "Contact: partnerships@primematesboardclub.com | +1 (555) 123-4567",
               ),
             ),
 
@@ -591,7 +579,7 @@ export function PDFDownloadButton({
               Document.createElement(
                 Text,
                 null,
-                "© 2024 Prime Mates Board Club. All rights reserved. This proposal is confidential and proprietary.",
+                "© 2024 Prime Mates Board Club. All rights reserved. This roadmap is confidential and proprietary.",
               ),
             ),
 
@@ -603,13 +591,13 @@ export function PDFDownloadButton({
         )
 
       // Generate PDF blob
-      const pdfBlob = await pdf(ProposalPDF()).toBlob()
+      const pdfBlob = await pdf(PrimeXWatchRoadmapPDF()).toBlob()
 
       // Create download link
       const url = URL.createObjectURL(pdfBlob)
       const link = document.createElement("a")
       link.href = url
-      link.download = "PrimeX-Watch-Partnership-Proposal.pdf"
+      link.download = "PrimeX-Watch-Roadmap.pdf"
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -631,7 +619,7 @@ export function PDFDownloadButton({
       size={size}
     >
       <Download className="mr-2 h-4 w-4" />
-      {isGenerating ? "Generating PDF..." : children || "Download Full Proposal"}
+      {isGenerating ? "Generating PDF..." : children || "Download Roadmap PDF"}
     </Button>
   )
 }

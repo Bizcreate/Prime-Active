@@ -33,7 +33,7 @@ import {
 } from "lucide-react"
 import { PDFDownloadButton } from "../components/pdf-download-button"
 
-export default function ProposalPresentation() {
+export default function PrimeXWatchRoadmap() {
   const [isContactOpen, setIsContactOpen] = useState(false)
   const [isMeetingOpen, setIsMeetingOpen] = useState(false)
   const [isExecutiveOpen, setIsExecutiveOpen] = useState(false)
@@ -64,7 +64,7 @@ export default function ProposalPresentation() {
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-blue-600/20" />
         <div className="relative container mx-auto px-4 py-20">
           <div className="text-center max-w-4xl mx-auto">
-            <Badge className="mb-6 bg-purple-600/20 text-purple-300 border-purple-500/30">Partnership Proposal</Badge>
+            <Badge className="mb-6 bg-purple-600/20 text-purple-300 border-purple-500/30">Partnership Roadmap</Badge>
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">PrimeX Watch</h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-4">Move-to-Earn Meets Board Culture</p>
             <p className="text-lg text-gray-400 mb-8">
@@ -96,7 +96,7 @@ export default function ProposalPresentation() {
                 className="bg-purple-600 hover:bg-purple-700"
                 onClick={() => scrollToSection("project-overview")}
               >
-                View Project Details <ArrowRight className="ml-2 h-5 w-5" />
+                View Roadmap Details <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Dialog open={isExecutiveOpen} onOpenChange={setIsExecutiveOpen}>
                 <DialogTrigger asChild>
@@ -762,7 +762,7 @@ export default function ProposalPresentation() {
       <section id="roadmap" className="py-20 bg-slate-800/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">Accelerated Roadmap</h2>
+            <h2 className="text-4xl font-bold text-white mb-4">Development Roadmap</h2>
             <p className="text-xl text-gray-300">Fast-track development from June to October 2025</p>
           </div>
 

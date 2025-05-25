@@ -552,19 +552,19 @@ export default function PrimeXWatchRoadmap() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-slate-800/50 rounded">
-                  <span className="text-gray-300">WatchX (Hardware Partner)</span>
-                  <span className="text-white font-bold">10%</span>
+                  <span className="text-gray-300">WatchX (Manufacturing & Hardware)</span>
+                  <span className="text-white font-bold">60%</span>
                 </div>
                 <div className="flex justify-between items-center p-4 bg-slate-800/50 rounded">
-                  <span className="text-gray-300">Prime Mates (Platform & Marketing)</span>
-                  <span className="text-white font-bold">90%</span>
+                  <span className="text-gray-300">Prime Mates (Software & Marketing)</span>
+                  <span className="text-white font-bold">40%</span>
                 </div>
                 <div className="mt-4 p-4 bg-blue-900/30 rounded border border-blue-500/30">
                   <h4 className="font-bold text-white mb-2">Genesis Edition Projections</h4>
                   <p className="text-gray-300 text-sm">• 5,000 units at $299 each</p>
                   <p className="text-gray-300 text-sm">• Total revenue: $1,495,000</p>
-                  <p className="text-gray-300 text-sm">• WatchX share: $149,500</p>
-                  <p className="text-gray-300 text-sm">• Prime Mates share: $1,345,500</p>
+                  <p className="text-gray-300 text-sm">• WatchX share: $897,000</p>
+                  <p className="text-gray-300 text-sm">• Prime Mates share: $598,000</p>
                 </div>
               </CardContent>
             </Card>
@@ -611,7 +611,7 @@ export default function PrimeXWatchRoadmap() {
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="font-bold text-white mb-3">WatchX Responsibilities (10% Revenue Partner)</h4>
+                    <h4 className="font-bold text-white mb-3">WatchX Responsibilities (60% Hardware, 10% Ecosystem)</h4>
                     <ul className="space-y-2 text-gray-300 text-sm">
                       <li>• Hardware manufacturing and quality control</li>
                       <li>• Supply chain management and logistics</li>
@@ -621,7 +621,9 @@ export default function PrimeXWatchRoadmap() {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-bold text-white mb-3">Prime Mates Responsibilities (90% Revenue Owner)</h4>
+                    <h4 className="font-bold text-white mb-3">
+                      Prime Mates Responsibilities (40% Hardware, 90% Ecosystem)
+                    </h4>
                     <ul className="space-y-2 text-gray-300 text-sm">
                       <li>• Software development and app maintenance</li>
                       <li>• Blockchain integration and smart contracts</li>

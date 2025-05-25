@@ -401,8 +401,8 @@ export function PDFDownloadButton({
                   View,
                   { style: styles.tableRow },
                   Document.createElement(Text, { style: styles.tableCell }, "Hardware Sales"),
-                  Document.createElement(Text, { style: styles.tableCell }, "10%"),
-                  Document.createElement(Text, { style: styles.tableCell }, "90%"),
+                  Document.createElement(Text, { style: styles.tableCell }, "60%"),
+                  Document.createElement(Text, { style: styles.tableCell }, "40%"),
                 ),
                 Document.createElement(
                   View,
@@ -430,7 +430,7 @@ export function PDFDownloadButton({
               Document.createElement(
                 Text,
                 { style: styles.paragraph },
-                "Genesis Edition Projections: 5,000 units at $299 = $1,495,000 total revenue. WatchX receives $149,500 (10%), Prime Mates receives $1,345,500 (90%). Year 1 ecosystem revenue projected at $1M+ with WatchX receiving $100K total.",
+                "Genesis Edition Projections: 5,000 units at $299 = $1,495,000 total revenue. WatchX receives $897,000 (60%), Prime Mates receives $598,000 (40%). Year 1 ecosystem revenue projected at $1M+ with WatchX receiving $100K total (10% of ecosystem).",
               ),
             ),
 

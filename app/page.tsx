@@ -30,6 +30,7 @@ import {
   WifiOff,
   Database,
   PieChart,
+  AlertTriangle,
 } from "lucide-react"
 import { PDFDownloadButton } from "../components/pdf-download-button"
 
@@ -394,12 +395,13 @@ export default function PrimeXWatchRoadmap() {
                       <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
                       <span className="text-white font-medium">Bitcoin (BTC)</span>
                     </div>
-                    <span className="text-gray-300">0.00001-0.0001 BTC</span>
+                    <span className="text-gray-300">0.000001-0.00001 BTC*</span>
                   </div>
                   <div className="text-xs text-gray-400 ml-5">
                     • Virtual mining via B² Network
                     <br />• Fitness-powered mining rigs
                     <br />• Weekly payouts based on activity
+                    <br />• *Subject to funding and mining equipment availability
                   </div>
                 </div>
 
@@ -432,6 +434,31 @@ export default function PrimeXWatchRoadmap() {
                     <br />• Exclusive merchandise access
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-8 max-w-4xl mx-auto">
+            <Card className="bg-gradient-to-r from-yellow-900/50 to-orange-900/50 border-yellow-500/30">
+              <CardHeader>
+                <CardTitle className="text-white text-center flex items-center justify-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                  Reward Rate Disclaimers
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-gray-300 text-sm">
+                  <strong>Bitcoin Mining Rewards:</strong> Rates are subject to available funding, mining equipment
+                  procurement, and network difficulty. Initial rates may be lower during bootstrap phase.
+                </p>
+                <p className="text-gray-300 text-sm">
+                  <strong>All Reward Rates:</strong> Token distribution rates may be adjusted based on treasury
+                  sustainability, user adoption, and market conditions to ensure long-term ecosystem health.
+                </p>
+                <p className="text-gray-300 text-sm">
+                  <strong>Funding Dependent:</strong> Premium mining features require additional infrastructure
+                  investment and may be phased in over time based on partnership funding milestones.
+                </p>
               </CardContent>
             </Card>
           </div>

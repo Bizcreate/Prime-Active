@@ -17,22 +17,49 @@ export default function SignupPage() {
   const [password, setPassword] = useState("")
   const [username, setUsername] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [cooldownTime, setCooldownTime] = useState(0)
   const { signUp } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (cooldownTime > 0) {
+      toast({
+        title: "Please wait",
+        description: `Try again in ${cooldownTime} seconds`,
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsLoading(true)
 
     try {
       await signUp(email, password, username)
       toast({
-        title: "Account created",
-        description: "Welcome to Prime Mates Board Club! Please check your email to verify your account.",
+        title: "Account created successfully!",
+        description: "Welcome to Prime Mates Board Club! You're now logged in.",
       })
-      router.push("/onboarding")
+      router.push("/dashboard")
     } catch (error: any) {
+      console.error("Signup error:", error)
+
+      if (error.message?.includes("wait")) {
+        // Start cooldown timer
+        let timeLeft = 3
+        setCooldownTime(timeLeft)
+        const timer = setInterval(() => {
+          timeLeft -= 1
+          setCooldownTime(timeLeft)
+          if (timeLeft <= 0) {
+            clearInterval(timer)
+            setCooldownTime(0)
+          }
+        }, 1000)
+      }
+
       toast({
         title: "Signup failed",
         description: error.message || "Please check your information and try again.",
@@ -42,6 +69,9 @@ export default function SignupPage() {
       setIsLoading(false)
     }
   }
+
+  const isFormValid = email && password && username && password.length >= 6
+  const isDisabled = isLoading || cooldownTime > 0 || !isFormValid
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-black">
@@ -74,6 +104,7 @@ export default function SignupPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   required
                   className="bg-zinc-800 border-zinc-700"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -88,6 +119,7 @@ export default function SignupPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="bg-zinc-800 border-zinc-700"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -101,13 +133,16 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={6}
                   className="bg-zinc-800 border-zinc-700"
+                  disabled={isLoading}
                 />
+                <p className="text-xs text-zinc-500">Password must be at least 6 characters</p>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating account..." : "Sign Up"}
+              <Button type="submit" className="w-full" disabled={isDisabled}>
+                {isLoading ? "Creating account..." : cooldownTime > 0 ? `Wait ${cooldownTime}s` : "Sign Up"}
               </Button>
               <div className="text-center text-sm text-zinc-400">
                 Already have an account?{" "}

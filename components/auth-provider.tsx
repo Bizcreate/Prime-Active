@@ -26,6 +26,10 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext)
 
+// Rate limiting state
+let lastSignupAttempt = 0
+const SIGNUP_COOLDOWN = 2000 // 2 seconds
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
@@ -42,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
       setIsLoading(false)
@@ -59,29 +63,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, username: string) => {
-    const { error, data } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username },
-      },
-    })
+    // Check rate limiting
+    const now = Date.now()
+    if (now - lastSignupAttempt < SIGNUP_COOLDOWN) {
+      const waitTime = Math.ceil((SIGNUP_COOLDOWN - (now - lastSignupAttempt)) / 1000)
+      throw new Error(`Please wait ${waitTime} seconds before trying again`)
+    }
 
-    if (error) throw error
+    lastSignupAttempt = now
 
-    // Create user profile
-    if (data.user) {
-      const { error: profileError } = await supabase.from("users").insert({
-        id: data.user.id,
-        username,
-        email,
-        wallet_address: null,
-        banana_points: 0,
-        shaka_tokens: 0,
-        board_club_level: 1,
+    try {
+      // Use the API route instead of direct Supabase call
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, username }),
       })
 
-      if (profileError) throw profileError
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Signup failed")
+      }
+
+      // If successful, sign in the user
+      await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second
+      await signIn(email, password)
+    } catch (error: any) {
+      console.error("Signup error:", error)
+
+      // Handle specific Supabase errors
+      if (error.message?.includes("rate limit") || error.message?.includes("1 seconds")) {
+        throw new Error("Please wait a moment before trying again")
+      }
+
+      if (error.message?.includes("already registered")) {
+        throw new Error("An account with this email already exists")
+      }
+
+      throw error
     }
   }
 

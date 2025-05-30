@@ -58,7 +58,7 @@ export default function LoginPage() {
         <Card className="border-zinc-800 bg-zinc-900">
           <CardHeader>
             <CardTitle className="text-xl">Login</CardTitle>
-            <CardDescription>Enter your credentials to access your account</CardDescription>
+            <CardDescription>Sign in to your Prime Mates account</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
@@ -93,7 +93,7 @@ export default function LoginPage() {
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Logging in..." : "Login"}
+                {isLoading ? "Signing in..." : "Login"}
               </Button>
               <div className="text-center text-sm text-zinc-400">
                 Don't have an account?{" "}

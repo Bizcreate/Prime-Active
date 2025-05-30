@@ -230,7 +230,7 @@ export default function OnboardingPage() {
               </div>
 
               <Button onClick={nextStep} className="mt-6">
-                Continue <ChevronRight className="h-4 w-4 ml-1" />
+                Continue <ChevronRight className="h-2 w-4 ml-1" />
               </Button>
             </div>
           )}
@@ -280,7 +280,7 @@ export default function OnboardingPage() {
                 Your data is encrypted and never shared without permission
               </p>
 
-              <Button onClick={nextStep} className="mt-6">
+              <Button onClick={nextStep} className="mt-3">
                 Continue <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>

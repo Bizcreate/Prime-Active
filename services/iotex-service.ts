@@ -2,6 +2,11 @@ import { BaseDePINService } from "./base-depin-service"
 import type { DePINNetwork, DePINServiceConfig, ActivityData } from "./depin-types"
 import { w3bStreamService } from "./w3bstream-service"
 
+// Add at the top of the file
+const IOTEX_NODE_URL = process.env.IOTEX_NODE_URL || "https://babel-api.mainnet.iotex.io"
+const W3BSTREAM_API_KEY = process.env.W3BSTREAM_API_KEY
+const IOTEX_PRIVATE_KEY = process.env.IOTEX_PRIVATE_KEY
+
 interface IoTeXConfig extends DePINServiceConfig {
   nodeUrl: string
   contractAddress?: string
@@ -27,16 +32,28 @@ export class IoTeXService extends BaseDePINService {
     super(network, config)
   }
 
+  // Update the enableMining method to use real API
   public async enableMining(userId: string): Promise<boolean> {
     try {
       this.userId = userId
-      this.isEnabled = true
 
-      // Initialize W3bStream service
-      if (typeof window !== "undefined") {
-        await w3bStreamService.initialize(userId)
+      // Real W3bStream initialization
+      if (W3BSTREAM_API_KEY && typeof window !== "undefined") {
+        const response = await fetch("/api/w3bstream/initialize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${W3BSTREAM_API_KEY}`,
+          },
+          body: JSON.stringify({ userId }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to initialize W3bStream")
+        }
       }
 
+      this.isEnabled = true
       console.log(`IoTeX mining enabled for user ${userId}`)
       this.saveState()
       return true

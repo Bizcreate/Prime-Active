@@ -1,4 +1,6 @@
 import { layerTwoLabsService } from "./layer-two-labs-service"
+import { BaseDePINService } from "./base-depin-service"
+import type { DePINNetwork, DePINServiceConfig, ActivityData } from "./depin-types"
 
 // Bitcoin Signet node configuration
 interface SignetNodeConfig {
@@ -33,7 +35,7 @@ interface SidechainDeposit {
   timestamp: number
 }
 
-class BitcoinSignetService {
+class BitcoinSignetService extends BaseDePINService {
   private config: SignetNodeConfig | null = null
   private isInitialized = false
   private _isNodeRunning = false
@@ -44,8 +46,31 @@ class BitcoinSignetService {
   }
   private deposits: SidechainDeposit[] = []
   private storageKeyPrefix = "btc_signet_"
+  private miningActive = false
+  private hashRate = 0
+  private blocksFound = 0
 
   constructor() {
+    const bitcoinNetwork: DePINNetwork = {
+      id: "bitcoin-signet",
+      name: "Bitcoin Signet",
+      description: "Bitcoin testnet for sidechain development",
+      tokenSymbol: "sBTC",
+      tokenName: "Signet Bitcoin",
+      logoUrl: "/bitcoin-logo.png",
+      category: "compute",
+      status: "active",
+    }
+
+    const config: DePINServiceConfig = {
+      apiUrl: "https://signet-api.bitcoin.org",
+      options: {
+        rewardInterval: 600000, // 10 minutes (Bitcoin block time)
+        minActivityForReward: 1,
+      },
+    }
+
+    super(bitcoinNetwork, config)
     this.loadState()
   }
 
@@ -483,6 +508,15 @@ class BitcoinSignetService {
         }
         localStorage.setItem(`${this.storageKeyPrefix}config`, JSON.stringify(safeConfig))
       }
+
+      // Save mining active status
+      localStorage.setItem(`${this.storageKeyPrefix}miningActive`, String(this.miningActive))
+
+      // Save hash rate
+      localStorage.setItem(`${this.storageKeyPrefix}hashRate`, String(this.hashRate))
+
+      // Save blocks found
+      localStorage.setItem(`${this.storageKeyPrefix}blocksFound`, String(this.blocksFound))
     } catch (error) {
       console.error("Error saving Bitcoin Signet state:", error)
     }
@@ -521,6 +555,18 @@ class BitcoinSignetService {
         this.config = partialConfig as SignetNodeConfig
       }
 
+      // Load mining active status
+      const miningActive = localStorage.getItem(`${this.storageKeyPrefix}miningActive`)
+      this.miningActive = miningActive === "true"
+
+      // Load hash rate
+      const hashRate = localStorage.getItem(`${this.storageKeyPrefix}hashRate`)
+      this.hashRate = hashRate ? Number.parseFloat(hashRate) : 0
+
+      // Load blocks found
+      const blocksFound = localStorage.getItem(`${this.storageKeyPrefix}blocksFound`)
+      this.blocksFound = blocksFound ? Number.parseInt(blocksFound, 10) : 0
+
       // If node was running when state was saved, restart status polling
       if (this._isNodeRunning) {
         this.startStatusPolling()
@@ -529,7 +575,80 @@ class BitcoinSignetService {
       console.error("Error loading Bitcoin Signet state:", error)
     }
   }
+
+  public async startMining(): Promise<boolean> {
+    try {
+      console.log("Starting Bitcoin Signet mining...")
+      this.miningActive = true
+      this.hashRate = Math.random() * 1000 + 100 // Simulate hash rate
+
+      // Start mining interval
+      setInterval(() => this.checkForBlocks(), 60000) // Check every minute
+
+      this.saveState()
+      return true
+    } catch (error) {
+      console.error("Failed to start Bitcoin mining:", error)
+      return false
+    }
+  }
+
+  public async stopMining(): Promise<boolean> {
+    this.miningActive = false
+    this.hashRate = 0
+    this.saveState()
+    return true
+  }
+
+  private checkForBlocks(): void {
+    if (!this.miningActive) return
+
+    // Simulate finding blocks (very low probability)
+    const blockFound = Math.random() < 0.001 // 0.1% chance per minute
+
+    if (blockFound) {
+      this.blocksFound++
+      const reward = 6.25 // Bitcoin block reward (testnet)
+      this.addReward(reward, `block-${this.blocksFound}`)
+      console.log(`Found Bitcoin Signet block! Reward: ${reward} sBTC`)
+    }
+
+    // Activity-based mining boost
+    const activityBoost = Math.random() * 0.01 // Small random reward
+    if (activityBoost > 0.005) {
+      this.addReward(activityBoost, `activity-boost-${Date.now()}`)
+    }
+  }
+
+  public async submitActivityData(activity: ActivityData): Promise<boolean> {
+    if (!this.miningActive) return false
+
+    // Boost mining based on activity
+    const boost = this.calculateMiningBoost(activity)
+    if (boost > 0) {
+      this.addReward(boost, activity.id)
+      console.log(`Bitcoin mining activity boost: ${boost.toFixed(6)} sBTC`)
+    }
+
+    return true
+  }
+
+  private calculateMiningBoost(activity: ActivityData): number {
+    // Higher activity = better mining rewards
+    const durationHours = activity.duration / 3600
+    const boost = durationHours * 0.001 // 0.001 sBTC per hour of activity
+
+    return Math.min(boost, 0.01) // Cap at 0.01 sBTC
+  }
+
+  public getMiningStats() {
+    return {
+      isActive: this.miningActive,
+      hashRate: this.hashRate,
+      blocksFound: this.blocksFound,
+      totalEarnings: this.getBalance(),
+    }
+  }
 }
 
-// Create singleton instance
 export const bitcoinSignetService = new BitcoinSignetService()

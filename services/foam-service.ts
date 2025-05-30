@@ -21,6 +21,8 @@ export class FOAMService extends BaseDePINService {
   private verificationEndpoint: string
   private poiEndpoint: string
   private isTestnet: boolean
+  private apiKey: string | null = null
+  private verifiedPOIs: string[] = []
 
   constructor(config: FOAMConfig) {
     const network: DePINNetwork = {
@@ -31,6 +33,8 @@ export class FOAMService extends BaseDePINService {
       logoUrl: "/foam-protocol-logo.png",
       description: "Geospatial location verification",
       enabled: false,
+      category: "location",
+      status: "active",
     }
 
     super(network, config)
@@ -44,6 +48,32 @@ export class FOAMService extends BaseDePINService {
     } else {
       this.verificationEndpoint = config.verificationEndpoint || "https://api.foam.space/verify"
       this.poiEndpoint = config.poiEndpoint || "https://api.foam.space/poi"
+    }
+  }
+
+  public async connect(apiKey: string, userId: string): Promise<boolean> {
+    try {
+      // Verify API key with FOAM
+      const response = await fetch(`${this.config.apiUrl}/v1/auth/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ userId }),
+      })
+
+      if (response.ok) {
+        this.apiKey = apiKey
+        this.userId = userId
+        this.saveState()
+        return true
+      }
+
+      return false
+    } catch (error) {
+      console.error("Failed to connect to FOAM:", error)
+      return false
     }
   }
 
@@ -79,45 +109,38 @@ export class FOAMService extends BaseDePINService {
     if (!this.isEnabled || !this.userId) return false
 
     try {
-      // Extract points of interest from the activity
-      const pointsOfInterest = this.extractPointsOfInterest(activity)
-
-      if (pointsOfInterest.length === 0) {
-        console.log("No points of interest found in activity")
-        return true // Not an error, just no relevant data
-      }
-
-      if (this.isTestnet) {
-        // Simulate POI verification and submission for testnet
-        console.log(`[TESTNET] Found ${pointsOfInterest.length} points of interest`)
-
-        let totalReward = 0
-
-        // Process each POI
-        for (const poi of pointsOfInterest) {
-          // Simulate verification
-          console.log(`[TESTNET] Verifying POI at ${poi.latitude}, ${poi.longitude}`)
-
-          // Calculate reward for this POI based on confidence
-          const poiReward = 0.05 * poi.confidence
-          totalReward += poiReward
-
-          console.log(`[TESTNET] POI verified, earned ${poiReward.toFixed(4)} FOAM`)
-        }
-
-        // Simulate transaction hash
-        const txHash = `foam_${Date.now().toString(36)}`
-
-        // Add reward to user's balance
-        this.addReward(totalReward, activity.id, txHash)
-
-        console.log(`[TESTNET] Total earned: ${totalReward.toFixed(4)} FOAM`)
-        return true
-      } else {
-        // For mainnet, we would submit to the actual FOAM API
-        console.log("Mainnet submission not yet implemented")
+      if (!this.apiKey || !activity.locationData) {
         return false
       }
+
+      // Submit location data for verification
+      const response = await fetch(`${this.config.apiUrl}/v1/poi/verify`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          userId: this.userId,
+          activityId: activity.id,
+          coordinates: activity.locationData.coordinates,
+          timestamp: activity.startTime,
+          accuracy: activity.locationData.accuracy,
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+
+        // Add reward for location verification
+        const reward = this.calculateLocationReward(activity)
+        this.addReward(reward, activity.id)
+
+        console.log(`Added FOAM reward: ${reward.toFixed(4)} FOAM`)
+        return true
+      }
+
+      return false
     } catch (error) {
       console.error("Failed to submit data to FOAM:", error)
       return false
@@ -191,4 +214,18 @@ export class FOAMService extends BaseDePINService {
       confidence: confidence,
     }
   }
+
+  private calculateLocationReward(activity: ActivityData): number {
+    // Reward based on distance traveled and location accuracy
+    const distanceKm = (activity.distance || 0) / 1000
+    const baseReward = distanceKm * 0.1 // 0.1 FOAM per km
+
+    return Math.min(baseReward, 5) // Cap at 5 FOAM per activity
+  }
+
+  public getVerifiedPOIs(): string[] {
+    return this.verifiedPOIs
+  }
 }
+
+// export const foamService = new FOAMService()

@@ -39,20 +39,29 @@ class MystService extends BaseDePINService {
   // Connect to MystNodes with user credentials
   public async connect(apiKey: string, userId: string): Promise<boolean> {
     try {
-      // Simulate API connection
-      // In production, this would make a real API call to MystNodes
-      console.log(`Connecting to MystNodes with API key ${apiKey} for user ${userId}`)
+      // Real API call to MystNodes
+      const response = await fetch("https://api.mystnodes.com/v1/auth/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ userId }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`MystNodes API error: ${response.statusText}`)
+      }
+
+      const data = await response.json()
 
       // Store API key and user ID
       this.apiKey = apiKey
       this.userId = userId
-
-      // Generate a device ID
-      this.deviceId = `prime-active-${Date.now()}`
+      this.deviceId = data.deviceId || `prime-active-${Date.now()}`
 
       // Update state
       this.saveState()
-
       return true
     } catch (error) {
       console.error("Failed to connect to MystNodes:", error)
@@ -221,25 +230,28 @@ class MystService extends BaseDePINService {
   // Get node statistics
   public async getNodeStats(): Promise<any> {
     try {
-      if (!this._isNodeRunning) {
+      if (!this.apiKey || !this._isNodeRunning) {
         return { status: "offline" }
       }
 
-      // Calculate time online
-      const uptime = this.lastRewardTime > 0 ? Date.now() - this.lastRewardTime : 0
+      const response = await fetch(`https://api.mystnodes.com/v1/nodes/${this.deviceId}/stats`, {
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+      })
 
-      // Simulate bandwidth stats
-      const uploadMb = Math.floor(Math.random() * 1000) + 100
-      const downloadMb = Math.floor(Math.random() * 500) + 50
+      if (!response.ok) {
+        throw new Error(`MystNodes API error: ${response.statusText}`)
+      }
 
+      const stats = await response.json()
       return {
         status: "online",
-        uptime: uptime,
-        uploadMb: uploadMb,
-        downloadMb: downloadMb,
-        earnings: this.getBalance(),
-        ip: "xxx.xxx.xxx.xxx",
-        connections: Math.floor(Math.random() * 10),
+        uptime: stats.uptime || 0,
+        uploadMb: stats.bytesUploaded / (1024 * 1024),
+        downloadMb: stats.bytesDownloaded / (1024 * 1024),
+        earnings: stats.earnings || this.getBalance(),
+        connections: stats.activeConnections || 0,
       }
     } catch (error) {
       console.error("Failed to get node stats:", error)

@@ -40,14 +40,14 @@ export class HeliumMobileService extends BaseDePINService {
       tokenSymbol: "MOBILE",
       tokenName: "Helium Mobile Token",
       logoUrl: "/helium-mobile-logo.png",
-      description: "Decentralized wireless network",
+      description: "Decentralized wireless network - earn MOBILE tokens by sharing location data",
       enabled: false,
     }
 
     super(network, config)
 
     this.deviceId = config.deviceId || `mobile_${Date.now().toString(36)}`
-    this.isTestnet = config.isTestnet || false
+    this.isTestnet = config.isTestnet || true // Start with testnet
 
     // Use testnet or mainnet endpoints
     if (this.isTestnet) {
@@ -255,3 +255,12 @@ export class HeliumMobileService extends BaseDePINService {
     return validPoints * baseReward * qualityMultiplier
   }
 }
+
+// Create and export the singleton instance
+export const heliumMobileService = new HeliumMobileService({
+  apiUrl: "https://api.helium.io",
+  isTestnet: true, // Start with testnet
+  options: {
+    rewardInterval: 300000, // 5 minutes
+  },
+})

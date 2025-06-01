@@ -137,7 +137,7 @@ export function PDFDownloadButton({
             Document.createElement(
               View,
               { style: styles.header },
-              Document.createElement(Text, { style: styles.title }, "PrimeX watchX Roadmap"),
+              Document.createElement(Text, { style: styles.title }, "PrimeX Watch Roadmap"),
               Document.createElement(Text, { style: styles.subtitle }, "Partnership Development Plan"),
               Document.createElement(Text, { style: styles.subtitle }, "Revolutionizing Action Sports Tracking"),
             ),
@@ -149,7 +149,7 @@ export function PDFDownloadButton({
               Document.createElement(
                 Text,
                 { style: styles.paragraph },
-                "This roadmap outlines the development plan for PrimeX watchX, a strategic partnership between Prime Mates Board Club (PMBC) and WatchX to create the first specialized wearable technology platform for action sports enthusiasts, integrating a Web3 move-to-earn concept.",
+                "This roadmap outlines the development plan for PrimeX Watch, a strategic partnership between Prime Mates Board Club (PMBC) and WatchX to create the first specialized wearable technology platform for action sports enthusiasts, integrating a Web3 move-to-earn concept.",
               ),
 
               Document.createElement(
@@ -188,7 +188,7 @@ export function PDFDownloadButton({
               Document.createElement(
                 Text,
                 { style: styles.paragraph },
-                "The PrimeX watchX development follows an accelerated roadmap from June to October 2025, with Genesis Edition launch in September.",
+                "The PrimeX Watch development follows an accelerated roadmap from June to October 2025, with Genesis Edition launch in September.",
               ),
 
               Document.createElement(
@@ -308,7 +308,7 @@ export function PDFDownloadButton({
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Bitcoin (BTC): 0.000001-0.00001 BTC via virtual mining (subject to funding)",
+                "• Bitcoin (BTC): 0.00001-0.0001 BTC via virtual mining",
               ),
               Document.createElement(Text, { style: styles.bulletPoint }, "• TON: 0.1-5.0 TON for premium challenges"),
               Document.createElement(
@@ -336,7 +336,7 @@ export function PDFDownloadButton({
               Document.createElement(
                 Text,
                 { style: styles.paragraph },
-                "The PrimeX watchX integrates WatchX hardware with PMBC software through a multi-chain blockchain architecture, supporting offline functionality and real-time reward distribution.",
+                "The PrimeX Watch integrates WatchX hardware with PMBC software through a multi-chain blockchain architecture, supporting offline functionality and real-time reward distribution.",
               ),
 
               Document.createElement(
@@ -348,7 +348,7 @@ export function PDFDownloadButton({
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Sensor data collection from PrimeX watchX hardware",
+                "• Sensor data collection from PrimeX Watch hardware",
               ),
               Document.createElement(
                 Text,
@@ -520,7 +520,7 @@ export function PDFDownloadButton({
               Document.createElement(
                 Text,
                 { style: styles.bulletPoint },
-                "• Limited run of Genesis Edition PrimeX watchX",
+                "• Limited run of Genesis Edition PrimeX Watches",
               ),
               Document.createElement(
                 Text,
@@ -542,7 +542,7 @@ export function PDFDownloadButton({
               Document.createElement(
                 Text,
                 { style: styles.paragraph },
-                "To move forward with the PrimeX watchX partnership, we recommend the following immediate actions:",
+                "To move forward with the PrimeX Watch partnership, we recommend the following immediate actions:",
               ),
 
               Document.createElement(
@@ -579,7 +579,7 @@ export function PDFDownloadButton({
               Document.createElement(
                 Text,
                 null,
-                "© 2025 PrimeX watchX. All rights reserved. https://v0-vPrimeX-watchX-Vercel.app",
+                "© 2024 Prime Mates Board Club. All rights reserved. This roadmap is confidential and proprietary.",
               ),
             ),
 
@@ -597,7 +597,7 @@ export function PDFDownloadButton({
       const url = URL.createObjectURL(pdfBlob)
       const link = document.createElement("a")
       link.href = url
-      link.download = "PrimeX-watchX-Roadmap.pdf"
+      link.download = "PrimeX-Watch-Roadmap.pdf"
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

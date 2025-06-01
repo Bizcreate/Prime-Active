@@ -1,6 +1,0 @@
-# https://v0-vPrimeX-watchX-Vercel.app
-
-User-agent: *
-Allow: /
-
-Sitemap: https://v0-vPrimeX-watchX-Vercel.app/sitemap.xml

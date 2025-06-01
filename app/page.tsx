@@ -66,7 +66,7 @@ export default function PrimeXWatchRoadmap() {
         <div className="relative container mx-auto px-4 py-20">
           <div className="text-center max-w-4xl mx-auto">
             <Badge className="mb-6 bg-purple-600/20 text-purple-300 border-purple-500/30">Partnership Roadmap</Badge>
-            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">PrimeX watchX</h1>
+            <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">PrimeX Watch</h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-4">Move-to-Earn Meets Board Culture</p>
             <p className="text-lg text-gray-400 mb-8">
               The World's First Web3 Smartwatch for Skaters, Surfers, and Snowboarders
@@ -108,11 +108,11 @@ export default function PrimeXWatchRoadmap() {
                 </DialogTrigger>
                 <DialogContent className="bg-slate-800 border-slate-600 text-white max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle>PrimeX watchX - Executive Summary</DialogTitle>
+                    <DialogTitle>PrimeX Watch - Executive Summary</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <p className="text-gray-300">
-                      <strong>Project:</strong> PrimeX watchX - Custom-branded Web3 smart wearable developed in
+                      <strong>Project:</strong> PrimeX Watch - Custom-branded Web3 smart wearable developed in
                       collaboration between WatchX and Prime Mates Board Club.
                     </p>
                     <p className="text-gray-300">
@@ -126,6 +126,9 @@ export default function PrimeXWatchRoadmap() {
                     <p className="text-gray-300">
                       <strong>Timeline:</strong> Fast-track development from June to October 2025, with Genesis Edition
                       launch in September.
+                    </p>
+                    <p className="text-gray-300">
+                      <strong>Partnership Portal:</strong> https://v0-PrimeX-watchX-Vercel.app/
                     </p>
                     <PDFDownloadButton className="w-full bg-purple-600 hover:bg-purple-700" />
                   </div>
@@ -141,7 +144,7 @@ export default function PrimeXWatchRoadmap() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">Prime Mates Community</h2>
-            <p className="text-xl text-gray-300">Established Web3 community ready for PrimeX watchX</p>
+            <p className="text-xl text-gray-300">Established Web3 community ready for PrimeX Watch</p>
           </div>
 
           <div className="grid md:grid-cols-4 gap-6">
@@ -232,8 +235,8 @@ export default function PrimeXWatchRoadmap() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">Project Overview</h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              PrimeX watchX connects directly to your Prime Active app to track real-world activity and reward users
-              with cryptocurrency, NFTs, and exclusive perks
+              PrimeX Watch connects directly to your Prime Active app to track real-world activity and reward users with
+              cryptocurrency, NFTs, and exclusive perks
             </p>
           </div>
 
@@ -972,8 +975,9 @@ export default function PrimeXWatchRoadmap() {
       {/* Footer */}
       <footer className="py-12 bg-slate-900 border-t border-slate-700">
         <div className="container mx-auto px-4 text-center">
-          <h3 className="text-2xl font-bold text-white mb-4">Ready to Launch PrimeX watchX?</h3>
-          <p className="text-gray-300 mb-6">Let's create the future of Web3 action sports wearables together</p>
+          <h3 className="text-2xl font-bold text-white mb-4">Ready to Launch PrimeX Watch?</h3>
+          <p className="text-gray-300 mb-4">Let's create the future of Web3 action sports wearables together</p>
+          <p className="text-sm text-gray-400 mb-6">Partnership Portal: https://v0-PrimeX-watchX-Vercel.app/</p>
           <div className="flex justify-center gap-4">
             <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
               <DialogTrigger asChild>
@@ -1009,7 +1013,7 @@ export default function PrimeXWatchRoadmap() {
                     <Label htmlFor="message">Message</Label>
                     <Textarea
                       id="message"
-                      placeholder="Tell us about your interest in the PrimeX watchX partnership..."
+                      placeholder="Tell us about your interest in the PrimeX Watch partnership..."
                       className="bg-slate-700 border-slate-600"
                       rows={4}
                       required
@@ -1022,14 +1026,6 @@ export default function PrimeXWatchRoadmap() {
               </DialogContent>
             </Dialog>
             <PDFDownloadButton className="bg-purple-600 hover:bg-purple-700" />
-          </div>
-          <div className="mt-8 text-gray-500 text-sm">
-            <p>© 2025 PrimeX watchX. All rights reserved.</p>
-            <p className="mt-1">
-              <a href="https://v0-vPrimeX-watchX-Vercel.app" className="hover:text-gray-400">
-                https://v0-vPrimeX-watchX-Vercel.app
-              </a>
-            </p>
           </div>
         </div>
       </footer>

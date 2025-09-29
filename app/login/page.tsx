@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const { signIn } = useAuth()
+  const { signIn, signInDemo } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
 
@@ -42,6 +42,31 @@ export default function LoginPage() {
     }
   }
 
+  const handleDemoLogin = async () => {
+    setIsLoading(true)
+    try {
+      await signInDemo()
+      toast({
+        title: "Demo login successful",
+        description: "Welcome to the Prime Mates demo!",
+      })
+      router.push("/dashboard")
+    } catch (error: any) {
+      toast({
+        title: "Demo login failed",
+        description: error.message || "Something went wrong with demo login.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fillDemoCredentials = () => {
+    setEmail("demo@primemates.com")
+    setPassword("demo123")
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-black">
       <div className="w-full max-w-md mx-auto">
@@ -60,6 +85,39 @@ export default function LoginPage() {
             <CardTitle className="text-xl">Login</CardTitle>
             <CardDescription>Sign in to your Prime Mates account</CardDescription>
           </CardHeader>
+
+          {/* Demo Credentials Info */}
+          <div className="px-6 mb-4">
+            <div className="bg-zinc-800 border border-zinc-700 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-zinc-300 mb-2">Demo Credentials</h3>
+              <div className="text-xs text-zinc-400 space-y-1">
+                <div>Email: demo@primemates.com</div>
+                <div>Password: demo123</div>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={fillDemoCredentials}
+                  className="text-xs bg-transparent"
+                >
+                  Fill Demo
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDemoLogin}
+                  disabled={isLoading}
+                  className="text-xs bg-transparent"
+                >
+                  Quick Demo Login
+                </Button>
+              </div>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-2">

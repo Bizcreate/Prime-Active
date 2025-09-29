@@ -1,183 +1,221 @@
 "use client"
 
-import { createContext, useContext, useReducer, type Dispatch, type ReactNode, useEffect } from "react"
-
-/* ------------------------------------------------------------------ */
-/*  TYPES                                                             */
-/* ------------------------------------------------------------------ */
-
-export interface Activity {
-  id: string
-  title: string
-  activityType: string
-  startedAt: Date
-  gearIds?: string[] // IDs of clothing / gear worn
-  isTracking: boolean
-}
-
-export interface TokenBalances {
-  bananaPoints: number
-  shakaTokens: number
-  iotx: number
-}
+import type React from "react"
+import { createContext, useContext, useState, useEffect } from "react"
 
 interface AppState {
-  currentActivity: Activity | null
-  activitiesHistory: Activity[]
-  tokens: TokenBalances
+  user: any
+  activities: any[]
+  achievements: any[]
+  tokens: {
+    banana: number
+    shaka: number
+    activity: number
+  }
+  nfts: any[]
+  isLoading: boolean
+  error: string | null
 }
 
-type Action =
-  | { type: "START_ACTIVITY"; payload: Activity }
-  | { type: "STOP_ACTIVITY"; activityId: string }
-  | { type: "ADD_TOKENS"; payload: Partial<TokenBalances> }
-  | { type: "LOAD_STORED_STATE"; payload: AppState }
+interface AppStateContextType {
+  state: AppState
+  updateUser: (user: any) => void
+  addActivity: (activity: any) => void
+  addAchievement: (achievement: any) => void
+  updateTokens: (tokens: Partial<AppState["tokens"]>) => void
+  addNFT: (nft: any) => void
+  setLoading: (loading: boolean) => void
+  setError: (error: string | null) => void
+  refreshData: () => Promise<void>
+}
 
-/* ------------------------------------------------------------------ */
-/*  REDUCER                                                           */
-/* ------------------------------------------------------------------ */
+const AppStateContext = createContext<AppStateContextType | undefined>(undefined)
 
-const reducer = (state: AppState, action: Action): AppState => {
-  switch (action.type) {
-    case "START_ACTIVITY":
-      return {
-        ...state,
-        currentActivity: action.payload,
-      }
+export const useAppState = () => {
+  const context = useContext(AppStateContext)
+  if (context === undefined) {
+    throw new Error("useAppState must be used within an AppStateProvider")
+  }
+  return context
+}
 
-    case "STOP_ACTIVITY": {
-      if (!state.currentActivity) return state
-      const finished = { ...state.currentActivity, isTracking: false }
-      return {
-        ...state,
-        currentActivity: null,
-        activitiesHistory: [finished, ...state.activitiesHistory],
-      }
+// Mock data for demo
+const mockActivities = [
+  {
+    id: 1,
+    type: "skateboarding",
+    duration: 45,
+    distance: 2.3,
+    calories: 320,
+    date: new Date().toISOString(),
+    location: "Venice Beach Skate Park",
+  },
+  {
+    id: 2,
+    type: "surfing",
+    duration: 90,
+    distance: 0,
+    calories: 450,
+    date: new Date(Date.now() - 86400000).toISOString(),
+    location: "Malibu Point",
+  },
+  {
+    id: 3,
+    type: "snowboarding",
+    duration: 180,
+    distance: 15.2,
+    calories: 680,
+    date: new Date(Date.now() - 172800000).toISOString(),
+    location: "Big Bear Mountain",
+  },
+]
+
+const mockAchievements = [
+  {
+    id: 1,
+    title: "First Ride",
+    description: "Complete your first activity",
+    earned: true,
+    date: new Date().toISOString(),
+  },
+  {
+    id: 2,
+    title: "Speed Demon",
+    description: "Reach 25+ mph",
+    earned: true,
+    date: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: 3,
+    title: "Distance Master",
+    description: "Travel 10+ miles in one session",
+    earned: false,
+    date: null,
+  },
+]
+
+const mockNFTs = [
+  {
+    id: 1,
+    name: "Prime Mate #420",
+    image: "/pmbc-420.png",
+    rarity: "Rare",
+    attributes: ["Skateboard", "Sunglasses", "Cool"],
+  },
+  {
+    id: 2,
+    name: "Prime Mate #721",
+    image: "/pmbc-721.png",
+    rarity: "Epic",
+    attributes: ["Surfboard", "Hawaiian Shirt", "Chill"],
+  },
+]
+
+export const AppStateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [state, setState] = useState<AppState>({
+    user: null,
+    activities: [],
+    achievements: [],
+    tokens: {
+      banana: 1250,
+      shaka: 890,
+      activity: 340,
+    },
+    nfts: [],
+    isLoading: true,
+    error: null,
+  })
+
+  useEffect(() => {
+    // Simulate loading demo data
+    const loadDemoData = async () => {
+      setState((prev) => ({ ...prev, isLoading: true }))
+
+      // Simulate API delay
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      setState((prev) => ({
+        ...prev,
+        activities: mockActivities,
+        achievements: mockAchievements,
+        nfts: mockNFTs,
+        isLoading: false,
+      }))
     }
 
-    case "ADD_TOKENS":
-      return {
-        ...state,
-        tokens: {
-          bananaPoints: state.tokens.bananaPoints + (action.payload.bananaPoints ?? 0),
-          shakaTokens: state.tokens.shakaTokens + (action.payload.shakaTokens ?? 0),
-          iotx: state.tokens.iotx + (action.payload.iotx ?? 0),
-        },
-      }
-
-    case "LOAD_STORED_STATE":
-      return action.payload
-
-    default:
-      return state
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/*  HELPERS                                                           */
-/* ------------------------------------------------------------------ */
-
-const STORAGE_KEY = "prime-active-app-state"
-
-const loadFromStorage = (): AppState | null => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as AppState
-    // Revive dates
-    if (parsed.currentActivity) parsed.currentActivity.startedAt = new Date(parsed.currentActivity.startedAt)
-    parsed.activitiesHistory = parsed.activitiesHistory.map((a) => ({
-      ...a,
-      startedAt: new Date(a.startedAt),
-    }))
-    return parsed
-  } catch {
-    return null
-  }
-}
-
-const saveToStorage = (state: AppState) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  } catch {
-    /* ignore quota / SSR errors */
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/*  CONTEXT + PROVIDER                                                */
-/* ------------------------------------------------------------------ */
-
-interface ContextValue extends AppState {
-  dispatch: Dispatch<Action>
-  startActivity: (activity: Activity) => void
-  stopActivity: () => void
-  addTokens: (tokens: Partial<TokenBalances>) => void
-}
-
-const AppStateContext = createContext<ContextValue | undefined>(undefined)
-
-const defaultState: AppState = {
-  currentActivity: null,
-  activitiesHistory: [],
-  tokens: {
-    bananaPoints: 0,
-    shakaTokens: 0,
-    iotx: 0,
-  },
-}
-
-export const AppStateProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(reducer, defaultState)
-
-  // Load stored state on first render
-  useEffect(() => {
-    const stored = loadFromStorage()
-    if (stored) dispatch({ type: "LOAD_STORED_STATE", payload: stored })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadDemoData()
   }, [])
 
-  // Persist to localStorage whenever state changes
-  useEffect(() => {
-    saveToStorage(state)
-  }, [state])
-
-  /* -------- helper wrappers for consumers ------------------------ */
-  const startActivity = (activity: Activity) => dispatch({ type: "START_ACTIVITY", payload: activity })
-
-  const stopActivity = () =>
-    dispatch({
-      type: "STOP_ACTIVITY",
-      activityId: state.currentActivity?.id ?? "",
-    })
-
-  const addTokens = (tokens: Partial<TokenBalances>) => dispatch({ type: "ADD_TOKENS", payload: tokens })
-
-  const value: ContextValue = {
-    ...state,
-    dispatch,
-    startActivity,
-    stopActivity,
-    addTokens,
+  const updateUser = (user: any) => {
+    setState((prev) => ({ ...prev, user }))
   }
 
-  return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>
+  const addActivity = (activity: any) => {
+    setState((prev) => ({
+      ...prev,
+      activities: [activity, ...prev.activities],
+    }))
+  }
+
+  const addAchievement = (achievement: any) => {
+    setState((prev) => ({
+      ...prev,
+      achievements: [achievement, ...prev.achievements],
+    }))
+  }
+
+  const updateTokens = (tokens: Partial<AppState["tokens"]>) => {
+    setState((prev) => ({
+      ...prev,
+      tokens: { ...prev.tokens, ...tokens },
+    }))
+  }
+
+  const addNFT = (nft: any) => {
+    setState((prev) => ({
+      ...prev,
+      nfts: [nft, ...prev.nfts],
+    }))
+  }
+
+  const setLoading = (loading: boolean) => {
+    setState((prev) => ({ ...prev, isLoading: loading }))
+  }
+
+  const setError = (error: string | null) => {
+    setState((prev) => ({ ...prev, error }))
+  }
+
+  const refreshData = async () => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      // Simulate refresh delay
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // In a real app, this would fetch fresh data
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+      }))
+    } catch (error) {
+      setError("Failed to refresh data")
+      setLoading(false)
+    }
+  }
+
+  const contextValue: AppStateContextType = {
+    state,
+    updateUser,
+    addActivity,
+    addAchievement,
+    updateTokens,
+    addNFT,
+    setLoading,
+    setError,
+    refreshData,
+  }
+
+  return <AppStateContext.Provider value={contextValue}>{children}</AppStateContext.Provider>
 }
-
-/* ------------------------------------------------------------------ */
-/*  HOOK                                                              */
-/* ------------------------------------------------------------------ */
-
-/**
- * Access global application state.
- *
- * Example:
- * const { currentActivity, startActivity } = useAppState()
- */
-export const useAppState = (): ContextValue => {
-  const ctx = useContext(AppStateContext)
-  if (!ctx) throw new Error("useAppState must be used inside <AppStateProvider />")
-  return ctx
-}
-
-/* ------------------------------------------------------------------ */

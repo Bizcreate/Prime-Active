@@ -1,215 +1,118 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/components/auth-provider"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AppShell } from "@/components/app-shell"
-import { TabBar } from "@/components/tab-bar"
-import { supabase } from "@/lib/supabase"
-import { Plus, Trophy, Clock, MapPin, Flame, TrendingUp, Calendar, Zap } from "lucide-react"
-import Image from "next/image"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Activity, Trophy, TrendingUp, MapPin, Clock, Zap, Plus } from "lucide-react"
 import Link from "next/link"
-
-interface RecentActivity {
-  id: string
-  activity_type: string
-  title: string
-  duration_minutes: number
-  distance_km: number
-  calories_burned: number
-  banana_points_earned: number
-  shaka_tokens_earned: number
-  created_at: string
-}
-
-interface UserStats {
-  total_banana_points: number
-  total_shaka_tokens: number
-  total_activities: number
-  total_distance: number
-  total_duration: number
-}
+import { useAuth } from "@/components/auth-provider"
+import { useAppState } from "@/context/AppStateContext"
+import { useRouter } from "next/navigation"
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
-  const [userStats, setUserStats] = useState<UserStats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { state } = useAppState()
+  const router = useRouter()
+  const [greeting, setGreeting] = useState("")
 
   useEffect(() => {
-    const loadDashboardData = async () => {
-      if (!user) return
+    const hour = new Date().getHours()
+    if (hour < 12) setGreeting("Good morning")
+    else if (hour < 18) setGreeting("Good afternoon")
+    else setGreeting("Good evening")
+  }, [])
 
-      try {
-        // Load recent activities
-        const { data: activities, error: activitiesError } = await supabase
-          .from("activities")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(5)
-
-        if (activitiesError) throw activitiesError
-
-        setRecentActivities(activities || [])
-
-        // Load user stats
-        const { data: stats, error: statsError } = await supabase
-          .from("activities")
-          .select(`
-            banana_points_earned,
-            shaka_tokens_earned,
-            distance_km,
-            duration_minutes
-          `)
-          .eq("user_id", user.id)
-
-        if (statsError) throw statsError
-
-        if (stats) {
-          const userStats: UserStats = {
-            total_banana_points: stats.reduce((sum, activity) => sum + (activity.banana_points_earned || 0), 0),
-            total_shaka_tokens: stats.reduce((sum, activity) => sum + (activity.shaka_tokens_earned || 0), 0),
-            total_activities: stats.length,
-            total_distance: stats.reduce((sum, activity) => sum + (activity.distance_km || 0), 0),
-            total_duration: stats.reduce((sum, activity) => sum + (activity.duration_minutes || 0), 0),
-          }
-          setUserStats(userStats)
-        }
-      } catch (error) {
-        console.error("Error loading dashboard data:", error)
-      } finally {
-        setIsLoading(false)
-      }
+  // Redirect to onboarding if not authenticated
+  useEffect(() => {
+    if (!user && !state.isLoading) {
+      router.push("/onboarding")
     }
+  }, [user, state.isLoading, router])
 
-    loadDashboardData()
-  }, [user])
-
-  const getActivityIcon = (type: string) => {
-    const icons: Record<string, string> = {
-      skateboarding: "🛹",
-      surfing: "🏄‍♂️",
-      snowboarding: "🏂",
-      running: "🏃‍♂️",
-      cycling: "🚴‍♂️",
-      walking: "🚶‍♂️",
-    }
-    return icons[type] || "🏃‍♂️"
-  }
-
-  const formatTime = (minutes: number) => {
-    const hrs = Math.floor(minutes / 60)
-    const mins = minutes % 60
-    return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`
-  }
-
-  if (isLoading) {
+  if (state.isLoading) {
     return (
-      <AppShell>
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-zinc-400">Loading dashboard...</p>
-        </div>
-        <TabBar activeTab="dashboard" />
-      </AppShell>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
     )
   }
 
+  if (!user) {
+    return null // Will redirect via useEffect
+  }
+
+  const recentActivities = state.activities.slice(0, 3)
+  const totalActivities = state.activities.length
+  const totalDistance = state.activities.reduce((sum, activity) => sum + (activity.distance || 0), 0)
+  const totalCalories = state.activities.reduce((sum, activity) => sum + (activity.calories || 0), 0)
+
   return (
-    <AppShell>
-      <div className="p-6 pb-20">
+    <main className="min-h-screen bg-black p-6 pb-20">
+      <div className="max-w-md mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Dashboard</h1>
-            <p className="text-zinc-400">Welcome back, {user?.email?.split("@")[0]}!</p>
+            <h1 className="text-2xl font-bold">{greeting}!</h1>
+            <p className="text-zinc-400">{user.user_metadata?.username || user.email?.split("@")[0] || "Rider"}</p>
           </div>
-          <Link href="/activity-setup">
-            <Button className="bg-primary hover:bg-primary/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Start Activity
-            </Button>
+          <Link href="/profile">
+            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+              <span className="text-black font-bold">
+                {(user.user_metadata?.username?.[0] || user.email?.[0] || "U").toUpperCase()}
+              </span>
+            </div>
           </Link>
         </div>
 
-        {/* Stats Overview */}
-        {userStats && (
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Image src="/banana-icon.png" alt="Banana Points" width={20} height={20} />
-                  <span className="text-sm text-zinc-400">Banana Points</span>
-                </div>
-                <div className="text-2xl font-bold text-yellow-500">
-                  {userStats.total_banana_points.toLocaleString()}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Image src="/shaka-coin.png" alt="Shaka Tokens" width={20} height={20} />
-                  <span className="text-sm text-zinc-400">Shaka Tokens</span>
-                </div>
-                <div className="text-2xl font-bold text-primary">{userStats.total_shaka_tokens.toFixed(2)}</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Trophy className="h-5 w-5 text-zinc-400" />
-                  <span className="text-sm text-zinc-400">Activities</span>
-                </div>
-                <div className="text-2xl font-bold">{userStats.total_activities}</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <MapPin className="h-5 w-5 text-zinc-400" />
-                  <span className="text-sm text-zinc-400">Distance</span>
-                </div>
-                <div className="text-2xl font-bold">{userStats.total_distance.toFixed(1)}km</div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        {/* Quick Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-primary">{state.tokens.banana}</div>
+              <div className="text-xs text-zinc-400">Banana Points</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-primary">{state.tokens.shaka}</div>
+              <div className="text-xs text-zinc-400">Shaka Tokens</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-primary">{totalActivities}</div>
+              <div className="text-xs text-zinc-400">Activities</div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Quick Actions */}
-        <Card className="bg-zinc-900 border-zinc-800 mb-6">
+        <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Quick Start
+            </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <Link href="/activity-setup">
+              <Button className="w-full h-12 text-left justify-start">
+                <Plus className="h-5 w-5 mr-3" />
+                Start New Activity
+              </Button>
+            </Link>
             <div className="grid grid-cols-2 gap-3">
-              <Link href="/activity-setup">
-                <Button variant="outline" className="w-full h-16 flex flex-col">
-                  <TrendingUp className="h-5 w-5 mb-1" />
-                  <span className="text-sm">Start Activity</span>
-                </Button>
-              </Link>
-              <Link href="/wallet">
-                <Button variant="outline" className="w-full h-16 flex flex-col">
-                  <Zap className="h-5 w-5 mb-1" />
-                  <span className="text-sm">View Wallet</span>
-                </Button>
-              </Link>
-              <Link href="/merch/collection">
-                <Button variant="outline" className="w-full h-16 flex flex-col">
-                  <span className="text-lg mb-1">👕</span>
-                  <span className="text-sm">My Gear</span>
-                </Button>
-              </Link>
               <Link href="/challenges">
-                <Button variant="outline" className="w-full h-16 flex flex-col">
-                  <Trophy className="h-5 w-5 mb-1" />
-                  <span className="text-sm">Challenges</span>
+                <Button variant="outline" className="w-full bg-transparent">
+                  <Trophy className="h-4 w-4 mr-2" />
+                  Challenges
+                </Button>
+              </Link>
+              <Link href="/map">
+                <Button variant="outline" className="w-full bg-transparent">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Explore
                 </Button>
               </Link>
             </div>
@@ -217,10 +120,10 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent Activities */}
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+              <Activity className="h-5 w-5" />
               Recent Activities
             </CardTitle>
             <Link href="/activity-history">
@@ -230,54 +133,102 @@ export default function DashboardPage() {
             </Link>
           </CardHeader>
           <CardContent>
-            {recentActivities.length === 0 ? (
+            {recentActivities.length > 0 ? (
+              <div className="space-y-3">
+                {recentActivities.map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between p-3 bg-zinc-900 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                        <Activity className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="font-medium capitalize">{activity.type}</div>
+                        <div className="text-sm text-zinc-400 flex items-center gap-2">
+                          <Clock className="h-3 w-3" />
+                          {activity.duration}min
+                          {activity.distance && (
+                            <>
+                              <span>•</span>
+                              <span>{activity.distance.toFixed(1)}mi</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <Badge variant="secondary">+{Math.floor(activity.duration * 2)} pts</Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
               <div className="text-center py-8">
+                <Activity className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
                 <p className="text-zinc-400 mb-4">No activities yet</p>
                 <Link href="/activity-setup">
                   <Button>Start Your First Activity</Button>
                 </Link>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {recentActivities.map((activity) => (
-                  <div key={activity.id} className="bg-zinc-800 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">{getActivityIcon(activity.activity_type)}</span>
-                        <div>
-                          <h4 className="font-medium">{activity.title}</h4>
-                          <p className="text-xs text-zinc-400">{new Date(activity.created_at).toLocaleDateString()}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium">+{activity.banana_points_earned} 🍌</div>
-                        <div className="text-xs text-zinc-400">+{activity.shaka_tokens_earned} 🤙</div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4 text-xs">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3 text-zinc-400" />
-                        <span>{formatTime(activity.duration_minutes)}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-zinc-400" />
-                        <span>{activity.distance_km}km</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Flame className="h-3 w-3 text-zinc-400" />
-                        <span>{activity.calories_burned} cal</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             )}
           </CardContent>
         </Card>
-      </div>
 
-      <TabBar activeTab="dashboard" />
-    </AppShell>
+        {/* Weekly Progress */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              This Week
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold">{totalDistance.toFixed(1)}</div>
+                <div className="text-sm text-zinc-400">Miles</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">{totalCalories}</div>
+                <div className="text-sm text-zinc-400">Calories</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Achievements Preview */}
+        {state.achievements.filter((a) => a.earned).length > 0 && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5" />
+                Latest Achievement
+              </CardTitle>
+              <Link href="/achievements">
+                <Button variant="ghost" size="sm">
+                  View All
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const latestAchievement = state.achievements
+                  .filter((a) => a.earned)
+                  .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())[0]
+
+                return latestAchievement ? (
+                  <div className="flex items-center gap-3 p-3 bg-zinc-900 rounded-lg">
+                    <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                      <Trophy className="h-5 w-5 text-yellow-500" />
+                    </div>
+                    <div>
+                      <div className="font-medium">{latestAchievement.title}</div>
+                      <div className="text-sm text-zinc-400">{latestAchievement.description}</div>
+                    </div>
+                  </div>
+                ) : null
+              })()}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </main>
   )
 }

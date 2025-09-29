@@ -1,0 +1,22 @@
+{
+  "name": "prime-active-app",
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "outputDirectory": ".next",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "@prime-active-supabase-url",
+    "SUPABASE_SERVICE_ROLE_KEY": "@prime-active-supabase-service-key",
+    "IOTEX_PRIVATE_KEY": "@prime-active-iotex-private-key",
+    "IOTEX_RPC_URL": "@prime-active-iotex-rpc-url",
+    "MYST_API_KEY": "@prime-active-myst-api-key",
+    "NEXT_PUBLIC_MAPBOX_TOKEN": "@prime-active-mapbox-token",
+    "MAPBOX_TOKEN": "@prime-active-mapbox-token"
+  }
+}

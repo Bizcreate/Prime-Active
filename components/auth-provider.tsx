@@ -13,6 +13,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, username: string) => Promise<void>
   signOut: () => Promise<void>
+  signInDemo: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
+  signInDemo: async () => {},
 })
 
 export const useAuth = () => useContext(AuthContext)
@@ -29,6 +31,20 @@ export const useAuth = () => useContext(AuthContext)
 // Rate limiting state
 let lastSignupAttempt = 0
 const SIGNUP_COOLDOWN = 2000 // 2 seconds
+
+// Demo user data
+const DEMO_USER = {
+  id: "demo-user-123",
+  email: "demo@primemates.com",
+  user_metadata: {
+    username: "demo_rider",
+    full_name: "Demo Rider",
+  },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  aud: "authenticated",
+  role: "authenticated",
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -58,6 +74,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
+    // Check for demo credentials
+    if (email === "demo@primemates.com" && password === "demo123") {
+      await signInDemo()
+      return
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       if (error.message.includes("Invalid login credentials")) {
@@ -65,6 +87,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       throw error
     }
+  }
+
+  const signInDemo = async () => {
+    // Create a mock session for demo purposes
+    const mockSession = {
+      access_token: "demo-token",
+      refresh_token: "demo-refresh",
+      expires_in: 3600,
+      expires_at: Date.now() + 3600000,
+      token_type: "bearer",
+      user: DEMO_USER as User,
+    } as Session
+
+    setSession(mockSession)
+    setUser(DEMO_USER as User)
+    setIsLoading(false)
   }
 
   const signUp = async (email: string, password: string, username: string) => {
@@ -117,12 +155,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    setSession(null)
+    setUser(null)
+
+    // Try to sign out from Supabase, but don't throw if it fails
+    try {
+      await supabase.auth.signOut()
+    } catch (error) {
+      console.warn("Supabase signout failed:", error)
+    }
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, isLoading, signIn, signUp, signOut, signInDemo }}>
       {children}
     </AuthContext.Provider>
   )

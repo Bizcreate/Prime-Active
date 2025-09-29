@@ -1,129 +1,278 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Activity, Trophy, TrendingUp, MapPin, Clock, Zap, Plus } from "lucide-react"
-import Link from "next/link"
+import type React from "react"
+
+import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/components/auth-provider"
-import { useAppState } from "@/context/AppStateContext"
-import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { AppShell } from "@/components/app-shell"
+import { TabBar } from "@/components/tab-bar"
+import { supabase } from "@/lib/supabase"
+import { Plus, Trophy, Clock, MapPin, Flame, TrendingUp, Calendar, Zap, AlertCircle } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import Image from "next/image"
+import Link from "next/link"
+
+interface RecentActivity {
+  id: string
+  activity_type: string
+  title: string
+  duration_minutes: number
+  distance_km: number
+  calories_burned: number
+  banana_points_earned: number
+  shaka_tokens_earned: number
+  created_at: string
+}
+
+interface UserStats {
+  total_banana_points: number
+  total_shaka_tokens: number
+  total_activities: number
+  total_distance: number
+  total_duration: number
+}
+
+/* ------------------------------------------------------------------ */
+/*  DEMO / OFF-LINE FALLBACK DATA                                     */
+/* ------------------------------------------------------------------ */
+const DEMO_ACTIVITIES: RecentActivity[] = [
+  {
+    id: "demo_001",
+    activity_type: "running",
+    title: "Morning Run",
+    duration_minutes: 32,
+    distance_km: 5.2,
+    calories_burned: 320,
+    banana_points_earned: 42,
+    shaka_tokens_earned: 3.1,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "demo_002",
+    activity_type: "skateboarding",
+    title: "Skate Park Session",
+    duration_minutes: 45,
+    distance_km: 2.3,
+    calories_burned: 290,
+    banana_points_earned: 35,
+    shaka_tokens_earned: 2.4,
+    created_at: new Date(Date.now() - 86_400_000).toISOString(),
+  },
+]
+
+const makeStats = (activities: RecentActivity[]): UserStats => ({
+  total_banana_points: activities.reduce((s, a) => s + a.banana_points_earned, 0),
+  total_shaka_tokens: activities.reduce((s, a) => s + a.shaka_tokens_earned, 0),
+  total_activities: activities.length,
+  total_distance: activities.reduce((s, a) => s + a.distance_km, 0),
+  total_duration: activities.reduce((s, a) => s + a.duration_minutes, 0),
+})
+/* ------------------------------------------------------------------ */
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const { state } = useAppState()
-  const router = useRouter()
-  const [greeting, setGreeting] = useState("")
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
+  const [userStats, setUserStats] = useState<UserStats | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const hour = new Date().getHours()
-    if (hour < 12) setGreeting("Good morning")
-    else if (hour < 18) setGreeting("Good afternoon")
-    else setGreeting("Good evening")
-  }, [])
-
-  // Redirect to onboarding if not authenticated
-  useEffect(() => {
-    if (!user && !state.isLoading) {
-      router.push("/onboarding")
+  /** Attempts Supabase fetch; falls back to demo data on *any* failure */
+  const loadDashboardData = useCallback(async () => {
+    if (!user) {
+      setIsLoading(false)
+      return
     }
-  }, [user, state.isLoading, router])
 
-  if (state.isLoading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      /* ---------- 1. Fetch recent activities --------------------- */
+      const { data: activities, error: activitiesError } = await supabase
+        .from("activities")
+        .select(
+          "id, activity_type, title, duration_minutes, distance_km, calories_burned, banana_points_earned, shaka_tokens_earned, created_at",
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5)
+
+      if (activitiesError) throw activitiesError
+
+      /* ---------- 2. Fetch stats (could be replaced by RPC) ------- */
+      const { data: statsRaw, error: statsError } = await supabase
+        .from("activities")
+        .select("banana_points_earned, shaka_tokens_earned, distance_km, duration_minutes")
+        .eq("user_id", user.id)
+
+      if (statsError) throw statsError
+
+      /* ---------- 3. Populate state ------------------------------ */
+      setRecentActivities(activities || [])
+      setUserStats(
+        statsRaw
+          ? {
+              total_banana_points: statsRaw.reduce((s: number, a: any) => s + (a.banana_points_earned || 0), 0),
+              total_shaka_tokens: statsRaw.reduce((s: number, a: any) => s + (a.shaka_tokens_earned || 0), 0),
+              total_activities: statsRaw.length,
+              total_distance: statsRaw.reduce((s: number, a: any) => s + (a.distance_km || 0), 0),
+              total_duration: statsRaw.reduce((s: number, a: any) => s + (a.duration_minutes || 0), 0),
+            }
+          : null,
+      )
+    } catch (err: any) {
+      console.warn("Supabase unreachable – switching to demo data.", err)
+      /* ----------- FALLBACK ------------------------------------- */
+      setRecentActivities(DEMO_ACTIVITIES)
+      setUserStats(makeStats(DEMO_ACTIVITIES))
+      setError(null) // hide banner – we’ve handled it
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [loadDashboardData])
+
+  /* ----------------------- helpers ------------------------------ */
+  const icons: Record<string, string> = {
+    skateboarding: "🛹",
+    surfing: "🏄‍♂️",
+    snowboarding: "🏂",
+    running: "🏃‍♂️",
+    cycling: "🚴‍♂️",
+    walking: "🚶‍♂️",
+  }
+  const getActivityIcon = (t: string) => icons[t] || "🏃‍♂️"
+  const formatTime = (m: number) => {
+    const h = Math.floor(m / 60)
+    const mins = m % 60
+    return h ? `${h}h ${mins}m` : `${mins}m`
+  }
+
+  /* ----------------------- skeleton UI -------------------------- */
+  const LoadingSkeleton = () => (
+    <AppShell>
+      <div className="p-6 pb-20 space-y-6">
+        <div className="flex justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-10 w-28" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="bg-zinc-900 border-zinc-800">
+              <CardContent className="p-4 space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
+      <TabBar activeTab="dashboard" />
+    </AppShell>
+  )
+
+  /* ----------------------- render ------------------------------- */
+  if (!user) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center py-12">
+          <p className="text-zinc-400">Please log in to view your dashboard</p>
+          <Link href="/login">
+            <Button className="mt-4">Log In</Button>
+          </Link>
+        </div>
+        <TabBar activeTab="dashboard" />
+      </AppShell>
     )
   }
 
-  if (!user) {
-    return null // Will redirect via useEffect
-  }
-
-  const recentActivities = state.activities.slice(0, 3)
-  const totalActivities = state.activities.length
-  const totalDistance = state.activities.reduce((sum, activity) => sum + (activity.distance || 0), 0)
-  const totalCalories = state.activities.reduce((sum, activity) => sum + (activity.calories || 0), 0)
+  if (isLoading) return <LoadingSkeleton />
 
   return (
-    <main className="min-h-screen bg-black p-6 pb-20">
-      <div className="max-w-md mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <AppShell>
+      {!!error && (
+        <Alert variant="destructive" className="mx-6 mt-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="p-6 pb-20">
+        {/* HEADER */}
+        <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">{greeting}!</h1>
-            <p className="text-zinc-400">{user.user_metadata?.username || user.email?.split("@")[0] || "Rider"}</p>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <p className="text-zinc-400">Welcome back, {user.email?.split("@")[0]}!</p>
           </div>
-          <Link href="/profile">
-            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-black font-bold">
-                {(user.user_metadata?.username?.[0] || user.email?.[0] || "U").toUpperCase()}
-              </span>
-            </div>
+          <Link href="/activity-setup">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Start Activity
+            </Button>
           </Link>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{state.tokens.banana}</div>
-              <div className="text-xs text-zinc-400">Banana Points</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{state.tokens.shaka}</div>
-              <div className="text-xs text-zinc-400">Shaka Tokens</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{totalActivities}</div>
-              <div className="text-xs text-zinc-400">Activities</div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* STATS */}
+        {userStats && (
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            {/* Banana points */}
+            <StatCard
+              icon={<Image src="/banana-icon.png" alt="" width={20} height={20} />}
+              label="Banana Points"
+              value={userStats.total_banana_points.toLocaleString()}
+              valueClass="text-yellow-500"
+            />
+            {/* Shaka tokens */}
+            <StatCard
+              icon={<Image src="/shaka-coin.png" alt="" width={20} height={20} />}
+              label="Shaka Tokens"
+              value={userStats.total_shaka_tokens.toFixed(2)}
+            />
+            {/* Activities */}
+            <StatCard
+              icon={<Trophy className="h-5 w-5 text-zinc-400" />}
+              label="Activities"
+              value={userStats.total_activities}
+            />
+            {/* Distance */}
+            <StatCard
+              icon={<MapPin className="h-5 w-5 text-zinc-400" />}
+              label="Distance"
+              value={`${userStats.total_distance.toFixed(1)} km`}
+            />
+          </div>
+        )}
 
-        {/* Quick Actions */}
-        <Card>
+        {/* QUICK ACTIONS */}
+        <Card className="bg-zinc-900 border-zinc-800 mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5" />
-              Quick Start
-            </CardTitle>
+            <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <Link href="/activity-setup">
-              <Button className="w-full h-12 text-left justify-start">
-                <Plus className="h-5 w-5 mr-3" />
-                Start New Activity
-              </Button>
-            </Link>
+          <CardContent>
             <div className="grid grid-cols-2 gap-3">
-              <Link href="/challenges">
-                <Button variant="outline" className="w-full bg-transparent">
-                  <Trophy className="h-4 w-4 mr-2" />
-                  Challenges
-                </Button>
-              </Link>
-              <Link href="/map">
-                <Button variant="outline" className="w-full bg-transparent">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Explore
-                </Button>
-              </Link>
+              <QuickAction href="/activity-setup" icon={<TrendingUp />} label="Start Activity" />
+              <QuickAction href="/wallet" icon={<Zap />} label="View Wallet" />
+              <QuickAction href="/merch/collection" icon={<span className="text-lg">👕</span>} label="My Gear" />
+              <QuickAction href="/challenges" icon={<Trophy />} label="Challenges" />
             </div>
           </CardContent>
         </Card>
 
-        {/* Recent Activities */}
-        <Card>
+        {/* RECENT ACTIVITIES */}
+        <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
+              <Calendar className="h-5 w-5" />
               Recent Activities
             </CardTitle>
             <Link href="/activity-history">
@@ -133,35 +282,34 @@ export default function DashboardPage() {
             </Link>
           </CardHeader>
           <CardContent>
-            {recentActivities.length > 0 ? (
+            {recentActivities.length ? (
               <div className="space-y-3">
-                {recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between p-3 bg-zinc-900 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
-                        <Activity className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="font-medium capitalize">{activity.type}</div>
-                        <div className="text-sm text-zinc-400 flex items-center gap-2">
-                          <Clock className="h-3 w-3" />
-                          {activity.duration}min
-                          {activity.distance && (
-                            <>
-                              <span>•</span>
-                              <span>{activity.distance.toFixed(1)}mi</span>
-                            </>
-                          )}
+                {recentActivities.map((a) => (
+                  <div key={a.id} className="bg-zinc-800 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{getActivityIcon(a.activity_type)}</span>
+                        <div>
+                          <h4 className="font-medium">{a.title}</h4>
+                          <p className="text-xs text-zinc-400">{new Date(a.created_at).toLocaleDateString()}</p>
                         </div>
                       </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium">+{a.banana_points_earned} 🍌</div>
+                        <div className="text-xs text-zinc-400">+{a.shaka_tokens_earned} 🤙</div>
+                      </div>
                     </div>
-                    <Badge variant="secondary">+{Math.floor(activity.duration * 2)} pts</Badge>
+
+                    <div className="grid grid-cols-3 gap-4 text-xs">
+                      <DataPoint icon={<Clock />} text={formatTime(a.duration_minutes)} />
+                      <DataPoint icon={<MapPin />} text={`${a.distance_km} km`} />
+                      <DataPoint icon={<Flame />} text={`${a.calories_burned} cal`} />
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="text-center py-8">
-                <Activity className="h-12 w-12 text-zinc-600 mx-auto mb-3" />
                 <p className="text-zinc-400 mb-4">No activities yet</p>
                 <Link href="/activity-setup">
                   <Button>Start Your First Activity</Button>
@@ -170,65 +318,62 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Weekly Progress */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              This Week
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold">{totalDistance.toFixed(1)}</div>
-                <div className="text-sm text-zinc-400">Miles</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">{totalCalories}</div>
-                <div className="text-sm text-zinc-400">Calories</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Achievements Preview */}
-        {state.achievements.filter((a) => a.earned).length > 0 && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                Latest Achievement
-              </CardTitle>
-              <Link href="/achievements">
-                <Button variant="ghost" size="sm">
-                  View All
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                const latestAchievement = state.achievements
-                  .filter((a) => a.earned)
-                  .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime())[0]
-
-                return latestAchievement ? (
-                  <div className="flex items-center gap-3 p-3 bg-zinc-900 rounded-lg">
-                    <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
-                      <Trophy className="h-5 w-5 text-yellow-500" />
-                    </div>
-                    <div>
-                      <div className="font-medium">{latestAchievement.title}</div>
-                      <div className="text-sm text-zinc-400">{latestAchievement.description}</div>
-                    </div>
-                  </div>
-                ) : null
-              })()}
-            </CardContent>
-          </Card>
-        )}
       </div>
-    </main>
+
+      <TabBar activeTab="dashboard" />
+    </AppShell>
+  )
+}
+
+/* ----------------- small sub-components -------------------------- */
+function StatCard({
+  icon,
+  label,
+  value,
+  valueClass,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: React.ReactNode
+  valueClass?: string
+}) {
+  return (
+    <Card className="bg-zinc-900 border-zinc-800">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 mb-2">
+          {icon}
+          <span className="text-sm text-zinc-400">{label}</span>
+        </div>
+        <div className={`text-2xl font-bold ${valueClass}`}>{value}</div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function QuickAction({
+  href,
+  icon,
+  label,
+}: {
+  href: string
+  icon: React.ReactNode
+  label: string
+}) {
+  return (
+    <Link href={href}>
+      <Button variant="outline" className="w-full h-16 flex flex-col bg-transparent">
+        {icon}
+        <span className="text-sm">{label}</span>
+      </Button>
+    </Link>
+  )
+}
+
+function DataPoint({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="flex items-center gap-1">
+      {icon}
+      <span>{text}</span>
+    </div>
   )
 }

@@ -14,9 +14,6 @@ export const config = {
       rpcUrl: process.env.IOTEX_RPC_URL,
       privateKey: process.env.IOTEX_PRIVATE_KEY,
     },
-    mapbox: {
-      token: process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
-    },
     myst: {
       apiKey: process.env.MYST_API_KEY,
     },

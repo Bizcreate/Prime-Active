@@ -1,31 +1,43 @@
-import { cn } from "@/lib/utils"
-import { AlertCircle } from "lucide-react"
 import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
 
-export interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "default" | "destructive"
-}
+import { cn } from "@/lib/utils"
 
-export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
-  ({ className, variant = "default", ...props }, ref) => (
-    <div
-      ref={ref}
-      role="alert"
-      className={cn(
-        "relative w-full rounded-lg border p-4",
-        variant === "destructive" ? "border-red-600/30 bg-red-600/10 text-red-300" : "border-zinc-600/30 bg-zinc-800",
-        className,
-      )}
-      {...props}
-    />
-  ),
+const alertVariants = cva(
+  "relative w-full rounded-lg border px-4 py-3 text-sm [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground [&>svg~*]:pl-7",
+  {
+    variants: {
+      variant: {
+        default: "bg-background text-foreground",
+        destructive: "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+    },
+  },
 )
+
+const Alert = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
+>(({ className, variant, ...props }, ref) => (
+  <div ref={ref} role="alert" className={cn(alertVariants({ variant }), className)} {...props} />
+))
 Alert.displayName = "Alert"
 
-export const AlertDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => <p ref={ref} className={cn("text-sm [&_a]:underline", className)} {...props} />,
+const AlertTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
+  ({ className, ...props }, ref) => (
+    <h5 ref={ref} className={cn("mb-1 font-medium leading-none tracking-tight", className)} {...props} />
+  ),
+)
+AlertTitle.displayName = "AlertTitle"
+
+const AlertDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+  ({ className, ...props }, ref) => (
+    <div ref={ref} className={cn("text-sm [&_p]:leading-relaxed", className)} {...props} />
+  ),
 )
 AlertDescription.displayName = "AlertDescription"
 
-/* Default icon slot for convenience */
-export const AlertIcon = () => <AlertCircle className="absolute left-4 top-4 h-4 w-4" />
+export { Alert, AlertTitle, AlertDescription }

@@ -5,6 +5,7 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import type { Session, User } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
+import { useToast } from "@/hooks/use-toast"
 
 type AuthContextType = {
   user: User | null
@@ -13,7 +14,6 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, username: string) => Promise<void>
   signOut: () => Promise<void>
-  signInDemo: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -23,33 +23,15 @@ const AuthContext = createContext<AuthContextType>({
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
-  signInDemo: async () => {},
 })
 
 export const useAuth = () => useContext(AuthContext)
-
-// Rate limiting state
-let lastSignupAttempt = 0
-const SIGNUP_COOLDOWN = 2000 // 2 seconds
-
-// Demo user data
-const DEMO_USER = {
-  id: "demo-user-123",
-  email: "demo@primemates.com",
-  user_metadata: {
-    username: "demo_rider",
-    full_name: "Demo Rider",
-  },
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  aud: "authenticated",
-  role: "authenticated",
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const { toast } = useToast()
 
   useEffect(() => {
     // Get initial session
@@ -74,100 +56,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    // Check for demo credentials
-    if (email === "demo@primemates.com" && password === "demo123") {
-      await signInDemo()
-      return
-    }
-
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      if (error.message.includes("Invalid login credentials")) {
-        throw new Error("Invalid email or password. Please check your credentials and try again.")
-      }
-      throw error
-    }
-  }
-
-  const signInDemo = async () => {
-    // Create a mock session for demo purposes
-    const mockSession = {
-      access_token: "demo-token",
-      refresh_token: "demo-refresh",
-      expires_in: 3600,
-      expires_at: Date.now() + 3600000,
-      token_type: "bearer",
-      user: DEMO_USER as User,
-    } as Session
-
-    setSession(mockSession)
-    setUser(DEMO_USER as User)
-    setIsLoading(false)
+    if (error) throw error
   }
 
   const signUp = async (email: string, password: string, username: string) => {
-    // Check rate limiting
-    const now = Date.now()
-    if (now - lastSignupAttempt < SIGNUP_COOLDOWN) {
-      const waitTime = Math.ceil((SIGNUP_COOLDOWN - (now - lastSignupAttempt)) / 1000)
-      throw new Error(`Please wait ${waitTime} seconds before trying again`)
-    }
-
-    lastSignupAttempt = now
-
     try {
-      // Use the API route instead of direct Supabase call
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      // First check if username exists
+      const { data: existingUsers } = await supabase.from("users").select("username").eq("username", username).single()
+
+      if (existingUsers) {
+        throw new Error("Username already taken")
+      }
+
+      // Sign up the user
+      const { error: signUpError, data } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username },
         },
-        body: JSON.stringify({ email, password, username }),
       })
 
-      const data = await response.json()
+      if (signUpError) throw signUpError
 
-      if (!response.ok) {
-        // Handle specific error codes
-        if (data.code === "EMAIL_EXISTS") {
-          throw new Error("An account with this email already exists. Please try logging in instead.")
+      // Create user profile
+      if (data.user) {
+        const { error: profileError } = await supabase.from("users").insert({
+          id: data.user.id,
+          username,
+          email,
+          full_name: "",
+          wallet_address: null,
+          banana_points: 0,
+          shaka_tokens: 0,
+          board_club_level: 1,
+          has_prime_mate_nft: false,
+        })
+
+        if (profileError) {
+          console.error("Error creating profile:", profileError)
+          throw new Error("Failed to create user profile")
         }
-        if (data.code === "USERNAME_EXISTS") {
-          throw new Error("This username is already taken. Please choose a different one.")
-        }
-        throw new Error(data.error || "Signup failed")
       }
-
-      // If successful, sign in the user
-      await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second
-      await signIn(email, password)
-    } catch (error: any) {
+    } catch (error) {
       console.error("Signup error:", error)
-
-      // Handle specific error types
-      if (error.message?.includes("rate limit") || error.message?.includes("wait")) {
-        throw new Error("Please wait a moment before trying again")
-      }
-
-      // Re-throw the error with the original message
       throw error
     }
   }
 
   const signOut = async () => {
-    setSession(null)
-    setUser(null)
-
-    // Try to sign out from Supabase, but don't throw if it fails
-    try {
-      await supabase.auth.signOut()
-    } catch (error) {
-      console.warn("Supabase signout failed:", error)
-    }
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, isLoading, signIn, signUp, signOut, signInDemo }}>
+    <AuthContext.Provider value={{ user, session, isLoading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   )

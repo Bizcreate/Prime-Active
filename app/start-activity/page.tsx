@@ -5,6 +5,8 @@ import { AppShell } from "@/components/app-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { useActivityTypes } from "@/services/activity-types-service"
 import { useActivityTemplates } from "@/services/activity-templates-service"
 import {
@@ -16,44 +18,18 @@ import {
   Snowflake,
   Skull,
   WavesIcon as Wave,
+  Coins,
+  Info,
   Zap,
-  ArrowRight,
-  TrendingUp,
 } from "lucide-react"
+import { ActivityTracker } from "@/components/activity-tracker"
 import { dePINManager } from "@/services/depin-manager"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { merchandiseWearService, type ConnectedMerchandise } from "@/services/merchandise-wear-service"
 import { activityBoostService } from "@/services/activity-boost-service"
-import { TabBar } from "@/components/tab-bar"
-
-const ACTIVITY_TYPES = [
-  {
-    id: "skateboarding",
-    name: "Skateboarding",
-    icon: "🛹",
-    color: "bg-orange-500",
-    description: "Street, park, or vert skating",
-  },
-  { id: "surfing", name: "Surfing", icon: "🏄‍♂️", color: "bg-blue-500", description: "Catch waves and ride the ocean" },
-  {
-    id: "snowboarding",
-    name: "Snowboarding",
-    icon: "🏂",
-    color: "bg-cyan-500",
-    description: "Shred the slopes and powder",
-  },
-  { id: "running", name: "Running", icon: "🏃‍♂️", color: "bg-green-500", description: "Track your runs and pace" },
-  {
-    id: "cycling",
-    name: "Cycling",
-    icon: "🚴‍♂️",
-    color: "bg-yellow-500",
-    description: "Road, mountain, or casual rides",
-  },
-  { id: "walking", name: "Walking", icon: "🚶‍♂️", color: "bg-purple-500", description: "Daily walks and hikes" },
-]
 
 export default function StartActivityPage() {
   const router = useRouter()
@@ -226,10 +202,6 @@ export default function StartActivityPage() {
 
   const availableBoosts = activityBoostService.getBoosts().filter((boost) => !boost.isActive)
 
-  const handleActivitySelect = (activityId: string) => {
-    router.push(`/activity-setup?type=${activityId}`)
-  }
-
   return (
     <AppShell>
       <div className="min-h-screen bg-black p-6 pb-20">
@@ -242,48 +214,68 @@ export default function StartActivityPage() {
           <h1 className="text-xl font-bold">Start Activity</h1>
         </div>
 
-        {/* Quick Start */}
-        <Card className="bg-zinc-900 border-zinc-800 mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Quick Start
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-zinc-400 mb-4">Start tracking immediately with your most recent activity type</p>
-            <Link href="/activity-setup">
-              <Button className="w-full">
-                Continue with Setup
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Activity Types */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Choose Activity Type</h2>
-          <div className="grid gap-3">
-            {ACTIVITY_TYPES.map((activity) => (
-              <Card
-                key={activity.id}
-                className="bg-zinc-900 border-zinc-800 cursor-pointer transition-all hover:border-zinc-600 hover:bg-zinc-800/50"
-                onClick={() => handleActivitySelect(activity.id)}
-              >
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${activity.color}`}>
-                    <span className="text-2xl">{activity.icon}</span>
+          <ActivityTracker />
+
+          {depinNetworks.length > 0 && (
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardContent className="p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-2">
+                    <Coins className="h-5 w-5 text-yellow-500" />
+                    <h3 className="font-medium">DePIN Mining</h3>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{activity.name}</h3>
-                    <p className="text-sm text-zinc-400">{activity.description}</p>
+                  <Switch checked={depinEnabled} onCheckedChange={toggleDePIN} />
+                </div>
+
+                <p className="text-sm text-zinc-400 mb-3">
+                  {depinEnabled
+                    ? "Your activity data will be submitted to these networks to earn tokens:"
+                    : "Token mining is disabled for this activity"}
+                </p>
+
+                {depinEnabled && (
+                  <div className="flex flex-wrap gap-2">
+                    {depinNetworks.map((service) => {
+                      const network = service.getNetwork()
+                      return (
+                        <Badge key={network.id} variant="outline" className="flex items-center gap-1 py-1 px-2">
+                          <div className="w-4 h-4 rounded-full overflow-hidden">
+                            <Image
+                              src={network.logoUrl || "/placeholder.svg"}
+                              alt={network.name}
+                              width={16}
+                              height={16}
+                            />
+                          </div>
+                          <span>{network.name}</span>
+                        </Badge>
+                      )
+                    })}
                   </div>
-                  <ArrowRight className="h-5 w-5 text-zinc-400" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {depinNetworks.length === 0 && (
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Info className="h-5 w-5 text-blue-500" />
+                  <h3 className="font-medium">Earn While You Move</h3>
+                </div>
+                <p className="text-sm text-zinc-400 mb-3">
+                  Set up DePIN mining to earn cryptocurrency tokens for your activities.
+                </p>
+                <Link href="/setup/depin-setup">
+                  <Button variant="outline" className="w-full">
+                    Set Up Mining
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {loadingTypes || loadingTemplates ? (
@@ -555,34 +547,7 @@ export default function StartActivityPage() {
             )}
           </div>
         )}
-
-        {/* Features */}
-        <Card className="bg-zinc-900 border-zinc-800 mt-6">
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-3">What you'll earn:</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <span>🍌</span>
-                <span>Banana Points for activity completion</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span>🤙</span>
-                <span>Shaka Tokens based on duration and intensity</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span>⚡</span>
-                <span>Crypto tokens through DePIN mining</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span>👕</span>
-                <span>Bonus rewards for wearing connected gear</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
-
-      <TabBar activeTab="activity" />
     </AppShell>
   )
 }

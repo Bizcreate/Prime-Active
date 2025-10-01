@@ -1,28 +1,20 @@
 "use client"
 
 import type React from "react"
-
-import { AuthProvider } from "@/components/auth-provider"
-import { AppStateProvider } from "@/context/AppStateContext"
-import { ThemeProvider } from "@/components/theme-provider"
+import { WishlistProvider } from "@/hooks/use-wishlist"
 import { Toaster } from "@/components/ui/toaster"
 import { CartProvider } from "@/contexts/cart-context"
+import { AuthProvider } from "@/components/auth-provider"
 
-export default function ClientLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-      <AuthProvider>
-        <AppStateProvider>
-          <CartProvider>
-            {children}
-            <Toaster />
-          </CartProvider>
-        </AppStateProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <WishlistProvider>
+        <CartProvider>
+          {children}
+          <Toaster />
+        </CartProvider>
+      </WishlistProvider>
+    </AuthProvider>
   )
 }

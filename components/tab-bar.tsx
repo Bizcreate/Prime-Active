@@ -1,91 +1,67 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Home, TrendingUp, MapPin, Trophy, User, Wallet } from "lucide-react"
+import { Home, Map, Trophy, Wallet, ShoppingBag, BarChart3 } from "lucide-react"
 
 interface TabBarProps {
-  activeTab?: string
+  activeTab: "dashboard" | "map" | "challenges" | "wallet" | "merch" | "stake"
 }
 
 export function TabBar({ activeTab }: TabBarProps) {
-  const pathname = usePathname()
-
   const tabs = [
     {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: Home,
+      name: "Home",
       href: "/dashboard",
-      paths: ["/dashboard", "/"],
+      icon: <Home className="h-5 w-5" />,
+      id: "dashboard",
     },
     {
-      id: "activity",
-      label: "Activity",
-      icon: TrendingUp,
-      href: "/start-activity",
-      paths: ["/start-activity", "/activity-setup", "/activity-tracking", "/activity-summary"],
-    },
-    {
-      id: "map",
-      label: "Map",
-      icon: MapPin,
+      name: "Map",
       href: "/map",
-      paths: ["/map"],
+      icon: <Map className="h-5 w-5" />,
+      id: "map",
     },
     {
-      id: "challenges",
-      label: "Challenges",
-      icon: Trophy,
+      name: "Challenges",
       href: "/challenges",
-      paths: ["/challenges"],
+      icon: <Trophy className="h-5 w-5" />,
+      id: "challenges",
     },
     {
-      id: "wallet",
-      label: "Wallet",
-      icon: Wallet,
+      name: "Wallet",
       href: "/wallet",
-      paths: ["/wallet"],
+      icon: <Wallet className="h-5 w-5" />,
+      id: "wallet",
     },
     {
-      id: "profile",
-      label: "Profile",
-      icon: User,
-      href: "/profile",
-      paths: ["/profile", "/settings"],
+      name: "Merch",
+      href: "/merch",
+      icon: <ShoppingBag className="h-5 w-5" />,
+      id: "merch",
+    },
+    {
+      name: "Stake",
+      href: "/staking",
+      icon: <BarChart3 className="h-5 w-5" />,
+      id: "stake",
     },
   ]
 
-  const getActiveTab = () => {
-    if (activeTab) return activeTab
-
-    const currentTab = tabs.find((tab) => tab.paths.some((path) => pathname.startsWith(path)))
-
-    return currentTab?.id || "dashboard"
-  }
-
-  const currentActiveTab = getActiveTab()
-
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-800 px-4 py-2 z-50">
-      <div className="flex justify-around items-center max-w-md mx-auto">
-        {tabs.map((tab) => {
-          const Icon = tab.icon
-          const isActive = currentActiveTab === tab.id
-
-          return (
-            <Link
-              key={tab.id}
-              href={tab.href}
-              className={`flex flex-col items-center gap-1 py-2 px-3 rounded-lg transition-colors ${
-                isActive ? "text-primary bg-primary/10" : "text-zinc-400 hover:text-zinc-300"
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{tab.label}</span>
-            </Link>
-          )
-        })}
+    <div className="fixed bottom-0 left-0 right-0 bg-zinc-900 border-t border-zinc-800 z-50">
+      <div className="flex justify-around">
+        {tabs.map((tab) => (
+          <Link
+            key={tab.id}
+            href={tab.href}
+            className={`flex flex-col items-center py-3 px-4 ${
+              activeTab === tab.id ? "text-primary" : "text-zinc-400"
+            }`}
+          >
+            {tab.icon}
+            <span className="text-xs mt-1">{tab.name}</span>
+          </Link>
+        ))}
       </div>
     </div>
   )

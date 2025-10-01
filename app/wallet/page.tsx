@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { TabBar } from "@/components/tab-bar"
@@ -15,9 +16,8 @@ import { useSearchParams } from "next/navigation"
 import { nftService, type NFT } from "@/services/nft-service"
 import { useToast } from "@/hooks/use-toast"
 import { merchandiseWearService, type ConnectedMerchandise } from "@/services/merchandise-wear-service"
-import { IoTeXMiningRewards } from "@/components/IoTeXMiningRewards"
-import { useAppState } from "@/context/AppStateContext"
-import { saveActivityToSupabase } from "@/services/supabase-service"
+// Import the IoTeXMiningRewards component
+// Note: We're not importing from ThirdWeb directly in this file
 
 export function WalletContent() {
   const [walletAddress, setWalletAddress] = useState<string>("0x1234...5678")
@@ -30,7 +30,6 @@ export function WalletContent() {
   const highlightId = searchParams.get("highlight")
   const { toast } = useToast()
   const [connectedItems, setConnectedItems] = useState<ConnectedMerchandise[]>([])
-  const { activityState, setActivityState } = useAppState()
 
   useEffect(() => {
     // Load NFT data and update staking rewards
@@ -120,11 +119,6 @@ export function WalletContent() {
     const remainingHours = hours % 24
 
     return `${days}d ${remainingHours}h`
-  }
-
-  const handleActivityStart = (activity: string) => {
-    setActivityState({ ...activityState, currentActivity: activity })
-    saveActivityToSupabase(activity)
   }
 
   return (
@@ -341,7 +335,42 @@ export function WalletContent() {
                       </Badge>
                     </div>
 
-                    <IoTeXMiningRewards />
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-zinc-400">Balance:</span>
+                        <span className="font-medium">128.45 IOTX</span>
+                      </div>
+
+                      <div className="flex justify-between text-sm">
+                        <span className="text-zinc-400">Daily Rewards:</span>
+                        <span className="font-medium">2.5 IOTX</span>
+                      </div>
+
+                      <div className="flex justify-between text-sm">
+                        <span className="text-zinc-400">Merch Bonus:</span>
+                        <span className="text-green-400">+1.2 IOTX</span>
+                      </div>
+
+                      <div className="flex justify-between text-sm">
+                        <span className="text-zinc-400">Activity Bonus:</span>
+                        <span className="text-green-400">+0.8 IOTX</span>
+                      </div>
+
+                      <div className="h-px bg-zinc-800 my-2"></div>
+
+                      <div className="flex justify-between">
+                        <span className="text-zinc-400">Total Daily:</span>
+                        <span className="font-bold text-primary">4.5 IOTX</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <Link href="/wallet/depin-info">
+                        <Button variant="outline" size="sm" className="w-full">
+                          View Details
+                        </Button>
+                      </Link>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -382,7 +411,6 @@ export function WalletContent() {
 
 export default function WalletPage() {
   const [activeTab, setActiveTab] = useState("tokens")
-  const { activityState } = useAppState()
 
   return (
     <div className="flex min-h-screen flex-col bg-black pb-20">
